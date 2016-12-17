@@ -1,0 +1,17 @@
+{
+  "name": "MeganeBot",
+  "version": "0.1.0",
+  "description": "a bot made by a glasses fetishtist",
+  "main": "bot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "frzyc",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^10.0.1",
+    "node-opus": "^0.2.4",
+    "opusscript": "0.0.1",
+    "ytdl-core": "^0.7.20"
+  }
+}
