@@ -78,6 +78,8 @@ client.on('ready', () => {
 });
 
 client.on('message', message => {
+
+    //normal message processing with commands
     if (!message.content.startsWith(config.prefix)) return;
 
     if (message.author.bot) return; //wont respond to bots
@@ -85,7 +87,7 @@ client.on('message', message => {
 
     args = message.content.split(' ').filter(a => a.length>0);//get split and get rid of zero length args
     const cmd = args.shift().slice(config.prefix.length).toLowerCase();//commands are not case-sensitive
-
+    
     
     if (message.author.id === config.ownerid && masterResponse[cmd])
         simulateTypingReply(message, masterResponse[cmd]);
@@ -144,17 +146,32 @@ function simulateTypingReply(message, msg) {
     clist.addCmd(about);
 
     let prune = new command('prune');
-    prune.usage = "[number of your own messages to prune, max 100]";
+    prune.usage = `[number of messages, max 100] [optional: @mention1] [optional: @mention2] ...]\nNOTE: need "manage messages" permission to delete other's messages. `;
     prune.process = function (message, args) {
-        let messagecount = parseInt(args[0]);
+        let messagecount = 0;
+        console.log(args.length);
+        let matchid = [message.author.id];
+        if (args.length >= 1) 
+            messagecount = parseInt(args[0]);
+        if (args.length > 1) {//means other people have been mentioned?
+            matchid = [];
+            message.mentions.users.map(u => { matchid.push(u.id); });
+            if (matchid.length != args.length - 1)
+                return message.reply(`argument number mismatch. use "${config.prefix}help ${this.name}" to check usage`);
+            if (!message.member.hasPermission("MANAGE_MESSAGES"))
+                return message.reply("You don't have the \"manage messages\" permissions to delete other people's messages");
+        }
         message.channel.fetchMessages({ limit: 100 })
             .then(messages => {
                 let msg_array = messages.array();
-                msg_array = msg_array.filter(m => m.author.id === message.author.id);
+                msg_array = msg_array.filter(m => (matchid.includes(m.author.id) && m.id !== message.id));
                 // limit to the requested number + 1 for the command message
-                if (msg_array.length > (messagecount + 1))
-                    msg_array.length = messagecount + 1;
+                if (msg_array.length > messagecount)
+                    msg_array.length = messagecount;
+                let msgdel = msg_array.length;
                 msg_array.map(m => m.delete().catch(console.error));
+                message.reply(`${msgdel} messages deleted. `);
+                message.delete();
             });
     }
     clist.addCmd(prune);
@@ -228,6 +245,7 @@ function simulateTypingReply(message, msg) {
     clist.addCmd(colorcmd);
 
     let colorlistcmd = new command('colorlist');
+    colorlistcmd.usage = `   prints out a list of colors on the server`;
     colorlistcmd.process = function (message, args) {
         if (!colorList || colorList.length === 0) return;
         let res = colorList.join(", ");
@@ -248,6 +266,7 @@ function simulateTypingReply(message, msg) {
         let colorname = colorrole.name;
         colorrole.setPermissions([]);
         colorList.push(colorname);
+        colorList = colorlist.sort();
         fs.writeFile(jsonfile, JSON.stringify(colorList), 'utf8', function () {
             message.reply(`${colorname} added, json file updated.`);
         });
