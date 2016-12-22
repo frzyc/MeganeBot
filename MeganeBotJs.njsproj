@@ -23,6 +23,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="data\" />
+    <Folder Include="modules\" />
     <Folder Include="typings\" />
     <Folder Include="typings\globals\" />
     <Folder Include="typings\globals\node\" />
@@ -33,6 +34,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="bot.js" />
+    <Compile Include="modules\color.js" />
+    <Compile Include="modules\command.js" />
+    <Compile Include="modules\general.js" />
+    <Compile Include="modules\music.js" />
+    <Compile Include="util.js" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <!--Do not delete the following Import Project.  While this appears to do nothing it is a marker for setting TypeScript properties before our import that depends on them.-->

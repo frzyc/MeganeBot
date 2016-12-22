@@ -9,9 +9,12 @@
   "author": "frzyc",
   "license": "ISC",
   "dependencies": {
-    "discord.js": "^10.0.1",
+    "discord.js": "github:hydrabolt/discord.js#indev",
+    "erlpack": "github:hammerandchisel/erlpack",
     "node-opus": "^0.2.4",
     "opusscript": "0.0.1",
+    "superagent": "^3.3.0",
+    "uws": "^0.11.1",
     "ytdl-core": "^0.7.20"
   }
 }
