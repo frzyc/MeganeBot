@@ -1,13 +1,16 @@
 ﻿const request = require('superagent');
 const ytdl = require('ytdl-core');
-const command = require('./command.js');
+const command = require('../command.js').command;
 const util = require('../util.js')
 const client = require('../bot.js').client;
 const config = require('../data/config.json');
 
 //music
-let clist = []
-exports.cmdlist = clist;
+const cmdModuleobj = require('../command.js').cmdModuleobj;
+let cmdModule = new cmdModuleobj('Music');
+cmdModule.description = `Music commands`
+cmdModule.serverOnly = true;
+exports.cmdModule = cmdModule;
 
 const MAX_NUM_SONGS_PER_PLAYLIST = 100;
 var queueList = {};//stores queuelists for all servers
@@ -21,12 +24,46 @@ var playQueue = function () {
     this.connection = null;
     this.dispatcher = null;
     this.volume = 0.25;//default volume
+    this.queueMsg = null;
+    this.queueQueue = [];
+    this.queueTimeOut = null;
 };
+
 playQueue.prototype.addtoQueue = function (videoObj) {
     console.log("playQueue.addtoQueue");
     if (this.list.length >= MAX_NUM_SONGS_PER_PLAYLIST) return this.tchannel.sendMessage("Max Playlist size.");
     this.list.push(videoObj);
-    if (this.tchannel) this.tchannel.sendMessage(`Queued ${videoObj.prettyPrint()}`);
+    if (this.tchannel) {
+        util.queueMessages(this.tchannel, `Queued ${videoObj.prettyPrint()}`);
+        /*
+        this.queueQueue.push(`Queued ${videoObj.prettyPrint()}`);
+        if (!this.queueTimeOut)
+            this.queueTimeOut = setInterval(() => {
+                if (this.queueQueue.length === 0) {//queue is empty
+                    if (this.queueTimeOut) {
+                        clearTimeout(this.queueTimeOut);
+                        this.queueTimeOut = null;
+                    }
+                    return;
+                }
+                if (!this.tchannel) return;
+                let msgcontent = ``;
+                while (true) {
+                    if (!this.queueQueue[0]) break;
+                    let guesslength = msgcontent.length + '\n'.length + this.queueQueue[0].length;
+                    if (guesslength < 2000) {
+                        if (msgcontent.length > 0) msgcontent += '\n';
+                        msgcontent += this.queueQueue.shift();
+                    }else
+                        break;
+                }
+                if (msgcontent.length === 0) return;
+                //console.log(`NEW MESSAGE: msgcontent.length(${msgcontent.length})`);
+                this.tchannel.sendMessage(msgcontent).then(msg => {
+                    this.queueMsg = msg;
+                }).catch(console.error);
+            }, 3000);*/
+    }
     console.log("playQueue.list.length:" + this.list.length);
     if (!this.current) this.playNextInQueue();
 }
@@ -56,18 +93,12 @@ playQueue.prototype.play = function (video) {
         console.log("after getStream()");
 
         //attach event to song end
-
         const streamOptions = { seek: 0, volume: this.volume };
         this.dispatcher = this.connection.playStream(currentStream, streamOptions);
-        (function (pq) {
-            pq.dispatcher.once('end', function () {
-                (function (p) {
-                    console.log("dispatcher end");
-                    setTimeout(function () { p.playStopped(); }, 2000)// 2 second leeway for bad timing
-                })(pq)
-            });
-        })(this)//CLOSURE cause the feels
-
+        this.dispatcher.once('end', () => {
+            console.log("dispatcher end");
+            setTimeout(() => { this.playStopped(); }, 2000)// 2 second leeway for bad timing
+        });
         if (this.tchannel) this.tchannel.sendMessage(`Playing ${video.prettyPrint()}`);
         client.user.setGame(video.title);
 
@@ -81,7 +112,6 @@ playQueue.prototype.playStopped = function () {
     this.last = this.current;
     this.current = false;
     this.playNextInQueue();
-
 }
 
 var Track = function (vid, info) {
@@ -134,22 +164,22 @@ function getInfoAndQueue(vid, message, suppress) {
     let pq = queueList[message.guild.id];
     console.log("getInfoAndQueue:" + vid);
     YoutubeTrack.getInfoFromVid(vid, message, (err, video) => {
-        if (err) handleYTError(err);
+        if (err) handleYTError(message, err);
         else pq.addtoQueue(video);
     });
 }
 
-function handleYTError(err) {
+function handleYTError(message, err) {
     if (!queueList[message.guild.id] || !queueList[message.guild.id].tchannel) return;
     let c = queueList[message.guild.id].tchannel;
     if (err.toString().indexOf('Code 150') > -1) {// Video unavailable in country
-        c.sendMessage('This video is unavailable in the country the bot is running in! Please try a different video.');
+        util.queueMessages(c, 'This video is unavailable in the country the bot is running in! Please try a different video.');
     } else if (err.message == 'Could not extract signature deciphering actions') {
-        c.sendMessage('YouTube streams have changed their formats, please update `ytdl-core` to account for the change!');
+        util.queueMessages(c, 'YouTube streams have changed their formats, please update `ytdl-core` to account for the change!');
     } else if (err.message == 'status code 404') {
-        c.sendMessage('That video does not exist!');
+        util.queueMessages(c, 'That video does not exist!');
     } else {
-        c.sendMessage('An error occurred while getting video information! Please try a different video.');
+        util.queueMessages(c, 'An error occurred while getting video information! Please try a different video.');
     }
     console.log(err.toString());
 }
@@ -173,7 +203,7 @@ joinvoice.process = function (message, args) {
     });
 
 }
-clist.push(joinvoice);
+cmdModule.addCmd(joinvoice);
 
 let leavevoice = new command(['leavevoice']);
 leavevoice.process = function (message, args) {
@@ -203,14 +233,14 @@ leavevoice.process = function (message, args) {
         delete queueList[message.guild.id];
     }*/
 }
-clist.push(leavevoice);
+cmdModule.addCmd(leavevoice);
 
 /*
 let thefuck = new command('thefuck')
 thefuck.process = function (message, args) {
     if (playQueue.connection) playQueue.dispatcher = playQueue.connection.playFile('Whatthefuckdidyousaytome.mp3');
 }
-clist.push(thefuck);*/
+cmdModule.addCmd(thefuck);*/
 let pause = new command(['pause']);
 pause.process = function (message, args) {
     if (!queueList[message.guild.id]) return;
@@ -219,7 +249,7 @@ pause.process = function (message, args) {
         message.channel.sendMessage("Music Paused.");
     }
 }
-clist.push(pause);
+cmdModule.addCmd(pause);
 
 let resume = new command(['resume']);
 resume.process = function (message, args) {
@@ -229,16 +259,26 @@ resume.process = function (message, args) {
         message.channel.sendMessage("Music Resumed.");
     }
 }
-clist.push(resume);
+cmdModule.addCmd(resume);
 let nextcmd = new command(['next']);
-nextcmd.usage = [`**\nStop current song and try to play the next song in the playlist.`];
+nextcmd.usage = [
+    `** Skip to the next song in the playlist.`,
+    `[number of songs]** Skip a few songs in the playlist.`
+];
 nextcmd.process = function (message, args) {
     if (!queueList[message.guild.id]) return;
     let pq = queueList[message.guild.id];
     if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
+    if (args || args[0]) {
+        let amt = parseInt(args[0]);
+        if (amt > 0) {
+            let removed = pq.list.splice(0, amt);
+            pq.tchannel.sendMessage(`${removed.length} songs have been removed from the playqueue.`);
+        }
+    }
     if (pq.dispatcher) pq.dispatcher.end();
 }
-clist.push(nextcmd);
+cmdModule.addCmd(nextcmd);
 
 let clearpl = new command(['plclear', 'plc']);
 clearpl.process = function (message, args) {
@@ -248,7 +288,7 @@ clearpl.process = function (message, args) {
     pq.list = [];
     message.channel.sendMessage("Playlist cleared.");
 }
-clist.push(clearpl);
+cmdModule.addCmd(clearpl);
 
 let plpop = new command(['playlistpop', 'plpop']);
 plpop.usage = [`**\nDequeue the last added song from the playlist.`];
@@ -259,7 +299,7 @@ plpop.process = function (message, args) {
     let pvideo = pq.list.pop();
     if (pvideo) if (pq.tchannel) pq.tchannel.sendMessage(`Dequeued ${pvideo.prettyPrint()}`);
 }
-clist.push(plpop);
+cmdModule.addCmd(plpop);
 
 let playlistcmd = new command(['playlist', 'pl']);
 playlistcmd.usage = [`**\nDisplay the playlist.`];
@@ -297,7 +337,7 @@ playlistcmd.process = function (message, args) {
     }
     message.channel.sendMessage(formattedList);
 }
-clist.push(playlistcmd);
+cmdModule.addCmd(playlistcmd);
 
 let youtube = new command(['youtube', 'yt'])
 youtube.usage = [`[youtube video link]**\nAdd a song to the playlist using a youtube link.`]
@@ -309,7 +349,7 @@ youtube.process = function (message, args) {
     if (!args || !args.length) return message.reply("Invalid youtube query.");
     getInfoAndQueue(args[0], message);
 }
-clist.push(youtube);
+cmdModule.addCmd(youtube);
 
 let youtubeq = new command(['youtubeq', 'ytq']);
 youtubeq.usage = [`[search params]**\nQuery for a song on youtube and add it to the playlist. Will use the first search result from youtube search.`];
@@ -348,10 +388,11 @@ youtubeq.process = function (message, args) {
     });
 
 }
-clist.push(youtubeq);
+cmdModule.addCmd(youtubeq);
 
 let youtubepl = new command(['youtubeplaylist', 'ytpl']);
 youtubepl.usage = [`[playlist ID]**\nQuery for a youtube playlists and add songs from it into the playlist.\nNOTE: Query is limited to 50 videos`];
+youtubepl.channelCooldown = 3*60;//3 minutes
 youtubepl.process = function (message, args) {
     if (!queueList[message.guild.id]) return;
     let pq = queueList[message.guild.id];
@@ -379,8 +420,7 @@ youtubepl.process = function (message, args) {
             body.items.forEach((elem, idx) => {
                 var vid = elem.contentDetails.videoId;
                 //stagger loading
-                setTimeout(function (v, m) { return function () { getInfoAndQueue(v, m); }; } (vid, message), 1000 * idx);
-
+                setTimeout(() => { getInfoAndQueue(vid, message);}, 200 * idx);
             });
         } else {
             message.reply('There was an error finding playlist with that id.');
@@ -388,5 +428,5 @@ youtubepl.process = function (message, args) {
         }
     });
 }
-clist.push(youtubepl);
+cmdModule.addCmd(youtubepl);
 

@@ -34,9 +34,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="bot.js" />
+    <Compile Include="data\playerData.json" />
+    <Compile Include="modules\basicResponse.js" />
+    <Compile Include="modules\cleverbot.js" />
     <Compile Include="modules\color.js" />
-    <Compile Include="modules\command.js" />
+    <Compile Include="command.js" />
+    <Compile Include="modules\gambling.js" />
+    <Compile Include="modules\games.js" />
     <Compile Include="modules\general.js" />
+    <Compile Include="modules\minesweeper.js" />
     <Compile Include="modules\music.js" />
     <Compile Include="util.js" />
   </ItemGroup>

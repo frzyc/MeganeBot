@@ -1,55 +1,33 @@
 ﻿const Discord = require('discord.js');
 const config = require('./data/config.json');
+const util = require('./util.js');
 const fs = require("fs");
 
-const command = require('./modules/command.js');
+const command = require('./command.js').command;
+const cmdBaseobj = require('./command.js').cmdBaseobj;
+const playerData = require('./modules/gambling.js').playerData;
+const currency = require('./modules/gambling.js').currency;
+//console.log(currency);
 
-const client = new Discord.Client();
+const client = new Discord.Client({
+    fetchAllMembers : true,
+});
 exports.client = client;
-//commandlist
-var cmdList = {};
-cmdList.addCmd = function (cmdobj) {
-    let addcomplete = true;
-    if (!cmdobj.name || cmdobj.name.length===0) {
-        console.log(`addCmd:ERROR: Command has invalid cmdname.`);
-        return false;
-    }
-    if (!cmdobj.process) return console.log(`addCmd:ERROR: Command ${cmdobj.name[0]} does not have a process.`);
-    if (!cmdobj.usage) console.log(`addCmd:WARN: Command ${cmdobj.name[0]} does not have a usage.`);
 
-    for (n of cmdobj.name) {
-        if (this[n]) {
-            console.log(`addCmd:ERROR: Command ${n} already exists.`);
-            addcomplete = false;
-            return;
-        }
-
-        this[n] = cmdobj;
-        if (this.help && this.help.cmdlist) this.help.cmdlist.push(n);
-    }
-    return addcomplete;
-}
-
-const general = require('./modules/general.js')
-general.cmdlist.map(cmd => { cmdList.addCmd(cmd) });
-const color = require('./modules/color.js')
-color.cmdlist.map(cmd => { cmdList.addCmd(cmd) });
-const music = require('./modules/music.js')
-music.cmdlist.map(cmd => { cmdList.addCmd(cmd) });
-
-var basicResponse = {
-    'hello': 'Hello.',//H-Hi... its not like I\'m replying back because I like you... BAKA
-    'bestgirl': 'Kuriyama Mirai...obviously',
-    'zone': 'Dont let me into my zone\nDont let me into my zone\nDont let me into my zone\nI\'m in my zone',
-    'ping': 'pong',
-    'pizza': ':pizza:',
-    'surrender':':flag_white: DEFEATED :flag_white:'
-};
-var masterResponse = {
-    'hello': 'Hello Master :heart:'
-};
-
-//TODO add basic response & masterresponse as commands
+var cmdBase = new cmdBaseobj();
+exports.cmdBase = cmdBase;
+let moduledirlist = [
+    './modules/general.js',
+    './modules/basicResponse.js',
+    './modules/color.js',
+    './modules/music.js',
+    './modules/gambling.js',
+    './modules/minesweeper.js',
+    //'./modules/cleverbot.js',
+]
+moduledirlist.forEach(mod => {
+    cmdBase.addModule(require(mod).cmdModule);
+});  
 
 client.on('ready', () => {
     console.log(`Ready to serve in ${client.channels.size} channels on ${client.guilds.size} servers, for a total of ${client.users.size} users.`);
@@ -60,8 +38,12 @@ client.on('ready', () => {
 
 client.on('message', message => {
     if (message.author.bot) return; //wont respond to bots
-    //if(message.author.id !== config.ownerid) return;//locked to me, FRED!
 
+    //if(message.author.id !== config.ownerid) return;//locked to me, FRED!
+    if (util.percentChance(5)) {
+        playerData.getOrCreatePlayer(message.author.id).wallet.addMoney(1);
+        message.react(currency.emoji).catch(console.error);
+    }
     let cont = message.content;
 
     //normal message processing with commands
@@ -69,21 +51,30 @@ client.on('message', message => {
     let startmention = cont.startsWith(`<@!${client.user.id}>`) || cont.startsWith(`<@${client.user.id}>`);
     if (!startprefix && !startmention) return;
 
-    var args = message.content.split(' ').filter(a => a.length > 0);//get split and get rid of zero length args
-
+    var args = cont.split(' ').filter(a => a.length > 0);//get split and get rid of zero length args
     var cmd = args.shift().slice(config.prefix.length).toLowerCase();//commands are not case-sensitive
     if (startmention)
         cmd = args.shift().toLowerCase();//commands are not case-sensitive shift again cause the cmd is the 2nd arg
-    
-    if (message.author.id === config.ownerid && masterResponse[cmd])
-        simulateTypingReply(message, masterResponse[cmd]);
-    else if(basicResponse[cmd]) 
-        simulateTypingReply(message, basicResponse[cmd]);
-    else if (cmdList[cmd]) {
-        if (cmdList[cmd].owneronly && message.author.id !== config.ownerid) return;//check for owneronly commands
-        if (cmdList[cmd].reqperms && !message.member.permissions.hasPermissions(cmdList[cmd].reqperms)) return;//check if has permission
+    console.log(`MESSAGE: cmd(${cmd})  args(${args})`);
+    if (cmdBase.cmdlist[cmd]) {
+        let cmdobj = cmdBase.cmdlist[cmd];
+        console.log("check serverOnly:" + cmdobj.serverOnly +" type:"+message.channel.type);
+        if (cmdobj.dmOnly && message.channel.type === 'text') return util.replyWithTimedDelete(message, "This command is restricted to direct message only.");
+        if (cmdobj.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) return util.replyWithTimedDelete(message, "This command is restricted to server only.");
+        if (cmdobj.ownerOnly && message.author.id !== config.ownerid) return;//check for ownerOnly commands
+        if (cmdobj.reqperms && !message.member.permissions.hasPermissions(cmdobj.reqperms)) return;//check if has permission
         console.log(`${cmd} args: ${args}`);
-        cmdList[cmd].process(message, args, client);
+        if (!cmdobj.inCooldown(message)) {
+            //if this has a cost, and the user doesnt have any moneys
+            if (cmdobj.cost && playerData.getOrCreatePlayer(message.author.id).wallet.getAmount() < cmdobj.cost)
+                return util.replyWithTimedDelete(message, `You don't have enough ${currency.nameplural} to use this command, need ${currency.symbol}${cmdobj.cost}.`, 10 * 1000);
+            cmdobj.process(message, args, client);
+        }
+    } else {
+        if (startmention && cmdBase.cmdlist['talk']) {
+            let prefix = cont.split(' ').slice(1).join(' ');
+            cmdBase.cmdlist['talk'].process(message, prefix, client);
+        }
     }
 });
 
@@ -93,7 +84,22 @@ client.on('guildMemberAdd', (member) => {
 });
 
 client.on('messageReactionAdd', (messageReaction, user) => {
-    console.log("NEW REACTION BOOO YEAH");
+    if (user.bot) return; //wont respond to bots
+    console.log(`NEW REACTION BOOO YEAH emoji.name:${messageReaction.emoji.name}, emoji.id:${messageReaction.emoji.id}, emoji.identifier:${messageReaction.emoji.identifier}, emoji.toString():${messageReaction.emoji.toString()}`);
+    /*
+    console.log(messageReaction.emoji.name);
+    console.log(messageReaction.emoji.id);
+    console.log(messageReaction.emoji.identifier);
+    console.log(messageReaction.emoji.toString());*/
+    //just give the player some money for now...
+    if (util.percentChance(10)) {
+        playerData.getOrCreatePlayer(messageReaction.message.author.id).wallet.addMoney(1);
+        messageReaction.message.react(currency.emoji).catch(console.error);//TODO: need to find how emojis work
+    }
+    /*
+    let msgOwnerAmount = msgOwnerPlayer.wallet.getAmount();
+    let currencyname = msgOwnerAmount > 1 ? currency.nameplural : currency.name
+    console.log(`${messageReaction.message.member.displayName} now has ${msgOwnerAmount} ${currencyname}`);*/
 });
 
 client.on('messageReactionRemove', (messageReaction, user) => {
@@ -103,20 +109,6 @@ client.on('messageReactionRemove', (messageReaction, user) => {
 // Handle discord.js warnings
 client.on('warn', (m) => console.log('[warn]', m));
 //client.on('debug', (m) => console.log('[debug]', m));
-
-function simulateTyping(message, time, callback) {
-    message.channel.startTyping();
-    setTimeout(function () {
-        callback();
-        message.channel.stopTyping(true);
-    }, time);
-}
-function simulateTypingReply(message, msg) {
-    simulateTyping(message, (msg.length * 30 + 100), function () {
-        message.reply(msg);
-    });
-}
-
 
 client.login(config.token);
 
@@ -131,3 +123,21 @@ process.on('uncaughtException', function (err) {
         //process.exit(0);
     }
 });
+/*
+process.stdin.resume();//so the program will not close instantly
+
+function exitHandler(options, err) {
+    if (options.cleanup) console.log('clean');
+    if (err) console.log(err.stack);
+    if (options.exit) process.exit();
+
+}
+
+//do something when app is closing
+process.on('exit', exitHandler.bind(null, { cleanup: true }));
+
+//catches ctrl+c event
+process.on('SIGINT', exitHandler.bind(null, { exit: true }));
+
+//catches uncaught exceptions
+process.on('uncaughtException', exitHandler.bind(null, { exit: true }));*/
