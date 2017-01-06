@@ -23,6 +23,7 @@ let moduledirlist = [
     './modules/music.js',
     './modules/gambling.js',
     './modules/minesweeper.js',
+    './modules/rps.js',
     //'./modules/cleverbot.js',
 ]
 moduledirlist.forEach(mod => {

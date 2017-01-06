@@ -252,6 +252,7 @@ pause.process = function (message, args) {
         queueList[message.guild.id].dispatcher.pause();
         message.channel.sendMessage("Music Paused.");
     }
+    this.setCooldown(message);
 }
 cmdModule.addCmd(pause);
 
@@ -263,6 +264,7 @@ resume.process = function (message, args) {
         queueList[message.guild.id].dispatcher.resume();
         message.channel.sendMessage("Music Resumed.");
     }
+    this.setCooldown(message);
 }
 cmdModule.addCmd(resume);
 let nextcmd = new command(['next']);
@@ -432,6 +434,7 @@ youtubepl.process = function (message, args) {
             return;
         }
     });
+    this.setCooldown(message);
 }
 cmdModule.addCmd(youtubepl);
 

@@ -44,6 +44,7 @@
     <Compile Include="modules\general.js" />
     <Compile Include="modules\minesweeper.js" />
     <Compile Include="modules\music.js" />
+    <Compile Include="modules\rps.js" />
     <Compile Include="util.js" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />

@@ -253,6 +253,7 @@ minesweepercmd.process = function (message, args) {
         if (isNaN(chosex) || isNaN(chosey)) return null;
         return { x: chosex, y: chosey };
     }
+    this.setCooldown(message);
 }
 cmdModule.addCmd(minesweepercmd);
 

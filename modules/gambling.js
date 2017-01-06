@@ -8,16 +8,23 @@ let cmdModule = new cmdModuleobj('Gambling');
 cmdModule.description = `gambling stuff with money`;
 
 var datafile = '../data/playerData.json';
-
+/*
 var currencyobj = function () {
     this.name = "MeganeBuck";
     this.nameplural = "MeganeBucks";
     this.symbol = "M$";
     this.emoji = "💵";
+}*/
+var currencyobj = function () {
+    this.name = "Pizza";
+    this.nameplural = "Pizzas";
+    this.symbol = "P$";
+    this.emoji = "🍕";
 }
 var currency = new currencyobj();
 
 var wallet = function (val) {
+    if (val && isFinite(val)) this.amount = val;
     else this.amount = 0;
     this.checkvalid();
 }

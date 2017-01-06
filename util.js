@@ -22,7 +22,7 @@ exports.getChain = function (obj, key) {
 //check the existence of nested object key, see getChain
 exports.hasChain = function (obj, key) {
     return key.split(".").every(function (x) {
-        if (typeof obj != "object" || obj === null || !x in obj)
+        if (obj === null || typeof obj == 'undefined' || !(x in obj))
             return false;
         obj = obj[x];
         return true;
