@@ -18,22 +18,32 @@ var currencyobj = function () {
 var currency = new currencyobj();
 
 var wallet = function (val) {
-    if (val) this.amount = val;
     else this.amount = 0;
+    this.checkvalid();
 }
 wallet.prototype.addMoney = function (val) {
-    console.log(`wallet.prototype.addMoney(${val})`);
-    console.log(`    amountbefore:${this.amount}`);
+    //console.log(`addMoney(${val}) before: ${this.amount}`);
+    this.checkvalid();
     this.amount += val;
-    console.log(`    amountafter:${this.amount}`);
+    //console.log(`addMoney(${val}) after: ${this.amount}`);
 }
 wallet.prototype.subMoney = function (val) {
+    this.checkvalid();
     if (this.amount >= val) {
         this.amount -= val;
-    } else this.amount = 0;;
+    } else this.amount = 0;
 }
 wallet.prototype.getAmount = function () {
+    this.checkvalid();
     return this.amount;
+}
+wallet.prototype.checkvalid = function () {
+    //console.log(`checkvalid() before: ${this.amount}`);
+    if (!isFinite(this.amount)) 
+        this.amount = 0;
+    //console.log(`checkvalid() beforetrunc: ${this.amount}`);
+    this.amount = Math.trunc(this.amount);
+    //console.log(`checkvalid() after: ${this.amount}`);
 }
 
 var player = function (id) {
@@ -46,7 +56,7 @@ var playerDataObj = function () {
     
     setInterval(()=> {
         this.saveData();
-    }, 30*1000);
+    }, 300*1000);
 }
 
 playerDataObj.prototype.addPlayer = function (id) {
@@ -121,7 +131,7 @@ walletcmd.usage = [
 ];
 walletcmd.process = function (message, args) {
     let amount = playerData.getOrCreatePlayer(message.author.id).wallet.getAmount();
-    return util.replyWithTimedDelete(message, `You current have ${currency.emoji} ${currency.symbol}${amount} ${currency.nameplural} ${currency.emoji} in your wallet.`, 30*1000);
+    return util.replyWithTimedDelete(message, `You currently have ${currency.emoji} ${currency.symbol}${amount} ${currency.nameplural} ${currency.emoji} in your wallet.`, 30*1000);
 }
 cmdModule.addCmd(walletcmd);
 
@@ -242,19 +252,19 @@ eightball.process = function (message, args) {
         answer += `Since the Magic 8 Ball answered negatively, you don't get your ${currency.nameplural} back! :disappointed: `
         player8.wallet.subMoney(this.cost);
     }
-    message.reply(answer);
+    util.replyWithTimedDelete(message, answer, 60 * 1000);//1min
     this.setCooldown(message);
 }
 cmdModule.addCmd(eightball);
 
 
 let dicecmd = new command(['dice']);
-dicecmd.userCooldown = 10;//10 seconds
+dicecmd.userCooldown = 30;//30 seconds
 dicecmd.usage = [
     `** roll a 6-sided die`,
     `[x]** roll x number of 6-sided dice`,
     `d[y]** roll one y-sided dice`,
-    `[x]d[y]** roll x number of y-sided dice\nNOTE: max 30 dice can be rolled at once. \nNOTE: if you get max number on all the dice in a roll, you get an exponential reward`,
+    `[x]d[y]** roll x number of y-sided dice\nNOTE: max 30 dice can be rolled at once, max 1337 sides.\nNOTE: if you get max number on all the dice in a roll, you get an exponential reward`,
 ]
 dicecmd.process = function (message, args) {
     let results = [];
@@ -273,7 +283,7 @@ dicecmd.process = function (message, args) {
             y = 6;
         }
     }
-    if (!x || x <= 0 || !y || y <= 1) return util.replyWithTimedDelete(message, `Invalid parameter`, 10 * 1000);
+    if (!x || x <= 0 || !y || y <= 1 || y > 1337) return util.replyWithTimedDelete(message, `Invalid parameter`, 10 * 1000);
     if (x > 30) x = 30;//limit number of dice rolls to 30;
     for (var i = 0; i < x; i++)
         results.push(util.getRandomIntInclusive(1, y));
@@ -293,12 +303,12 @@ dicecmd.process = function (message, args) {
     } else {
         msg += `**${results.join(', ')}**`;
     }
-    if (results.every((val) => { return val === y })) {
-        let rewardamount = Math.pow((y-1), x);
-        msg += `\n**CRITIAL ROLL!!!**, you have been rewarded ${currency.symbol}${rewardamount}`;
+    if (y>= 4 && results.every((val) => { return val === y })) {
+        let rewardamount = Math.pow((y-3), x);
+        msg += `\n**CRITICAL ROLL!!!**, you have been rewarded ${currency.symbol}${rewardamount}`;
         playerData.getOrCreatePlayer(message.author.id).wallet.addMoney(rewardamount);
     }
-    message.reply(msg);
+    util.replyWithTimedDelete(message, msg, 5 * 60 * 1000);//5min
 
     this.setCooldown(message);
 }
@@ -337,7 +347,7 @@ betHundred.process = function (message, args) {
         msg += `👑 Congratulations! You won ${currency.symbol}${amount * 10} for rolling **100**. 👑`;
         player.wallet.addMoney(amount * 10);
     }
-    message.reply(msg);
+    util.replyWithTimedDelete(message, msg, 60 * 1000);//1min
     this.setCooldown(message);
 }
 cmdModule.addCmd(betHundred);

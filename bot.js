@@ -40,7 +40,7 @@ client.on('message', message => {
     if (message.author.bot) return; //wont respond to bots
 
     //if(message.author.id !== config.ownerid) return;//locked to me, FRED!
-    if (util.percentChance(5)) {
+    if (util.percentChance(3)) {
         playerData.getOrCreatePlayer(message.author.id).wallet.addMoney(1);
         message.react(currency.emoji).catch(console.error);
     }
@@ -92,7 +92,7 @@ client.on('messageReactionAdd', (messageReaction, user) => {
     console.log(messageReaction.emoji.identifier);
     console.log(messageReaction.emoji.toString());*/
     //just give the player some money for now...
-    if (util.percentChance(10)) {
+    if (util.percentChance(5)) {
         playerData.getOrCreatePlayer(messageReaction.message.author.id).wallet.addMoney(1);
         messageReaction.message.react(currency.emoji).catch(console.error);//TODO: need to find how emojis work
     }

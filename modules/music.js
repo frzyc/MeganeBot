@@ -188,7 +188,10 @@ function handleYTError(message, err) {
 let joinvoice = new command(['joinvoice']);
 joinvoice.process = function (message, args) {
     let vchannel = message.member.voiceChannel
-    if (!vchannel) return message.reply("BAKA... You are not in a voice channel. ");
+    if (!vchannel) return util.replyWithTimedDelete(message, "BAKA... You are not in a voice channel. ");
+    if (queueList[message.guild.id]
+        && queueList[message.guild.id].vchannel
+        && queueList[message.guild.id].vchannel.id === vchannel.id) return util.replyWithTimedDelete(message, "BAKA... I'm already here! ");
     message.reply("Connecting...").then(re => {
         vchannel.join().then(conn => {
             if (!queueList[message.guild.id])
@@ -242,6 +245,7 @@ thefuck.process = function (message, args) {
 }
 cmdModule.addCmd(thefuck);*/
 let pause = new command(['pause']);
+pause.channelCooldown = 3;
 pause.process = function (message, args) {
     if (!queueList[message.guild.id]) return;
     if (queueList[message.guild.id].dispatcher) {
@@ -252,6 +256,7 @@ pause.process = function (message, args) {
 cmdModule.addCmd(pause);
 
 let resume = new command(['resume']);
+resume.channelCooldown = 3;
 resume.process = function (message, args) {
     if (!queueList[message.guild.id]) return;
     if (queueList[message.guild.id].dispatcher) {

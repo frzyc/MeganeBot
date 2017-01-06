@@ -18,8 +18,8 @@ let wrongflag = `❌`;//'x'
 let letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 minesweeperGame = function (xs, ys) {
-    this.xsizemin = 10;
-    this.ysizemin = 10;
+    this.xsizemin = 15;
+    this.ysizemin = 15;
 
     this.xsizemax = xs;
     this.ysizemax = ys;
@@ -43,6 +43,7 @@ minesweeperGame.prototype.newGame = function (xs, ys) {
         this.boardmsg.delete().then().catch(console.error);
     }
     this.boardmsg = null;
+    this.players = {};
     if (xs < this.xsizemin) xs = this.xsizemin;
     if (xs > this.xsizemax) xs = this.xsizemax;
     this.xsize = xs;
@@ -70,7 +71,7 @@ minesweeperGame.prototype.newGame = function (xs, ys) {
     }
     for (var x = 0; x < this.xsize; x++) {
         for (var y = 0; y < this.ysize; y++) {
-            if (util.percentChance(10)) {
+            if (util.percentChance(15)) {
                 this.numbombs++;
                 this.board[x][y] = 'b';
                 for (var xoff = -1; xoff < 2; xoff++) {
@@ -189,6 +190,7 @@ minesweeperGame.prototype.checkWin = function () {
     return false;
 }
 minesweeperGame.prototype.gameOver = function () {
+    if (this.gameover) return;
     this.gameover = true;
     let unmarkedbombs = 0;
     for (var ix = 0; ix < this.xsize; ix++) {
@@ -310,7 +312,7 @@ endminesweepercmd.usage = [
     `** End the current minesweeper game, and collect earned ${currency.nameplural}.`,
 ];
 endminesweepercmd.process = function (message, args) {
-    if (!msgames[message.channel.id]) return util.replyWithTimedDelete(message, "No current minesweeper game.");
+    if (!msgames[message.channel.id] || msgames[message.channel.id].gameover) return util.replyWithTimedDelete(message, "No current minesweeper game.");
     let msgame = msgames.getOrCreateGame(message.channel.id);
     if (message.channel.id !== msgame.tchannel.id) return;
     msgame.gameOver(); 
