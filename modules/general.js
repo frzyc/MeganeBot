@@ -1,11 +1,12 @@
 ﻿const fs = require("fs");
-const command = require('../command.js').command;
-const util = require('../util.js')
-const client = require('../bot.js').client;
-const cmdBase = require('../bot.js').cmdBase
-const config = require('../data/config.json');
+const util = require.main.exports.getRequire('util');
+const command = require.main.exports.getRequire('command').command;
+const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
+const config = require.main.exports.getRequire('config');
+const client = require.main.exports.client;
+const cmdBase = require.main.exports.cmdBase
+const package = require('../package.json');
 
-const cmdModuleobj = require('../command.js').cmdModuleobj;
 let cmdModule = new cmdModuleobj('General');
 cmdModule.description = `Contains general server commands`;
 exports.cmdModule = cmdModule;
@@ -15,7 +16,7 @@ let helpcmd = new command(["help", "h"]);
 helpcmd.usage = [
     "**\nList the modules.",
     "all **\nget all the commands.",
-    "[module]**\nget the list of command from a module.",
+    "[module]**\nget all commands in this module",
     "[cmd]**\nget help on indvidual cmd usage."
 ]
 helpcmd.process = function (message, args) {
@@ -32,11 +33,14 @@ helpcmd.process = function (message, args) {
             message.reply(msg);
         } else if (cmdBase.modulelist[args[0]]) {
             let mod = cmdBase.modulelist[args[0]];
-            msg = `List of all commands in module **${mod.name}**:\n`
-            msg += `**${Object.keys(mod.cmdlist).filter((cmd) => {
+            msg = `List of all commands in module **${mod.name}**:`
+            let sortedcmdkeys = Object.keys(mod.cmdlist).filter((cmd) => {
                 let cmdobj = cmdBase.cmdlist[cmd];
                 return canUseCmd(cmdobj, message);
-            }).sort().join(' ')}**`;
+            }).sort().map(key => mod.cmdlist[key]).forEach((cmd) => {
+                msg += `\n**${cmd.name.join('**, or **')}**`;
+                });
+            
             message.reply(msg);
         } else if (cmdBase.cmdlist[args[0]])
             message.reply(cmdBase.cmdlist[args[0]].getUseage());
@@ -63,6 +67,7 @@ helpcmd.process = function (message, args) {
                 msg += `This module does not have a description.`
             msg += `\n`;
         }
+        msg += `\nUse ${this.getUseage(2)}`;
 
         message.reply(msg);
     }
@@ -70,7 +75,7 @@ helpcmd.process = function (message, args) {
 cmdModule.addCmd(helpcmd);
 
 
-var package = require('../package.json');
+
 
 let about = new command(['about']);
 about.usage = ["**\nGet some information about me, MeganeBot :D"];
@@ -88,11 +93,12 @@ cmdModule.addCmd(about);
 let prune = new command(['prune']);
 prune.usage = [
     `[number of messages, max 100]**\nDelete your own messages`,
-    `[number of messages, max 100] [optional: @mention1] [optional: @mention2] ...**\n`
+    `[number of messages, max 100] [@mentions]**\n`
     + `Delete messages from @mentions\n`
     + `NOTE: delete need "manage messages" permission to delete other's messages. `
 ];
 prune.serverOnly = true;
+prune.reqBotPerms = ["MANAGE_MESSAGES"];
 prune.process = function (message, args) {
     let messagecount = 0;
     console.log(args.length);
@@ -134,50 +140,14 @@ prune.process = function (message, args) {
 cmdModule.addCmd(prune);
 
 let nick = new command(['nick']);
-nick.usage = ["[desiredNickname]** NOTE: botowner only."];
-nick.reqperms = ["MANAGE_NICKNAMES"];
+nick.usage = ["[desiredNickname]** Change my server nickname, need the MANAGE_NICKNAMES permission."];
+nick.reqUserPerms = ["MANAGE_NICKNAMES"];
+nick.serverOnly = true;
 nick.process = function (message, args) {
     let newname = args.join(' ');
     message.channel.members.get(client.user.id).setNickname(newname);
 }
 cmdModule.addCmd(nick);
-
-let glassescmd = new command(['glasses']);
-glassescmd.usage = ['**\nChange my display picture.\nNOTE:Botowner only.'];
-glassescmd.ownerOnly = true;
-glassescmd.process = function (message, args) {
-    if (message.author.id !== config.ownerid) return;
-    message.reply("Changing my glasses...").then(reply => {
-        fs.readdir('./glassesicon', (err, files) => {
-            files.forEach(file => {
-                console.log(file);
-            });;
-            let randicon = files[Math.floor(Math.random() * files.length)];
-            console.log(`randicon:${randicon}`);
-            client.user.setAvatar(`./glassesicon/${randicon}`).then(user => reply.edit(`Changed my glasses! :eyeglasses: `)).catch(console.error);
-        });
-    }).catch(console.error)
-}
-cmdModule.addCmd(glassescmd);
-
-
-let evalcmd = new command(['eval']);
-evalcmd.usage = ["[string]** \nNOTE: bot owner only"];
-evalcmd.ownerOnly = true;
-evalcmd.process = function (message, args) {
-    try {
-        let code = args.join(' ');//args.slice(1).join(' ');
-        let evaled = eval(code);
-
-        if (typeof evaled !== "string")
-            evaled = require("util").inspect(evaled);
-
-        message.channel.sendCode("xl", util.clean(evaled));
-    } catch (err) {
-        message.channel.sendMessage("ERROR :" + util.clean(err) + "\n");
-    }
-}
-cmdModule.addCmd(evalcmd);
 
 let emojify = new command(['emojify']);
 emojify.usage = ["[string]** convert string to emojis"];
@@ -190,3 +160,45 @@ emojify.process = function (message, args) {
     }).join(' '));
 }
 cmdModule.addCmd(emojify);
+
+let myidcmd = new command(['myid']);
+myidcmd.usage = ["** get the sender's id."];
+myidcmd.process = function (message, args) {
+    util.sendMessageWithTimedDelete(message,`Your ID: \`\`\`${message.author.id}\`\`\``, 5 * 60 * 1000);
+}
+cmdModule.addCmd(myidcmd);
+
+let mypermscmd = new command(['myperms']);
+mypermscmd.usage = ["** get the sender's permissions in this channel."];
+mypermscmd.serverOnly = true;
+mypermscmd.process = function (message, args) {
+    let perms = message.channel.permissionsFor(message.author).serialize();
+    util.replyWithTimedDelete(message, `Your Permissions:\`\`\`JSON\n${JSON.stringify(perms, null, 2)}\`\`\``, 15 * 60 * 1000);
+}
+cmdModule.addCmd(mypermscmd);
+
+let saycmd = new command(['say']);
+saycmd.usage = ["[some message to repeat]** repeat what the sender says."];
+saycmd.process = function (message, args) {
+    let start = message.content.indexOf(' ')+1;
+    util.sendMessageWithTimedDelete(message, `${message.content.slice(start)}`, 5 * 60 * 1000);
+}
+cmdModule.addCmd(saycmd);
+
+let sayttscmd = new command(['saytts']);
+sayttscmd.usage = ["[some message to repeat]** repeat what the sender says, with tts."];
+sayttscmd.process = function (message, args) {
+    let start = message.content.indexOf(' ') + 1;
+    util.sendMessageWithTimedDelete(message, `${message.content.slice(start)}`, 5 * 60 * 1000, {tts:true});
+}
+cmdModule.addCmd(sayttscmd);
+
+let topiccmd = new command(['topic']);
+topiccmd.usage = ["[topic]** change channel topic."];
+topiccmd.serverOnly = true;
+topiccmd.reqUserPerms = ['MANAGE_CHANNELS'];
+topiccmd.reqBotPerms = ['MANAGE_CHANNELS'];
+topiccmd.process = function (message, args) {
+    message.channel.setTopic(args.join(' '));
+}
+cmdModule.addCmd(topiccmd);

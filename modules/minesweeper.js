@@ -1,12 +1,10 @@
-﻿//const fs = require("fs");
-const command = require('../command.js').command;
-const util = require('../util.js');
-//const client = require('../bot.js').client;
+﻿const util = require.main.exports.getRequire('util');
+const command = require.main.exports.getRequire('command').command;
+const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
 
-const playerData = require('./gambling.js').playerData;
-const currency = require('./gambling.js').currency;
+const playerData = require.main.exports.getRequire('playerdata').playerData;
+const currency = require.main.exports.getRequire('playerdata').currency;
 
-const cmdModuleobj = require('../command.js').cmdModuleobj;
 let cmdModule = new cmdModuleobj('Minesweeper');
 cmdModule.description = `a minesweeper game`;
 exports.cmdModule = cmdModule;
@@ -94,25 +92,21 @@ minesweeperGame.prototype.addToPlayer = function (id, amount) {
 
 minesweeperGame.prototype.mark = function (x, y, message) {
     if (this.gameover) return;
-    if (this.playerboard[x][y] === 'o' && !this.gameover)
+    if (this.playerboard[x][y] === 'o' && !this.gameover) {
         this.playerboard[x][y] = 'f';
-    if (this.board[x][y] === 'b')  this.addToPlayer(message.author.id, 1.0);
-
+        if (this.board[x][y] === 'b') this.addToPlayer(message.author.id, 1.0);
+    }
     this.boardmsg.edit(this.boardToString(this.playerboard));
 }
 minesweeperGame.prototype.dig = function (x, y, message) {
     if (this.gameover) return;
-    console.log(`minesweeperGame.prototype.dig(${x},${y})`);
     if (this.playerboard[x][y] === 'o' || this.playerboard[x][y] === 'f') {
         if (this.board[x][y] === 0) {
-            console.log("DUG ZERO");
             recursezero.bind(this)(x, y);
         } else if (this.board[x][y] === 'b') {
-            console.log("GAME OVER GAME OVER");
             this.gameOver();
         } else {
-            console.log("DUG NUMBA");
-            this.playerboard[x][y] = this.board[x][y];//TODO detect BOMB for gameover
+            this.playerboard[x][y] = this.board[x][y];
         }
         if (this.board[x][y] !== 'b') this.addToPlayer(message.author.id , 0.1);
         
@@ -234,8 +228,9 @@ let minesweepercmd = new command(['minesweeper']);
 minesweepercmd.usage = [
     `[xsize] [ysize]** Create a new minesweeper board with specified size.`,
 ];
-minesweepercmd.channelCooldown = 5 * 60;//5 minutes
+minesweepercmd.channelCooldown = 10;//10 seconds
 minesweepercmd.process = function (message, args) {
+    if (msgames[message.channel.id] && !msgames[message.channel.id].gameover) return util.replyWithTimedDelete(message, "There is still a game going on!");
     let xy = getxy(args)
     if (!xy) return util.replyWithTimedDelete(message, "bad arguments");
     let msgame = msgames.getOrCreateGame(message.channel.id);

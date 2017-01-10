@@ -1,9 +1,8 @@
-﻿const command = require('../command.js').command;
-const util = require('../util.js');
-//const client = require('../bot.js').client;
-const config = require('../data/config.json');
+﻿const util = require.main.exports.getRequire('util');
+const command = require.main.exports.getRequire('command').command;
+const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
+const config = require.main.exports.getRequire('config');
 
-const cmdModuleobj = require('../command.js').cmdModuleobj;
 let cmdModule = new cmdModuleobj('BasicResponse');
 cmdModule.description = `Basic scripted responses to stuff... mostly memes`;
 exports.cmdModule = cmdModule;

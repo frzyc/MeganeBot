@@ -30,13 +30,24 @@ exports.hasChain = function (obj, key) {
 }
 
 //reply with the message with a reply, then delete the message and the reply after timeout.
-exports.replyWithTimedDelete = function (message, msgstr, deletetime) {
+exports.replyWithTimedDelete = function (message, msgstr, deletetime, options) {
     if (!deletetime) deletetime = 10 * 1000;//10 second by default
-    message.reply(msgstr).then(re => {
-        setTimeout(()=> {
-                re.delete().catch(console.error);
-                message.delete().catch(console.error);
-            }, deletetime);
+    message.reply(msgstr,options).then(re => {
+        setTimeout(() => {
+            if (re.deletable) re.delete().catch(console.error);
+            if (message.deletable) message.delete().catch(console.error);
+        }, deletetime);
+    });
+}
+
+//reply with the message with a reply, then delete the message and the reply after timeout.
+exports.sendMessageWithTimedDelete = function (message, msgstr, deletetime, options) {
+    if (!deletetime) deletetime = 10 * 1000;//10 second by default
+    message.channel.sendMessage(msgstr,options).then(re => {
+        setTimeout(() => {
+            if (re.deletable) re.delete().catch(console.error);
+            if (message.deletable) message.delete().catch(console.error);
+        }, deletetime);
     });
 }
 

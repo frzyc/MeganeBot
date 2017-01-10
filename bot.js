@@ -1,13 +1,22 @@
 ﻿const Discord = require('discord.js');
-const config = require('./data/config.json');
-const util = require('./util.js');
 const fs = require("fs");
 
-const command = require('./command.js').command;
-const cmdBaseobj = require('./command.js').cmdBaseobj;
-const playerData = require('./modules/gambling.js').playerData;
-const currency = require('./modules/gambling.js').currency;
-//console.log(currency);
+console.log(`Starting DiscordBot\nNode version: ${process.version}\nDiscord.js version: ${Discord.version}`);
+
+//little helper function to keep track of the files... for now
+exports.getRequire = function (modulename) {
+    if (modulename === 'command') return require('./command.js');
+    if (modulename === 'util') return require('./util.js');
+    if (modulename === 'config') return require('./data/config.json');
+    if (modulename === 'playerdata') return require('./modules/playerData.js');
+    throw 'codefile not found!';
+}
+const config = require.main.exports.getRequire('config');
+const util = require.main.exports.getRequire('util');
+const command = require.main.exports.getRequire('command').command;
+const cmdBaseobj = require.main.exports.getRequire('command').cmdBaseobj;
+const playerData = require.main.exports.getRequire('playerdata').playerData;
+const currency = require.main.exports.getRequire('playerdata').currency;
 
 const client = new Discord.Client({
     fetchAllMembers : true,
@@ -17,7 +26,9 @@ exports.client = client;
 var cmdBase = new cmdBaseobj();
 exports.cmdBase = cmdBase;
 let moduledirlist = [
+    './modules/playerData.js',
     './modules/general.js',
+    './modules/botAdmin.js',
     './modules/basicResponse.js',
     './modules/color.js',
     './modules/music.js',
@@ -60,10 +71,18 @@ client.on('message', message => {
     if (cmdBase.cmdlist[cmd]) {
         let cmdobj = cmdBase.cmdlist[cmd];
         console.log("check serverOnly:" + cmdobj.serverOnly +" type:"+message.channel.type);
-        if (cmdobj.dmOnly && message.channel.type === 'text') return util.replyWithTimedDelete(message, "This command is restricted to direct message only.");
-        if (cmdobj.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) return util.replyWithTimedDelete(message, "This command is restricted to server only.");
-        if (cmdobj.ownerOnly && message.author.id !== config.ownerid) return;//check for ownerOnly commands
-        if (cmdobj.reqperms && !message.member.permissions.hasPermissions(cmdobj.reqperms)) return;//check if has permission
+        if (cmdobj.dmOnly && message.channel.type === 'text')
+            return util.replyWithTimedDelete(message, "This command is restricted to direct message only.");
+        if (cmdobj.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group'))
+            return util.replyWithTimedDelete(message, "This command is restricted to server only.");
+        if (cmdobj.ownerOnly && message.author.id !== config.ownerid)
+            return util.replyWithTimedDelete(message, "This command is restricted to owner only.");
+        if (cmdobj.reqBotPerms &&
+            message.channel.type === 'text' &&
+            !message.channel.permissionsFor(client.user).hasPermissions(cmdobj.reqBotPerms))
+            return util.replyWithTimedDelete(message, `I don't have enough permissions to use this command. need:\n${cmdobj.reqBotPerms.join(', and ')}`,5*60*1000);
+        if (cmdobj.reqUserPerms && !message.member.permissions.hasPermissions(cmdobj.reqUserPerms)) 
+            return util.replyWithTimedDelete(message, `You have enough permissions to use this command. need:\n${cmdobj.reqUserPerms.join(', and ')}`, 60 * 1000);
         console.log(`${cmd} args: ${args}`);
         if (!cmdobj.inCooldown(message)) {
             //if this has a cost, and the user doesnt have any moneys
@@ -142,3 +161,4 @@ process.on('SIGINT', exitHandler.bind(null, { exit: true }));
 
 //catches uncaught exceptions
 process.on('uncaughtException', exitHandler.bind(null, { exit: true }));*/
+

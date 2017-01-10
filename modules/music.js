@@ -1,12 +1,13 @@
 ﻿const request = require('superagent');
 const ytdl = require('ytdl-core');
-const command = require('../command.js').command;
-const util = require('../util.js')
-const client = require('../bot.js').client;
-const config = require('../data/config.json');
 
-//music
-const cmdModuleobj = require('../command.js').cmdModuleobj;
+const util = require.main.exports.getRequire('util');
+const command = require.main.exports.getRequire('command').command;
+const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
+
+const client = require.main.exports.client;
+const config = require.main.exports.getRequire('config');
+
 let cmdModule = new cmdModuleobj('Music');
 cmdModule.description = `Music commands`
 cmdModule.serverOnly = true;
@@ -24,9 +25,6 @@ var playQueue = function () {
     this.connection = null;
     this.dispatcher = null;
     this.volume = 0.25;//default volume
-    this.queueMsg = null;
-    this.queueQueue = [];
-    this.queueTimeOut = null;
 };
 
 playQueue.prototype.addtoQueue = function (videoObj) {
@@ -35,34 +33,6 @@ playQueue.prototype.addtoQueue = function (videoObj) {
     this.list.push(videoObj);
     if (this.tchannel) {
         util.queueMessages(this.tchannel, `Queued ${videoObj.prettyPrint()}`);
-        /*
-        this.queueQueue.push(`Queued ${videoObj.prettyPrint()}`);
-        if (!this.queueTimeOut)
-            this.queueTimeOut = setInterval(() => {
-                if (this.queueQueue.length === 0) {//queue is empty
-                    if (this.queueTimeOut) {
-                        clearTimeout(this.queueTimeOut);
-                        this.queueTimeOut = null;
-                    }
-                    return;
-                }
-                if (!this.tchannel) return;
-                let msgcontent = ``;
-                while (true) {
-                    if (!this.queueQueue[0]) break;
-                    let guesslength = msgcontent.length + '\n'.length + this.queueQueue[0].length;
-                    if (guesslength < 2000) {
-                        if (msgcontent.length > 0) msgcontent += '\n';
-                        msgcontent += this.queueQueue.shift();
-                    }else
-                        break;
-                }
-                if (msgcontent.length === 0) return;
-                //console.log(`NEW MESSAGE: msgcontent.length(${msgcontent.length})`);
-                this.tchannel.sendMessage(msgcontent).then(msg => {
-                    this.queueMsg = msg;
-                }).catch(console.error);
-            }, 3000);*/
     }
     console.log("playQueue.list.length:" + this.list.length);
     if (!this.current) this.playNextInQueue();
@@ -186,6 +156,7 @@ function handleYTError(message, err) {
 
 
 let joinvoice = new command(['joinvoice']);
+joinvoice.reqBotPerms = ["CONNECT", "SPEAK"];
 joinvoice.process = function (message, args) {
     let vchannel = message.member.voiceChannel
     if (!vchannel) return util.replyWithTimedDelete(message, "BAKA... You are not in a voice channel. ");

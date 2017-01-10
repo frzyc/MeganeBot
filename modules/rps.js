@@ -1,10 +1,9 @@
-﻿const command = require('../command.js').command;
-const util = require('../util.js');
+﻿const util = require.main.exports.getRequire('util');
+const command = require.main.exports.getRequire('command').command;
+const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
+const playerData = require.main.exports.getRequire('playerdata').playerData;
+const currency = require.main.exports.getRequire('playerdata').currency;
 
-const playerData = require('./gambling.js').playerData;
-const currency = require('./gambling.js').currency;
-
-const cmdModuleobj = require('../command.js').cmdModuleobj;
 let cmdModule = new cmdModuleobj('RockPaperScissors');
 cmdModule.description = `RockPaperScissors, with some more advanced modes.`
 cmdModule.serverOnly = true;

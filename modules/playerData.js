@@ -1,0 +1,214 @@
+﻿const fs = require("fs");
+
+const util = require.main.exports.getRequire('util');
+const command = require.main.exports.getRequire('command').command;
+const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
+
+let cmdModule = new cmdModuleobj('PlayerData');
+cmdModule.description = `Stuff that have to deal with the data stored for each player.`;
+
+var datafile = '../data/playerData.json';
+
+var currencyobj = function () {
+    this.name = "MeganeBuck";
+    this.nameplural = "MeganeBucks";
+    this.symbol = "M$";
+    this.emoji = "💵";
+}
+/*var currencyobj = function () {
+    this.name = "Pizza";
+    this.nameplural = "Pizzas";
+    this.symbol = "P$";
+    this.emoji = "🍕";
+}*/
+var currency = new currencyobj();
+
+var wallet = function (val) {
+    if (val && isFinite(val)) this.amount = val;
+    else this.amount = 0;
+    this.checkvalid();
+}
+wallet.prototype.addMoney = function (val) {
+    //console.log(`addMoney(${val}) before: ${this.amount}`);
+    this.checkvalid();
+    this.amount += val;
+    //console.log(`addMoney(${val}) after: ${this.amount}`);
+}
+wallet.prototype.subMoney = function (val) {
+    this.checkvalid();
+    if (this.amount >= val) {
+        this.amount -= val;
+    } else this.amount = 0;
+}
+wallet.prototype.getAmount = function () {
+    this.checkvalid();
+    return this.amount;
+}
+wallet.prototype.checkvalid = function () {
+    //console.log(`checkvalid() before: ${this.amount}`);
+    if (!isFinite(this.amount)) 
+        this.amount = 0;
+    //console.log(`checkvalid() beforetrunc: ${this.amount}`);
+    this.amount = Math.trunc(this.amount);
+    //console.log(`checkvalid() after: ${this.amount}`);
+}
+
+var player = function (id) {
+    this.id = id;
+    this.wallet = new wallet();
+}
+
+var playerDataObj = function () {
+    this.playerList = {};
+    
+    setInterval(()=> {
+        this.saveData();
+    }, 300*1000);
+}
+
+playerDataObj.prototype.addPlayer = function (id) {
+    console.log(`playerDataObj.prototype.addPlayer(${id})`);
+    this.playerList[id] = new player(id);
+    return this.playerList[id];
+}
+playerDataObj.prototype.removePlayer = function (id) {
+    console.log(`playerDataObj.prototype.removePlayer(${id})`);
+    if (this.playerList[id]) delete this.playerList[id]; 
+}
+playerDataObj.prototype.readData = function () {
+    console.log(`playerDataObj.prototype.readData()`);
+    fs.readFile(__dirname + '/' + datafile, 'utf8', (err, data)=> {
+        if (err) {
+            this.playerList = {};
+            return console.log(err);
+        }
+        try {
+            this.playerList = JSON.parse(data);
+        } catch (e) {
+            console.log(e);
+            this.playerList = {};
+        }
+        if (!this.playerList) this.playerList = {};
+        for (id in this.playerList) {
+            //console.log(`reconstructing wallet for ${id}`);
+            let player = this.playerList[id];
+            if (player.wallet && player.wallet.amount) 
+                player.wallet = new wallet(player.wallet.amount);
+            else 
+                player.wallet = new wallet();
+            
+            
+        }
+    });
+}
+playerDataObj.prototype.saveData = function () {
+    console.log(`playerDataObj.prototype.saveData`);
+    fs.writeFile(__dirname + '/' + datafile, JSON.stringify(this.playerList), 'utf8', (err) => {
+        if (err) return console.log(err);
+        console.log(`saved player data to file...`);
+    });
+}
+
+playerDataObj.prototype.hasPlayer = function (id) {
+    console.log(`playerDataObj.prototype.hasPlayer(${id})`);
+    if (this.playerList[id]) return true;
+    else return false;
+}
+playerDataObj.prototype.getOrCreatePlayer = function (id) {
+    console.log(`playerDataObj.prototype.getOrCreatePlayer(${id})`);
+    if (this.hasPlayer(id)) return this.playerList[id];
+    else return this.addPlayer(id);
+}
+
+var playerData = new playerDataObj();
+playerData.readData();
+
+module.exports = {
+    cmdModule : cmdModule,
+    playerData: playerData,
+    playerDataObj: playerDataObj,
+    player: player,
+    currency: currency,
+    currencyobj: currencyobj,
+    wallet: wallet,
+}
+let walletcmd = new command(['wallet']);
+walletcmd.usage = [
+    `** Get how much ${currency.nameplural} in your wallet.`,
+];
+walletcmd.process = function (message, args) {
+    let amount = playerData.getOrCreatePlayer(message.author.id).wallet.getAmount();
+    return util.replyWithTimedDelete(message, `You currently have ${currency.emoji} ${currency.symbol}${amount} ${currency.nameplural} ${currency.emoji} in your wallet.`, 30*1000);
+}
+cmdModule.addCmd(walletcmd);
+
+let givecmd = new command(['give']);
+givecmd.usage = [
+    `[amount] [mention someguy]**\nGive some amount of ${currency.nameplural} from your wallet to some guy.`,
+    `[amount] [mention someguy] [mention anotherguy] [mention more guys]**\nGive some amount of ${currency.nameplural} to each person you mention.`,
+    `[amount] [mention somerole] **\nGive everyone with that role a specified amount of ${currency.nameplural} each.`,
+    `[amount] [mention everyone] **\nGive everyone in the server a specified amount of ${currency.nameplural} each.`,
+];
+givecmd.process = function (message, args) {
+    if (!args || !args[0]) return util.replyWithTimedDelete(message, `Invalid amount`);
+    let amount = parseInt(args[0]);
+    if (!amount ||amount <= 0) return util.replyWithTimedDelete(message, `Invalid amount`);
+
+    console.log(`give amount: ${amount}`);
+    let giverid = message.author.id;
+    let giver = playerData.getOrCreatePlayer(giverid);
+    console.log(giver);
+    if (giver.wallet.getAmount() === 0) return util.replyWithTimedDelete(message, `You have no ${currency.nameplural} to give`);
+    let mentionedusers = util.getMentionedUsers(message);
+    let mentioneduserscount = Object.keys(mentionedusers).length;
+    console.log(`ALL MENTIONS size: ${mentioneduserscount}`);
+    let total = mentioneduserscount * amount;
+    if (giver.wallet.getAmount() < total) return util.replyWithTimedDelete(message, `You don't have enough ${currency.nameplural} to give, need ${currency.symbol}${total}.`);
+
+    //start giving
+    giver.wallet.subMoney(total);
+    for (var id in mentionedusers) {
+        let receiver = playerData.getOrCreatePlayer(id);
+        receiver.wallet.addMoney(amount);
+    }
+    return util.replyWithTimedDelete(message, `You gave ${currency.symbol}${amount} each to these people!`, 60 * 1000);
+}
+cmdModule.addCmd(givecmd);
+
+let awardcmd = new command(['award']);
+awardcmd.usage = [
+    `[amount] [mention someguy or guys or role or everyone]**\nAward the mentions some money.\nNOTE: botowner only.`,
+];
+awardcmd.ownerOnly = true;
+awardcmd.process = function (message, args) {
+    if (!args || !args[0]) return util.replyWithTimedDelete(message, `Invalid amount`);
+    let amount = parseInt(args[0]);
+    if (!amount || amount <= 0) return util.replyWithTimedDelete(message, `Invalid amount`);
+    let mentionedusers = util.getMentionedUsers(message);
+    //start giving
+    for (var id in mentionedusers) {
+        let receiver = playerData.getOrCreatePlayer(id);
+        receiver.wallet.addMoney(amount);
+    }
+    return util.replyWithTimedDelete(message, `You awarded ${currency.symbol}${amount} each to these people!`, 60 * 1000);
+}
+cmdModule.addCmd(awardcmd);
+
+let takecmd = new command(['take']);
+takecmd.usage = [
+    `[amount] [mention someguy or guys or role or everyone]**\Take some money from everyone in the mentions.\nNOTE: botowner only.`,
+];
+takecmd.ownerOnly = true;
+takecmd.process = function (message, args) {
+    if (!args || !args[0]) return util.replyWithTimedDelete(message, `Invalid amount`);
+    let amount = parseInt(args[0]);
+    if (!amount || amount <= 0) return util.replyWithTimedDelete(message, `Invalid amount`);
+    let mentionedusers = util.getMentionedUsers(message);
+    //start taking
+    for (var id in mentionedusers) {
+        let receiver = playerData.getOrCreatePlayer(id);
+        receiver.wallet.subMoney(amount);
+    }
+    return util.replyWithTimedDelete(message, `You took ${currency.symbol}${amount} each from these people!`, 60 * 1000);
+}
+cmdModule.addCmd(takecmd);

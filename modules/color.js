@@ -1,13 +1,14 @@
 ﻿const fs = require("fs");
-const command = require('../command.js').command;
-const currency = require('./gambling.js').currency;
-const playerData = require('./gambling.js').playerData;
+const util = require.main.exports.getRequire('util');
+const command = require.main.exports.getRequire('command').command;
+const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
+
+const playerData = require.main.exports.getRequire('playerdata').playerData;
+const currency = require.main.exports.getRequire('playerdata').currency;
 let colorfile = '../data/color.json';
-const util = require('../util.js');
 var colorList = require(colorfile);
 if (!colorList) colorList = {};
 
-const cmdModuleobj = require('../command.js').cmdModuleobj;
 let cmdModule = new cmdModuleobj('Color');
 cmdModule.description = `Allows the player to change their name color using roles.`;
 cmdModule.serverOnly = true;
@@ -69,7 +70,7 @@ cmdModule.addCmd(colorlistcmd);
 
 let coloraddcmd = new command(['coloradd']);
 coloraddcmd.usage = [`[color role]**\nNOTE: all role permissions will be removed. Color "White" cannot be added.`];
-coloraddcmd.reqperms = ["MANAGE_ROLES_OR_PERMISSIONS"]
+coloraddcmd.reqUserPerms = ["MANAGE_ROLES_OR_PERMISSIONS"]
 coloraddcmd.process = function (message, args) {
     if (!colorList) return;
     if (!colorList[message.guild.id]) colorList[message.guild.id] = [];

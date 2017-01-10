@@ -1,5 +1,5 @@
-﻿const util = require('./util.js');
-const config = require('./data/config.json');
+﻿const util = require.main.exports.getRequire('util');
+const config = require.main.exports.getRequire('config');
 
 var cmdBaseobj = function () {
     this.cmdlist = {};
@@ -100,6 +100,7 @@ cmdModuleobj.prototype.addCmd = function (cmdobj) {
     this.cmdlist[cmdname] = cmdobj;
     if (this.serverOnly) cmdobj.serverOnly = true;
     if (this.dmOnly) cmdobj.dmOnly = true;
+    if (this.ownerOnly) cmdobj.ownerOnly = true;
     return addcomplete;
 }
 cmdModuleobj.prototype.getDesc = function () {
@@ -110,9 +111,11 @@ cmdModuleobj.prototype.getDesc = function () {
 var command = function (cmdnames) {
     this.name = cmdnames;
 }
-command.prototype.getUseage = function () {
+command.prototype.getUseage = function (ind) {
     if (!this.usage) return `This command does not have a usage description.`
-    else {
+    else if (isFinite(ind) && ind < this.usage.length) {
+        return `**${config.prefix}${this.name[0]} ${this.usage[ind]}`;
+    } else{
         //console.log(`number of usages: ${this.usage.length}`);
         let usagetxt = `Usage of [${this.name.join(', ')}]: `;
 
@@ -159,7 +162,6 @@ command.prototype.inCooldown = function (message) {
         }
         return false;
     }
-
 }
 
 module.exports = {
