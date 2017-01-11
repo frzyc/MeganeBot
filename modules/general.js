@@ -33,6 +33,12 @@ helpcmd.process = function (message, args) {
             message.reply(msg);
         } else if (cmdBase.modulelist[args[0]]) {
             let mod = cmdBase.modulelist[args[0]];
+            if (mod.dmOnly && message.channel.type === 'text')
+                return util.replyWithTimedDelete(message, "This module is restricted to direct message only.");
+            if (mod.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) 
+                return util.replyWithTimedDelete(message, "This module is restricted to server only.");
+            if (mod.ownerOnly && message.author.id !== config.ownerid) 
+                return util.replyWithTimedDelete(message, "This module is restricted to botowner only.");
             msg = `List of all commands in module **${mod.name}**:`
             let sortedcmdkeys = Object.keys(mod.cmdlist).filter((cmd) => {
                 let cmdobj = cmdBase.cmdlist[cmd];
@@ -42,7 +48,7 @@ helpcmd.process = function (message, args) {
                 });
             
             message.reply(msg);
-        } else if (cmdBase.cmdlist[args[0]])
+        } else if (cmdBase.cmdlist[args[0]] && canUseCmd(cmdBase.cmdlist[args[0]],message))
             message.reply(cmdBase.cmdlist[args[0]].getUseage());
         else
             message.reply(`command ${args[0]} does not exist.`);

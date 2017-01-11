@@ -164,8 +164,8 @@ slotscmd.process = function (message, args) {
         rolls.push(util.getRandomInt(0, slotarr.length));
         results.push(6);//start with 777
     }
-    let msgini1 = `<@${message.author.id}>, 🎰 Rolling 🎰\n`;
-    let msgini2 = `<@${message.author.id}>, 🎰 Rolled 🎰\n`;
+    let msgini1 = `<@${message.author.id}>, You paid ${this.cost} ${currency.nameplural}\n🎰 Rolling 🎰\n`;
+    let msgini2 = `<@${message.author.id}>, You paid ${this.cost} ${currency.nameplural}\n🎰 Rolled 🎰\n`;
 
     message.channel.send(msgini1 + slotstring()).then((msg) => {
         let timer = setInterval(() => {
