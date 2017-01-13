@@ -138,7 +138,11 @@ walletcmd.usage = [
 ];
 walletcmd.process = function (message, args) {
     let amount = playerData.getOrCreatePlayer(message.author.id).wallet.getAmount();
-    return util.replyWithTimedDelete(message, `You currently have ${currency.emoji} ${currency.symbol}${amount} ${currency.nameplural} ${currency.emoji} in your wallet.`, 30*1000);
+    return Promise.resolve({
+        messageContent: `You currently have ${currency.emoji} ${currency.symbol}${amount} ${currency.nameplural} ${currency.emoji} in your wallet.`, 
+        deleteTime: 30 * 1000,
+        reply: true
+    })
 }
 cmdModule.addCmd(walletcmd);
 
@@ -150,28 +154,35 @@ givecmd.usage = [
     `[amount] [mention everyone] **\nGive everyone in the server a specified amount of ${currency.nameplural} each.`,
 ];
 givecmd.process = function (message, args) {
-    if (!args || !args[0]) return util.replyWithTimedDelete(message, `Invalid amount`);
-    let amount = parseInt(args[0]);
-    if (!amount ||amount <= 0) return util.replyWithTimedDelete(message, `Invalid amount`);
+    return new Promise((resolve, reject) => {
+        if (!args || !args[0]) return reject(util.redel(`Invalid amount`));
+        let amount = parseInt(args.shift());
+        if (!amount || amount <= 0) return reject(util.redel(`Invalid amount`));
 
-    console.log(`give amount: ${amount}`);
-    let giverid = message.author.id;
-    let giver = playerData.getOrCreatePlayer(giverid);
-    console.log(giver);
-    if (giver.wallet.getAmount() === 0) return util.replyWithTimedDelete(message, `You have no ${currency.nameplural} to give`);
-    let mentionedusers = util.getMentionedUsers(message);
-    let mentioneduserscount = Object.keys(mentionedusers).length;
-    console.log(`ALL MENTIONS size: ${mentioneduserscount}`);
-    let total = mentioneduserscount * amount;
-    if (giver.wallet.getAmount() < total) return util.replyWithTimedDelete(message, `You don't have enough ${currency.nameplural} to give, need ${currency.symbol}${total}.`);
+        console.log(`give amount: ${amount}`);
+        let giverid = message.author.id;
+        let giver = playerData.getOrCreatePlayer(giverid);
+        console.log(giver);
+        if (giver.wallet.getAmount() === 0) return reject(util.redel(`You have no ${currency.nameplural} to give`));
+        let mentionedusers = util.getMentionedUsers(message);
+        let mentioneduserscount = Object.keys(mentionedusers).length;
+        if (mentioneduserscount === 0) return reject(util.redel(`You didn't mention anyone!`));
+        console.log(`ALL MENTIONS size: ${mentioneduserscount}`);
+        let total = mentioneduserscount * amount;
+        if (giver.wallet.getAmount() < total) return reject(util.redel(`You don't have enough ${currency.nameplural} to give, need ${currency.symbol}${total}.`));
 
-    //start giving
-    giver.wallet.subMoney(total);
-    for (var id in mentionedusers) {
-        let receiver = playerData.getOrCreatePlayer(id);
-        receiver.wallet.addMoney(amount);
-    }
-    return util.replyWithTimedDelete(message, `You gave ${currency.symbol}${amount} each to these people!`, 60 * 1000);
+        //start giving
+        giver.wallet.subMoney(total);
+        for (var id in mentionedusers) {
+            let receiver = playerData.getOrCreatePlayer(id);
+            receiver.wallet.addMoney(amount);
+        }
+        return resolve({
+            messageContent: `You gave ${currency.symbol}${amount} each to ${args.join(', and ')}!`,
+            deleteTime: 60 * 1000,
+            reply: true
+        });
+    });
 }
 cmdModule.addCmd(givecmd);
 
@@ -181,16 +192,24 @@ awardcmd.usage = [
 ];
 awardcmd.ownerOnly = true;
 awardcmd.process = function (message, args) {
-    if (!args || !args[0]) return util.replyWithTimedDelete(message, `Invalid amount`);
-    let amount = parseInt(args[0]);
-    if (!amount || amount <= 0) return util.replyWithTimedDelete(message, `Invalid amount`);
-    let mentionedusers = util.getMentionedUsers(message);
-    //start giving
-    for (var id in mentionedusers) {
-        let receiver = playerData.getOrCreatePlayer(id);
-        receiver.wallet.addMoney(amount);
-    }
-    return util.replyWithTimedDelete(message, `You awarded ${currency.symbol}${amount} each to these people!`, 60 * 1000);
+    return new Promise((resolve, reject) => {
+        if (!args || !args[0]) return reject(util.redel(`Invalid amount`));
+        let amount = parseInt(args.shift());
+        if (!amount || amount <= 0) return reject(util.redel(`Invalid amount`));
+        let mentionedusers = util.getMentionedUsers(message);
+        if (Object.keys(mentionedusers).length === 0) return reject(util.redel(`You didn't mention anyone!`));
+        //start giving
+        for (var id in mentionedusers) {
+            let receiver = playerData.getOrCreatePlayer(id);
+            receiver.wallet.addMoney(amount);
+        }
+        return resolve({
+            messageContent: `You awarded ${currency.symbol}${amount} each to ${args.join(', and ')}!`,
+            deleteTime: 60 * 1000,
+            reply: true
+        });
+    });
+    
 }
 cmdModule.addCmd(awardcmd);
 
@@ -200,15 +219,22 @@ takecmd.usage = [
 ];
 takecmd.ownerOnly = true;
 takecmd.process = function (message, args) {
-    if (!args || !args[0]) return util.replyWithTimedDelete(message, `Invalid amount`);
-    let amount = parseInt(args[0]);
-    if (!amount || amount <= 0) return util.replyWithTimedDelete(message, `Invalid amount`);
-    let mentionedusers = util.getMentionedUsers(message);
-    //start taking
-    for (var id in mentionedusers) {
-        let receiver = playerData.getOrCreatePlayer(id);
-        receiver.wallet.subMoney(amount);
-    }
-    return util.replyWithTimedDelete(message, `You took ${currency.symbol}${amount} each from these people!`, 60 * 1000);
+    return new Promise((resolve, reject) => {
+        if (!args || !args[0]) return reject(util.redel(`Invalid amount`));
+        let amount = parseInt(args.shift());
+        if (!amount || amount <= 0) return reject(util.redel(`Invalid amount`));
+        let mentionedusers = util.getMentionedUsers(message);
+        if (Object.keys(mentionedusers).length === 0) return reject(util.redel(`You didn't mention anyone!`));
+        //start taking
+        for (var id in mentionedusers) {
+            let receiver = playerData.getOrCreatePlayer(id);
+            receiver.wallet.subMoney(amount);
+        }
+        return resolve({
+            messageContent: `You took ${currency.symbol}${amount} each from ${args.join(', and ')}!`,
+            deleteTime: 60 * 1000,
+            reply: true
+        });
+    });
 }
 cmdModule.addCmd(takecmd);

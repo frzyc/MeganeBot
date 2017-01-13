@@ -93,7 +93,7 @@ cmdModuleobj.prototype.addCmd = function (cmdobj) {
         this.cmdlist[n] = cmdobj;
     }*/
     if (this.cmdlist[cmdname]) {
-        console.log(`module.addCmd:ERROR: Command ${n} already exists in this module.`);
+        console.log(`module.addCmd:ERROR: Command ${cmdname} already exists in this module.`);
         addcomplete = false;
         return;
     }
@@ -125,43 +125,50 @@ command.prototype.getUseage = function (ind) {
     }
 }
 command.prototype.setCooldown = function (message) {
-    //NOTE: apply binds the 'this' in the function to the scope of this prototype.setcooldown function... whoes 'this' is the command obj. 
-    //so basically binds 'this' in the setcooldown function to the command obj
-    setCD.apply(this, ['userCooldown', message.author.id]);
-    if (message.guild && message.guild.available)
-        setCD.apply(this, ['serverCooldown', message.guild.id]);
-    setCD.apply(this, ['channelCooldown', message.channel.id]);
-    function setCD(coolDownType, property) {
+    let setCD = (coolDownType, property) => {
         if (this[coolDownType]) {
             let now = new Date();
             let cdlist = coolDownType + 'List';
-            if (!this[cdlist]) this[cdlist] = [];
+            if (!this[cdlist]) this[cdlist] = {};
             this[cdlist][property] = now.setSeconds(now.getSeconds() + this[coolDownType]);
             console.log(`setcooldown: ${this.name[0]}[${cdlist}][${property}] = ${this[cdlist][property]}`);
         }
     }
+    setCD('userCooldown', message.author.id);
+    if (message.guild && message.guild.available)
+        setCD('serverCooldown', message.guild.id);
+    setCD('channelCooldown', message.channel.id);
 }
 command.prototype.inCooldown = function (message) {
-    if (inCD.apply(this, ['userCooldown', message.author.id, `This command is time-restricted per user.`])) return true;
-    if(message.guild && message.guild.available)
-        if (inCD.apply(this, ['serverCooldown', message.guild.id, `This command is time-restricted per server.`])) return true;
-    if (inCD.apply(this, ['channelCooldown', message.channel.id, `This command is time-restricted per channel.`])) return true;
-    return false;
-
-    function inCD(coolDownType, property, msg) {
-        if (!this[coolDownType]) return false;
+    let inCD = (coolDownType, property, msg) => {
+        if (!this[coolDownType]) return 0;
         let now = new Date();
         let nowtime = now.getTime();
         let cd = util.getChain(this, `${coolDownType}List.${property}`); //this.coolDownTypeList[property]
-        if (cd) console.log("prop exists");
-        if (cd && cd > nowtime) {//if current time has not surpassed cd time, means still in cooldown.
-            util.replyWithTimedDelete(message, `${msg} Cooldown: ${(cd - nowtime) / 1000}seconds.`, 10 * 1000);//TODO get a time format function for this
-            return true;
-        } else if (cd && cd <= nowtime) {
+        if (cd && cd > nowtime) //if current time has not surpassed cd time, means still in cooldown.
+            return cd - nowtime;
+         else if (cd && cd <= nowtime) 
             delete this[coolDownType + 'List'][property];//delete this
-        }
-        return false;
+        return 0;
     }
+    let ret = {
+        userCooldown: inCD('userCooldown', message.author.id),//`This command is time-restricted per user.`
+        serverCooldown: message.guild && message.guild.available ? inCD('serverCooldown', message.guild.id) : 0, //`This command is time-restricted per server.`
+        channelCooldown: inCD('channelCooldown', message.channel.id)//`This command is time-restricted per channel.`
+    }
+    
+    return (!ret.userCooldown && !ret.serverCooldown && !ret.channelCooldown) ? null : ret;
+}
+command.prototype.clearCooldown = function (message) {
+    let clrCD = (coolDownType, property, msg) => {
+        if (!this[coolDownType]) return;
+        if (util.hasChain(this, `${coolDownType}List.${property}`)) //this.coolDownTypeList[property]
+            delete this[coolDownType + 'List'][property];//delete this
+    }
+    clrCD('userCooldown', message.author.id);
+    if (message.guild && message.guild.available)
+        clrCD('serverCooldown', message.guild.id);
+    clrCD('channelCooldown', message.channel.id);
 }
 
 module.exports = {

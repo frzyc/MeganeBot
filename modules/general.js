@@ -20,6 +20,7 @@ helpcmd.usage = [
     "[cmd]**\nget help on indvidual cmd usage."
 ]
 helpcmd.process = function (message, args) {
+    let msg = '';
     if (args && args[0]) {// if ask for a specific command
         args[0] = args[0].toLowerCase();
         if (args[0].startsWith(config.prefix))
@@ -30,7 +31,6 @@ helpcmd.process = function (message, args) {
                 let cmdobj = cmdBase.cmdlist[cmd];
                 return canUseCmd(cmdobj, message);
             }).sort().join(' ')}**`;
-            message.reply(msg);
         } else if (cmdBase.modulelist[args[0]]) {
             let mod = cmdBase.modulelist[args[0]];
             if (mod.dmOnly && message.channel.type === 'text')
@@ -46,12 +46,10 @@ helpcmd.process = function (message, args) {
             }).sort().map(key => mod.cmdlist[key]).forEach((cmd) => {
                 msg += `\n**${cmd.name.join('**, or **')}**`;
                 });
-            
-            message.reply(msg);
         } else if (cmdBase.cmdlist[args[0]] && canUseCmd(cmdBase.cmdlist[args[0]],message))
-            message.reply(cmdBase.cmdlist[args[0]].getUseage());
+            msg = cmdBase.cmdlist[args[0]].getUseage();
         else
-            message.reply(`command ${args[0]} does not exist.`);
+            msg = `command ${args[0]} does not exist.`;
 
         function canUseCmd(cmdobj, message) {
             if (cmdobj.dmOnly && message.channel.type === 'text') return false;
@@ -61,8 +59,9 @@ helpcmd.process = function (message, args) {
         }
     } else {
         msg = `List of all modules:\n`
-        for (modhash in cmdBase.modulelist) {
-            let mod = cmdBase.modulelist[modhash];
+        console.log(cmdBase.modulelist);
+        for (modname in cmdBase.modulelist) {
+            let mod = cmdBase.modulelist[modname];
             if (mod.dmOnly && message.channel.type === 'text') continue;
             if (mod.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) continue;
             if (mod.ownerOnly && message.author.id !== config.ownerid) continue;
@@ -73,15 +72,14 @@ helpcmd.process = function (message, args) {
                 msg += `This module does not have a description.`
             msg += `\n`;
         }
-        msg += `\nUse ${this.getUseage(2)}`;
-
-        message.reply(msg);
+        msg += `\nUse ${this.getUseage(2)}`; 
     }
+    return Promise.resolve({
+        messageContent: msg,
+        reply: true
+    });
 }
 cmdModule.addCmd(helpcmd);
-
-
-
 
 let about = new command(['about']);
 about.usage = ["**\nGet some information about me, MeganeBot :D"];
@@ -92,7 +90,7 @@ about.process = function (message, args) {
     let minutes = Math.floor((uptime % (60 * 60)) / 60);
     let seconds = uptime % 60;
     msg += `\nUptime: ${hours} Hours ${minutes} Mintues and ${seconds} Seconds`;
-    message.channel.sendMessage(msg);
+    return Promise.resolve({ messageContent: msg });
 }
 cmdModule.addCmd(about);
 
@@ -106,42 +104,51 @@ prune.usage = [
 prune.serverOnly = true;
 prune.reqBotPerms = ["MANAGE_MESSAGES"];
 prune.process = function (message, args) {
-    let messagecount = 0;
-    console.log(args.length);
-    let matchid = [message.author.id];
-    if (args.length >= 1)
-        messagecount = parseInt(args[0]);
-    if (!messagecount) return util.replyWithTimedDelete(message, "invalid arguments");
-    if (args.length > 1) {//means other people have been mentioned?
-        matchid = [];
-        let mentiondict = util.getMentionedUsers(message);
-        for (id in mentiondict) 
-            matchid.push(id);
+    return new Promise((resolve, reject) => {
+        let messagecount = 0;
+        console.log(args.length);
+        let matchid = [message.author.id];
+        if (args.length >= 1)
+            messagecount = parseInt(args[0]);
+        if (!messagecount) return reject(util.redel("invalid arguments"));
+        if (args.length > 1) {//means other people have been mentioned?
+            matchid = [];
+            let mentiondict = util.getMentionedUsers(message);
+            for (id in mentiondict)
+                matchid.push(id);
 
-        if (!message.member.hasPermission("MANAGE_MESSAGES"))
-            return util.replyWithTimedDelete(message,"You don't have the \"manage messages\" permissions to delete other people's messages");
-    }
-    message.channel.fetchMessages({ limit: 100, before: message.id })
-        .then(messages => {
-            console.log(`messagecount:${messagecount}`);
-            let filteredMessageCollection = messages.filter(m => {
-                if (messagecount > 0 && matchid.includes(m.author.id)) {
-                    messagecount--;
-                    return true;
-                }
-                return false
+            if (!message.member.hasPermission("MANAGE_MESSAGES"))
+                return reject(util.redel("You don't have the \"manage messages\" permissions to delete other people's messages"));
+        }
+        message.channel.fetchMessages({ limit: 100, before: message.id })
+            .then(messages => {
+                console.log(`messagecount:${messagecount}`);
+                let filteredMessageCollection = messages.filter(m => {
+                    if (messagecount > 0 && matchid.includes(m.author.id)) {
+                        messagecount--;
+                        return true;
+                    }
+                    return false
+                });
+                let numOfFilteredMsgs = filteredMessageCollection.size;
+                console.log("size of the collection" + numOfFilteredMsgs);
+                if (numOfFilteredMsgs > 1)
+                    message.channel.bulkDelete(filteredMessageCollection).then(() => {
+                        return resolve(util.redel(`${numOfFilteredMsgs} messages deleted. `));
+                    }).catch((err) => {
+                        console.error(err);
+                        return reject(util.redel(`Cannot delete messages.`));
+                    });
+                else if (numOfFilteredMsgs === 1)
+                    filteredMessageCollection.first().delete().then(() => {
+                        return resolve(util.redel(`1 message deleted. `));
+                    }).catch((err) => {
+                        console.error(err);
+                        return reject(util.redel(`Cannot delete message.`));
+                    });
             });
-            let numOfFilteredMsgs = filteredMessageCollection.size;
-            console.log("size of the collection" + numOfFilteredMsgs);
-            if (numOfFilteredMsgs>1)
-                message.channel.bulkDelete(filteredMessageCollection).then(() => {
-                    util.replyWithTimedDelete(message, `${numOfFilteredMsgs} messages deleted. `, 10 * 1000);
-                }).catch(console.error);
-            else if (numOfFilteredMsgs = 1)
-                filteredMessageCollection.first().delete().then(() => {
-                    util.replyWithTimedDelete(message, `${numOfFilteredMsgs} messages deleted. `, 10 * 1000);
-                }).catch(console.error);
-        });
+    });
+    
 }
 cmdModule.addCmd(prune);
 
@@ -150,8 +157,11 @@ nick.usage = ["[desiredNickname]** Change my server nickname, need the MANAGE_NI
 nick.reqUserPerms = ["MANAGE_NICKNAMES"];
 nick.serverOnly = true;
 nick.process = function (message, args) {
-    let newname = args.join(' ');
-    message.channel.members.get(client.user.id).setNickname(newname);
+    return util.justOnePromise(
+        message.channel.members.get(client.user.id).setNickname(args.join(' ')),
+        util.redel(`Changed my name to: ${args.join(' ')}.`),
+        util.redel(`Cannot change nickname.`)
+    );
 }
 cmdModule.addCmd(nick);
 
@@ -159,18 +169,23 @@ let emojify = new command(['emojify']);
 emojify.usage = ["[string]** convert string to emojis"];
 emojify.process = function (message, args) {
     if (!args || args.length === 0) return;
-    message.reply(args.join(` `).toUpperCase().split(``).map(char => {
+    let msg = args.join(` `).toUpperCase().split(``).map(char => {
         if (/\d/.test(char)) return util.getDigitSymbol(char);
         if (/[A-Z]/.test(char)) return util.getLetterSymbol(char);
         return char;
-    }).join(' '));
+    }).join(' ');
+    return Promise.resolve({ messageContent: msg });
 }
 cmdModule.addCmd(emojify);
 
 let myidcmd = new command(['myid']);
 myidcmd.usage = ["** get the sender's id."];
 myidcmd.process = function (message, args) {
-    util.sendMessageWithTimedDelete(message,`Your ID: \`\`\`${message.author.id}\`\`\``, 5 * 60 * 1000);
+    return Promise.resolve({
+        messageContent: `Your ID: \`\`\`${message.author.id}\`\`\``,
+        reply:true,
+        deleteTime: 5 * 60 * 1000,//15min
+    });
 }
 cmdModule.addCmd(myidcmd);
 
@@ -179,15 +194,22 @@ mypermscmd.usage = ["** get the sender's permissions in this channel."];
 mypermscmd.serverOnly = true;
 mypermscmd.process = function (message, args) {
     let perms = message.channel.permissionsFor(message.author).serialize();
-    util.replyWithTimedDelete(message, `Your Permissions:\`\`\`JSON\n${JSON.stringify(perms, null, 2)}\`\`\``, 15 * 60 * 1000);
+    return Promise.resolve({
+        messageContent: `Your Permissions:\`\`\`JSON\n${JSON.stringify(perms, null, 2)}\`\`\``,
+        reply: true,
+        deleteTime: 15 * 60 * 1000,//15min
+    });
 }
 cmdModule.addCmd(mypermscmd);
 
 let saycmd = new command(['say']);
 saycmd.usage = ["[some message to repeat]** repeat what the sender says."];
 saycmd.process = function (message, args) {
-    let start = message.content.indexOf(' ')+1;
-    util.sendMessageWithTimedDelete(message, `${message.content.slice(start)}`, 5 * 60 * 1000);
+    let start = message.content.indexOf(' ') + 1;
+    return Promise.resolve({
+        messageContent: `${message.content.slice(start)}`,
+        deleteTime: 5 * 60 * 1000,
+    });
 }
 cmdModule.addCmd(saycmd);
 
@@ -195,16 +217,36 @@ let sayttscmd = new command(['saytts']);
 sayttscmd.usage = ["[some message to repeat]** repeat what the sender says, with tts."];
 sayttscmd.process = function (message, args) {
     let start = message.content.indexOf(' ') + 1;
-    util.sendMessageWithTimedDelete(message, `${message.content.slice(start)}`, 5 * 60 * 1000, {tts:true});
+    return Promise.resolve({
+        messageContent: `${message.content.slice(start)}`,
+        deleteTime: 5 * 60 * 1000,
+        messageOptions: { tts: true }
+    });
 }
 cmdModule.addCmd(sayttscmd);
 
 let topiccmd = new command(['topic']);
 topiccmd.usage = ["[topic]** change channel topic."];
 topiccmd.serverOnly = true;
+topiccmd.channelCooldown = 5;
 topiccmd.reqUserPerms = ['MANAGE_CHANNELS'];
 topiccmd.reqBotPerms = ['MANAGE_CHANNELS'];
 topiccmd.process = function (message, args) {
-    message.channel.setTopic(args.join(' '));
+    return util.justOnePromise(
+        message.channel.setTopic(args.join(' ')),
+        util.redel(`Changed Topic to: ${args.join(' ')}`),
+        util.redel(`Cannot change channel topic.`)
+    );
 }
 cmdModule.addCmd(topiccmd);
+
+/*
+let testcmd = new command(['test']);
+testcmd.process = function (message, args) {
+    return new Promise((resolve, reject)=>{
+        
+        reject();
+        resolve();
+    })
+}
+cmdModule.addCmd(testcmd);*/

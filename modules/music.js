@@ -157,25 +157,30 @@ function handleYTError(message, err) {
 
 let joinvoice = new command(['joinvoice']);
 joinvoice.reqBotPerms = ["CONNECT", "SPEAK"];
+joinvoice.serverCooldown = 5;//5 seconds
 joinvoice.process = function (message, args) {
-    let vchannel = message.member.voiceChannel
-    if (!vchannel) return util.replyWithTimedDelete(message, "BAKA... You are not in a voice channel. ");
-    if (queueList[message.guild.id]
-        && queueList[message.guild.id].vchannel
-        && queueList[message.guild.id].vchannel.id === vchannel.id) return util.replyWithTimedDelete(message, "BAKA... I'm already here! ");
-    message.reply("Connecting...").then(re => {
-        vchannel.join().then(conn => {
-            if (!queueList[message.guild.id])
-                queueList[message.guild.id] = new playQueue();
-            let pq = queueList[message.guild.id];
-            pq.tchannel = message.channel;
-            pq.vchannel = vchannel;
-            pq.connection = conn;
-            re.edit(`Connected to voice channel **${pq.vchannel.name}**, I will accept all music commands in this text channel: **${pq.tchannel.name}**.`);
-            console.log(`joinvoice: server:${message.guild.name}, vchannel: ${pq.vchannel.name}, tchannel: ${pq.tchannel.name}`);
-        }).catch(console.error);
-    });
-
+    return new Promise((resolve, reject) => {
+        let vchannel = message.member.voiceChannel;
+        if (!vchannel) return Promise.reject(util.redel("BAKA... You are not in a voice channel."));
+        if (queueList[message.guild.id]
+            && queueList[message.guild.id].vchannel
+            && queueList[message.guild.id].vchannel.id === vchannel.id) return Promise.reject(util.redel("BAKA... I'm already here! "));
+        util.createMessage({ messageContent: "Connecting..."},message).then(re => {
+            vchannel.join().then(conn => {
+                if (!queueList[message.guild.id])
+                    queueList[message.guild.id] = new playQueue();
+                let pq = queueList[message.guild.id];
+                pq.tchannel = message.channel;
+                pq.vchannel = vchannel;
+                pq.connection = conn;
+                console.log(`joinvoice: server:${message.guild.name}, vchannel: ${pq.vchannel.name}, tchannel: ${pq.tchannel.name}`);
+                return resolve({
+                    message: re,
+                    messageContent: `Connected to voice channel **${pq.vchannel.name}**, I will accept all music commands in this text channel: **${pq.tchannel.name}**.`
+                });
+            }).catch(console.error);
+        });
+    })
 }
 cmdModule.addCmd(joinvoice);
 
@@ -218,24 +223,22 @@ cmdModule.addCmd(thefuck);*/
 let pause = new command(['pause']);
 pause.channelCooldown = 3;
 pause.process = function (message, args) {
-    if (!queueList[message.guild.id]) return;
-    if (queueList[message.guild.id].dispatcher) {
+    if (queueList[message.guild.id] && queueList[message.guild.id].dispatcher) {
         queueList[message.guild.id].dispatcher.pause();
-        message.channel.sendMessage("Music Paused.");
+        return Promise.resolve({ messageContent: "Music Paused." });
     }
-    this.setCooldown(message);
+    return Promise.reject({ messageContent: "Error with pausing." });
 }
 cmdModule.addCmd(pause);
 
 let resume = new command(['resume']);
 resume.channelCooldown = 3;
 resume.process = function (message, args) {
-    if (!queueList[message.guild.id]) return;
-    if (queueList[message.guild.id].dispatcher) {
+    if (queueList[message.guild.id] && queueList[message.guild.id].dispatcher) {
         queueList[message.guild.id].dispatcher.resume();
-        message.channel.sendMessage("Music Resumed.");
+        return Promise.resolve({ messageContent: "Music Resumed." });
     }
-    this.setCooldown(message);
+    return Promise.reject({ messageContent: "Error with pausing." });
 }
 cmdModule.addCmd(resume);
 let nextcmd = new command(['next']);
@@ -251,7 +254,7 @@ nextcmd.process = function (message, args) {
         let amt = parseInt(args[0]);
         if (amt > 0) {
             let removed = pq.list.splice(0, amt);
-            pq.tchannel.sendMessage(`${removed.length} songs have been removed from the playqueue.`);
+            return Promise.resolve({ messageContent: `${removed.length} songs have been removed from the playqueue.` });
         }
     }
     if (pq.dispatcher) pq.dispatcher.end();
@@ -264,7 +267,7 @@ clearpl.process = function (message, args) {
     let pq = queueList[message.guild.id];
     if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
     pq.list = [];
-    message.channel.sendMessage("Playlist cleared.");
+    return Promise.resolve({ messageContent: "Playlist cleared." });
 }
 cmdModule.addCmd(clearpl);
 
@@ -275,7 +278,7 @@ plpop.process = function (message, args) {
     let pq = queueList[message.guild.id];
     if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
     let pvideo = pq.list.pop();
-    if (pvideo) if (pq.tchannel) pq.tchannel.sendMessage(`Dequeued ${pvideo.prettyPrint()}`);
+    if (pvideo) if (pq.tchannel) return Promise.resolve({ messageContent: `Dequeued ${pvideo.prettyPrint()}` });
 }
 cmdModule.addCmd(plpop);
 
@@ -313,7 +316,7 @@ playlistcmd.process = function (message, args) {
         });
         formattedList += `\n**Remaining play time:** ${util.formatTime(overallTime)} minutes.`;
     }
-    message.channel.sendMessage(formattedList);
+    return Promise.resolve({ messageContent: formattedList });
 }
 cmdModule.addCmd(playlistcmd);
 
@@ -323,8 +326,8 @@ youtube.process = function (message, args) {
     if (!queueList[message.guild.id]) return;
     let pq = queueList[message.guild.id];
     if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
-    if (!pq.vchannel) return message.reply(`I'm not connected to a voice channel! Use ${config.prefix}${joinvoice.name[0]}`);
-    if (!args || !args.length) return message.reply("Invalid youtube query.");
+    if (!pq.vchannel) return Promise.reject({ messageContent: `I'm not connected to a voice channel! Use ${config.prefix}${joinvoice.name[0]}` });
+    if (!args || !args.length) return Promise.reject({ messageContent: "Invalid youtube query." });
     getInfoAndQueue(args[0], message);
 }
 cmdModule.addCmd(youtube);

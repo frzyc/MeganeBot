@@ -52,7 +52,7 @@ client.on('message', message => {
     if (message.author.bot) return; //wont respond to bots
 
     //if(message.author.id !== config.ownerid) return;//locked to me, FRED!
-    if (util.percentChance(3)) {
+    if (playerData && util.percentChance(3)) {
         playerData.getOrCreatePlayer(message.author.id).wallet.addMoney(1);
         message.react(currency.emoji).catch(console.error);
     }
@@ -66,11 +66,11 @@ client.on('message', message => {
     var args = cont.split(' ').filter(a => a.length > 0);//get split and get rid of zero length args
     var cmd = args.shift().slice(config.prefix.length).toLowerCase();//commands are not case-sensitive
     if (startmention)
-        cmd = args.shift().toLowerCase();//commands are not case-sensitive shift again cause the cmd is the 2nd arg
+        cmd = args.shift().toLowerCase();// shift again cause the cmd is the 2nd arg, commands are not case-sensitive
     console.log(`MESSAGE: cmd(${cmd})  args(${args})`);
     if (cmdBase.cmdlist[cmd]) {
         let cmdobj = cmdBase.cmdlist[cmd];
-        console.log("check serverOnly:" + cmdobj.serverOnly +" type:"+message.channel.type);
+
         if (cmdobj.dmOnly && message.channel.type === 'text')
             return util.replyWithTimedDelete(message, "This command is restricted to direct message only.");
         if (cmdobj.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group'))
@@ -84,14 +84,36 @@ client.on('message', message => {
         if (cmdobj.reqUserPerms && !message.member.permissions.hasPermissions(cmdobj.reqUserPerms)) 
             return util.replyWithTimedDelete(message, `You have enough permissions to use this command. need:\n${cmdobj.reqUserPerms.join(', and ')}`, 60 * 1000);
         console.log(`${cmd} args: ${args}`);
-        if (!cmdobj.inCooldown(message)) {
+        let inCD = cmdobj.inCooldown(message);
+        if (inCD) {
+            let msg = '';
+            //this accounts for multiple cooldowns
+            if (inCD.userCooldown)
+                msg += `This command is time-restricted per user. Cooldown: ${inCD.userCooldown / 1000} seconds.\n`
+            if (inCD.serverCooldown)
+                msg += `This command is time-restricted per server. Cooldown: ${inCD.serverCooldown / 1000} seconds.\n`
+            if (inCD.channelCooldown)
+                msg += `This command is time-restricted per channel.. Cooldown: ${inCD.channelCooldown / 1000} seconds.\n`
+            return util.replyWithTimedDelete(message, msg);
+        } else {
             //if this has a cost, and the user doesnt have any moneys
             if (cmdobj.cost && playerData.getOrCreatePlayer(message.author.id).wallet.getAmount() < cmdobj.cost)
                 return util.replyWithTimedDelete(message, `You don't have enough ${currency.nameplural} to use this command, need ${currency.symbol}${cmdobj.cost}.`, 10 * 1000);
-            cmdobj.process(message, args, client);
+            cmdobj.setCooldown(message);
+            //use Promise.resolve just incase a process doesnt return a promise...
+            Promise.resolve(cmdobj.process(message, args, client)).then(response => {
+                console.log("cmd resolved");
+                console.log(response);
+                util.createMessage(response, message).catch(console.error);
+            }).catch(reject => {
+                console.log("cmd rejected");
+                cmdobj.clearCooldown(message);
+                console.log(reject);
+                util.createMessage(reject, message).catch(console.error);;
+            });
         }
     } else {
-        if (startmention && cmdBase.cmdlist['talk']) {
+        if (startmention && cmdBase.cmdlist['talk']) {//cleverbot
             let prefix = cont.split(' ').slice(1).join(' ');
             cmdBase.cmdlist['talk'].process(message, prefix, client);
         }
@@ -112,7 +134,7 @@ client.on('messageReactionAdd', (messageReaction, user) => {
     console.log(messageReaction.emoji.identifier);
     console.log(messageReaction.emoji.toString());*/
     //just give the player some money for now...
-    if (util.percentChance(5)) {
+    if (playerData && util.percentChance(5)) {
         playerData.getOrCreatePlayer(messageReaction.message.author.id).wallet.addMoney(1);
         messageReaction.message.react(currency.emoji).catch(console.error);//TODO: need to find how emojis work
     }
@@ -143,6 +165,18 @@ process.on('uncaughtException', function (err) {
         //process.exit(0);
     }
 });
+process.on('uncaughtException', function (err) {
+    if (err.code == 'ECONNRESET') {//occationally get this error using ytdl.... not sure what to do with it
+        console.log('Got an ECONNRESET!');
+        console.log(err.stack);
+    } else {
+        // Normal error handling
+        console.log(err);
+        console.log(err.stack);
+        //process.exit(0);
+    }
+}); 
+
 /*
 process.stdin.resume();//so the program will not close instantly
 

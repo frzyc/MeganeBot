@@ -184,7 +184,7 @@ minesweeperGame.prototype.checkWin = function () {
     return false;
 }
 minesweeperGame.prototype.gameOver = function () {
-    if (this.gameover) return;
+    if (this.gameover) return '';
     this.gameover = true;
     let unmarkedbombs = 0;
     for (var ix = 0; ix < this.xsize; ix++) {
@@ -201,10 +201,9 @@ minesweeperGame.prototype.gameOver = function () {
         for (var player in this.players)
             this.players[player] += average;
     }
-    this.printWinners();
+    return printWinners();
 }
 minesweeperGame.prototype.printWinners = function () {
-    if (!this.tchannel) return;
     msg = 'Player earnings:\n';
     if (Object.keys(this.players).length === 0) {
         msg = `No one earned anything! better luck next time.`
@@ -215,7 +214,7 @@ minesweeperGame.prototype.printWinners = function () {
             msg += `<@${player}> has received ${currency.symbol}${money}.\n`;
         }
     }
-    this.tchannel.sendMessage(msg);
+    return msg;
 }
 
 msgames = {};
@@ -230,16 +229,18 @@ minesweepercmd.usage = [
 ];
 minesweepercmd.channelCooldown = 10;//10 seconds
 minesweepercmd.process = function (message, args) {
-    if (msgames[message.channel.id] && !msgames[message.channel.id].gameover) return util.replyWithTimedDelete(message, "There is still a game going on!");
+    if (msgames[message.channel.id] && !msgames[message.channel.id].gameover) return Promise.reject(util.redel("There is still a game going on!"));
     let xy = getxy(args)
-    if (!xy) return util.replyWithTimedDelete(message, "bad arguments");
+    if (!xy) return Promise.reject(util.redel("bad arguments"));
     let msgame = msgames.getOrCreateGame(message.channel.id);
     msgame.newGame(xy.x, xy.y);
-    //message.channel.sendMessage(msgame.boardToString(msgame.board));
-    message.channel.sendMessage(msgame.boardToString(msgame.playerboard)).then(msg => {
+    
+    /*message.channel.sendMessage(msgame.boardToString(msgame.playerboard))*/
+    return util.createMessage({ messageContent: msgame.boardToString(msgame.playerboard) },message).then(msg => {
         msgame.boardmsg = msg;
         msgame.tchannel = message.channel;
-    }).catch(console.error);
+    })
+
     function getxy(args) {
         if (!args) return null;
         if (args.length < 2) return null;
@@ -248,7 +249,6 @@ minesweepercmd.process = function (message, args) {
         if (isNaN(chosex) || isNaN(chosey)) return null;
         return { x: chosex, y: chosey };
     }
-    this.setCooldown(message);
 }
 cmdModule.addCmd(minesweepercmd);
 
@@ -257,15 +257,16 @@ minesweeperdig.usage = [
     `[x] [y]** Mine the block at (x,y)`,
 ];
 minesweeperdig.process = function (message, args) {
-    if (!msgames[message.channel.id]) return util.replyWithTimedDelete(message, "No current minesweeper game.");
+    if (!msgames[message.channel.id]) return Promise.reject(util.redel("No current minesweeper game."));
     let msgame = msgames.getOrCreateGame(message.channel.id);
-    if (message.channel.id !== msgame.tchannel.id) return;
+    if (message.channel.id !== msgame.tchannel.id) return Promise.reject(util.redel('Bad channel binding'));
     let xy = getxyfromargs(args, msgame);
-    if (!xy) return util.replyWithTimedDelete(message, "bad arguments");
+    if (!xy) return Promise.reject(util.redel("bad arguments"));
     msgame.dig(xy.x, xy.y, message);
-    setTimeout(() => {
-        message.delete().catch(console.error);
-    }, 5000);
+    return Promise.resolve({
+        message: message,
+        deleteTime: 5 * 1000
+    });
 }
 cmdModule.addCmd(minesweeperdig);
 
@@ -275,15 +276,16 @@ minesweepermark.usage = [
     `[x][y]** Mark the block at (x,y) as a possible mine`,
 ];
 minesweepermark.process = function (message, args) {
-    if (!msgames[message.channel.id]) return util.replyWithTimedDelete(message, "No current minesweeper game.");
+    if (!msgames[message.channel.id]) return Promise.reject(util.redel("No current minesweeper game."));
     let msgame = msgames.getOrCreateGame(message.channel.id);
-    if (message.channel.id !== msgame.tchannel.id) return;
+    if (message.channel.id !== msgame.tchannel.id) return Promise.reject(util.redel('Bad channel binding'));
     let xy = getxyfromargs(args, msgame);
-    if (!xy) return util.replyWithTimedDelete(message, "bad arguments");
+    if (!xy) return Promise.reject(util.redel("bad arguments"));
     msgame.mark(xy.x, xy.y, message);
-    setTimeout(() => {
-        message.delete().catch(console.error);
-    }, 5000);
+    return Promise.resolve({
+        message: message,
+        deleteTime: 5 * 1000
+    });
 }
 cmdModule.addCmd(minesweepermark);
 
@@ -292,9 +294,9 @@ printboardcmd.usage = [
     `** print the board, if the board is getting swamped by messages.`,
 ];
 printboardcmd.process = function (message, args) {
-    if (!msgames[message.channel.id]) return util.replyWithTimedDelete(message, "No current minesweeper game.");
+    if (!msgames[message.channel.id]) return Promise.reject(util.redel("No current minesweeper game."));
     let msgame = msgames.getOrCreateGame(message.channel.id);
-    if (message.channel.id !== msgame.tchannel.id) return;
+    if (message.channel.id !== msgame.tchannel.id) return Promise.reject(util.redel('Bad channel binding'));
     message.channel.sendMessage(msgame.boardToString(msgame.playerboard)).then(msg => {
         msgame.boardmsg.delete().then(() => {
             msgame.boardmsg = msg;
@@ -308,10 +310,12 @@ endminesweepercmd.usage = [
     `** End the current minesweeper game, and collect earned ${currency.nameplural}.`,
 ];
 endminesweepercmd.process = function (message, args) {
-    if (!msgames[message.channel.id] || msgames[message.channel.id].gameover) return util.replyWithTimedDelete(message, "No current minesweeper game.");
+    if (!msgames[message.channel.id] || msgames[message.channel.id].gameover) return Promise.reject(util.redel("No current minesweeper game."));
     let msgame = msgames.getOrCreateGame(message.channel.id);
-    if (message.channel.id !== msgame.tchannel.id) return;
-    msgame.gameOver(); 
+    if (message.channel.id !== msgame.tchannel.id) return Promise.reject(util.redel('Bad channel binding'));
+    return util.createMessage({
+        messageContent: msgame.gameOver(),
+    });
 }
 cmdModule.addCmd(endminesweepercmd);
 
