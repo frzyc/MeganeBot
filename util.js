@@ -1,16 +1,85 @@
-﻿exports.formatTime = function formatTime(seconds) {
+﻿//my own function to send messages, should be able to queue messages, check length, segment/shorten messages, and do some parsing stuff
+exports.createMessage = function (rmsg, message, channel) {
+    //console.log(`createMessage:`);
+    //console.log(rmsg);
+    return new Promise((resolve, reject) => {
+        if (!rmsg) return reject(Error('no resolve message obj'));
+        if (rmsg.messageContent) {
+            //TODO check 2000 character message limit
+        }
+
+        if (rmsg.message) {//basically an edit
+            if (rmsg.messageContent) {
+                rmsg.message.edit(rmsg.messageContent)
+                    .then((msg) => {
+                        return resolve(msg);
+                    })
+                    .catch((err) => {
+                        console.log("createMessage: fail to edit message.");
+                        console.error(err);
+                        return reject(err);
+                    });
+            }
+            if ('deleteTime' in rmsg) deletemsg(rmsg.message, message);
+        } else if (rmsg.messageContent) {
+            if (!message && !channel) return reject(new Error('no message or channel to send to.'));
+            let sendCreatedMessage = () => {
+                //console.log("sendCreatedMessage");
+                return new Promise((resolve, reject) => {
+                    let replyOrSend;
+                    if (message)
+                        replyOrSend = rmsg.reply ? message.reply(rmsg.messageContent, rmsg.messageOptions) : message.channel.sendMessage(rmsg.messageContent, rmsg.messageOptions);
+                    else if (channel)
+                        replyOrSend = channel.sendMessage(rmsg.messageContent, rmsg.messageOptions);
+
+                    replyOrSend.then((re) => {
+                        if (rmsg.then) rmsg.then(re);
+                        if ('deleteTime' in rmsg) deletemsg(re, message);
+                        //console.log("sendCreatedMessage: sent created message.");
+                        return resolve(re);
+                    }).catch((err) => {
+                        console.log("createMessage: fail to send message.");
+                        console.error(err);
+                        return reject(err);
+                    });
+                });
+            }
+
+            if (rmsg.typing) {
+                let channel = message ? message.channel : channel;
+                if (!channel) return reject(new Error('no message or channel to send to.'));
+                channel.startTyping();
+                setTimeout(() => {
+                    channel.stopTyping(true);
+                    return sendCreatedMessage().then(resolve, reject);
+                }, (rmsg.messageContent.length * 30 + 100))
+            } else {
+                return sendCreatedMessage().then(resolve, reject);
+            }
+        } else
+            return reject(new Error('Not a resolvable message.'));
+
+        function deletemsg(re, message) {
+            if (rmsg.deleteTime === 0) {
+                if (re.deletable) re.delete().catch(console.error);
+                if (message && message.deletable) message.delete().catch(console.error);
+                return;
+            }
+            setTimeout(() => {
+                if (re.deletable) re.delete().catch(console.error);
+                if (message && message.deletable && re.id !== message.id) message.delete().catch(console.error);
+            }, rmsg.deleteTime);
+        }
+    });
+}
+
+
+exports.formatTime = function formatTime(seconds) {
     return `${Math.round((seconds - Math.ceil(seconds % 60)) / 60)}:${String('00' + Math.ceil(seconds % 60)).slice(-2)}`;
 };
 
 
-//helper functions
-//This function prevents the use of actual mentions within the return line by adding a zero-width character between the @ and the first character of the mention - blocking the mention from happening.
-exports.clean = function clean(text) {
-    if (typeof (text) === "string")
-        return text.replace(/`/g, "`" + String.fromCharCode(8203)).replace(/@/g, "@" + String.fromCharCode(8203));
-    else
-        return text;
-}
+
 
 //if i need to do a = item.pro1.pro2.pro3, i dont have to incrementally check each layer's existence
 exports.getChain = function (obj, key) {
@@ -28,40 +97,58 @@ exports.hasChain = function (obj, key) {
         return true;
     });
 }
-
+/*
 //reply with the message with a reply, then delete the message and the reply after timeout.
 exports.replyWithTimedDelete = function (message, msgstr, deletetime, options) {
-    if (!deletetime) deletetime = 10 * 1000;//10 second by default
-    message.reply(msgstr,options).then(re => {
-        setTimeout(() => {
-            if (re.deletable) re.delete().catch(console.error);
-            if (message.deletable) message.delete().catch(console.error);
-        }, deletetime);
-    });
+    return new Promise((resolve, reject) => {
+        if (!deletetime) deletetime = 10 * 1000;//10 second by default, so undefined, null, or zero gets a default value.
+        message.reply(msgstr, options).then(re => {
+            setTimeout(() => {
+                if (re.deletable) re.delete().catch(console.error);
+                if (message.deletable) message.delete().catch(console.error);
+            }, deletetime);
+            resolve();
+        }).catch(err => {
+            console.err(err);
+            reject();
+        });
+    }); 
 }
 
 //reply with the message with a reply, then delete the message and the reply after timeout.
 exports.sendMessageWithTimedDelete = function (message, msgstr, deletetime, options) {
-    if (!deletetime) deletetime = 10 * 1000;//10 second by default
-    message.channel.sendMessage(msgstr,options).then(re => {
-        setTimeout(() => {
-            if (re.deletable) re.delete().catch(console.error);
-            if (message.deletable) message.delete().catch(console.error);
-        }, deletetime);
+    return new Promise((resolve, reject) => {
+        if (!deletetime) deletetime = 10 * 1000;//10 second by default
+        message.channel.sendMessage(msgstr, options).then(re => {
+            setTimeout(() => {
+                if (re.deletable) re.delete().catch(console.error);
+                if (message.deletable) message.delete().catch(console.error);
+            }, deletetime);
+            resolve();
+        }).catch(err => {
+            console.err(err);
+            reject();
+        });
     });
+}*/
+//since this gets used so much, im creating a shortcut template for this
+exports.redel = function (msg) {
+    let smdelobj = exports.smdel(msg)
+    smdelobj.reply = true;
+    return smdelobj;
+    /*
+    return {
+        messageContent: msg,
+        deleteTime: 10 * 1000,
+        reply: true
+    }*/
 }
-
-exports.simulateTyping = function (message, time, callback) {
-    message.channel.startTyping();
-    setTimeout(function () {
-        callback();
-        message.channel.stopTyping(true);
-    }, time);
-}
-exports.simulateTypingReply = function (message, msg) {
-    exports.simulateTyping(message, (msg.length * 30 + 100), function () {
-        message.reply(msg);
-    });
+//since this gets used so much, im creating a shortcut template for this
+exports.smdel = function (msg, suc) {
+    return {
+        messageContent: msg,
+        deleteTime: 10 * 1000,
+    }
 }
 
 exports.requireFile = function (filepath) {
@@ -211,7 +298,18 @@ messageQueue.prototype.queue = function(msg){
 
 var messageQueues = {};
 exports.queueMessages = function (channel, queuestring) {
-    if (channel.type !== 'text') return;//only work for guild text channel
+    //if (channel.type !== 'text') return;//only work for guild text channel
     if (!messageQueues[channel.id]) messageQueues[channel.id] = new messageQueue(channel);
     messageQueues[channel.id].queue(queuestring);
+}
+
+exports.justOnePromise = function(promise,resolveResponse, rejectResponse){
+    return new Promise((resolve, reject) => {
+        promise.then().then((channel) => {
+            return resolve(resolveResponse);
+        }).catch((err) => {
+            console.error(err);
+            return reject(rejectResponse);
+        });
+    });
 }

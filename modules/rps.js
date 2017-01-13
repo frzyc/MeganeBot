@@ -91,53 +91,32 @@ function parsefromString() {
 }
 parsefromString();
 
-function handlerpsmessage(message, list, arg, winamount) {
-    if (!arg) return util.replyWithTimedDelete(message, `Invalid entry. Use one of [${list.join(', ')}]`);
-    let meganans = list[util.getRandomInt(0, list.length)];
-    let playerans = getfromrpslist(list, arg);
-    if (!playerans) return util.replyWithTimedDelete(message, `Invalid entry. Use one of [${list.join(', ')}]`);
-    let boolwin = false;
-    if (meganans !== playerans) boolwin = checkWin(list, playerans, meganans);
-    let ans = `You chose ${playerans}, I chose ${meganans}`;
-    if (meganans !== playerans) ans += `\n` + getWin(list, playerans, meganans);
-    if (meganans === playerans) ans += `\nIT'S A TIE!`;
-    else if (boolwin) {
-        ans += '\nYOU WIN!';
-        playerData.getOrCreatePlayer(message.author.id).wallet.addMoney(winamount);
-        ans += `\n<@${message.author.id}> has received ${currency.symbol}${winamount}.\n`;
-    } else ans += '\nYOU LOSE!';
-    util.replyWithTimedDelete(message, ans);
-    return true;
-}
-/*
-let rpscmd = new command(['rockpaperscissors', 'rps']);
-rpscmd.userCooldown = 10;
-rpscmd.usage = [`[${rpslist.join(', ')}]** choose an option to play`]
-rpscmd.process = function (message, args) {
-    if (handlerpsmessage(message, rpslist, args[0],1)) this.setCooldown(message);
-}
-cmdModule.addCmd(rpscmd);
-let rpslscmd = new command(['rockpaperscissorslizardspock', 'rpsls']);
-rpslscmd.userCooldown = 20;
-rpslscmd.usage = [`[${rpslslist.join(', ')}]** choose an option to play`]
-rpslscmd.process = function (message, args) {
-    if (handlerpsmessage(message, rpslslist, args[0],2)) this.setCooldown(message);
-}
-cmdModule.addCmd(rpslscmd);
-let rpslssbwgcmd = new command(['rockpaperscissorslizardspockspidermanbatmanwizardglock', 'rpslssbwg']);
-rpslssbwgcmd.userCooldown = 30;
-rpslssbwgcmd.usage = [`[${rpslssbwglist.join(', ')}]** choose an option to play`]
-rpslssbwgcmd.process = function (message, args) {
-    if (handlerpsmessage(message, rpslssbwglist, args[0],3)) this.setCooldown(message);
-}
-cmdModule.addCmd(rpslssbwgcmd);
-*/
 function addrpsvariation(cmds,list, amount, cooldown) {
     let rpsvariation = new command(cmds);
     rpsvariation.userCooldown = cooldown;
     rpsvariation.usage = [`[${list.join(', ')}]** choose an option to play`]
     rpsvariation.process = function (message, args) {
-        if (handlerpsmessage(message, list, args[0], amount)) this.setCooldown(message);
+        return new Promise((resolve, reject) => {
+            if (!args[0]) return reject(util.redel(`Invalid entry. Use one of [${list.join(', ')}]`));
+            let meganans = list[util.getRandomInt(0, list.length)];
+            let playerans = getfromrpslist(list, args[0]);
+            if (!playerans) return reject(util.redel(`Invalid entry. Use one of [${list.join(', ')}]`));
+            let boolwin = false;
+            if (meganans !== playerans) boolwin = checkWin(list, playerans, meganans);
+            let ans = `You chose ${playerans}, I chose ${meganans}`;
+            if (meganans !== playerans) ans += `\n` + getWin(list, playerans, meganans);
+            if (meganans === playerans) ans += `\nIT'S A TIE!`;
+            else if (boolwin) {
+                ans += '\nYOU WIN!';
+                playerData.getOrCreatePlayer(message.author.id).wallet.addMoney(amount);
+                ans += `\n<@${message.author.id}> has received ${currency.symbol}${amount}.\n`;
+            } else ans += '\nYOU LOSE!';
+            return resolve({
+                messageContent: ans,
+                deleteTime: 60 * 1000,
+                reply: true
+            });
+        });
     }
     cmdModule.addCmd(rpsvariation);
 }
