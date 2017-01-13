@@ -72,17 +72,17 @@ client.on('message', message => {
         let cmdobj = cmdBase.cmdlist[cmd];
 
         if (cmdobj.dmOnly && message.channel.type === 'text')
-            return util.replyWithTimedDelete(message, "This command is restricted to direct message only.");
+            return util.createMessage(util.redel("This command is restricted to direct message only."),message);
         if (cmdobj.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group'))
-            return util.replyWithTimedDelete(message, "This command is restricted to server only.");
+            return util.createMessage(util.redel("This command is restricted to server only."), message);
         if (cmdobj.ownerOnly && message.author.id !== config.ownerid)
-            return util.replyWithTimedDelete(message, "This command is restricted to owner only.");
+            return util.createMessage(util.redel("This command is restricted to owner only."), message);
         if (cmdobj.reqBotPerms &&
             message.channel.type === 'text' &&
             !message.channel.permissionsFor(client.user).hasPermissions(cmdobj.reqBotPerms))
-            return util.replyWithTimedDelete(message, `I don't have enough permissions to use this command. need:\n${cmdobj.reqBotPerms.join(', and ')}`,5*60*1000);
+            return util.createMessage({ messageContent: `I don't have enough permissions to use this command. need:\n${cmdobj.reqBotPerms.join(', and ')}`, deleteTime: 5*60 * 1000 });
         if (cmdobj.reqUserPerms && !message.member.permissions.hasPermissions(cmdobj.reqUserPerms)) 
-            return util.replyWithTimedDelete(message, `You have enough permissions to use this command. need:\n${cmdobj.reqUserPerms.join(', and ')}`, 60 * 1000);
+            return util.createMessage({ messageContent: `You have enough permissions to use this command. need:\n${cmdobj.reqUserPerms.join(', and ')}`, deleteTime: 60 * 1000 });
         console.log(`${cmd} args: ${args}`);
         let inCD = cmdobj.inCooldown(message);
         if (inCD) {
@@ -94,11 +94,11 @@ client.on('message', message => {
                 msg += `This command is time-restricted per server. Cooldown: ${inCD.serverCooldown / 1000} seconds.\n`
             if (inCD.channelCooldown)
                 msg += `This command is time-restricted per channel.. Cooldown: ${inCD.channelCooldown / 1000} seconds.\n`
-            return util.replyWithTimedDelete(message, msg);
+            return util.createMessage(util.redel(msg), message);
         } else {
             //if this has a cost, and the user doesnt have any moneys
             if (cmdobj.cost && playerData.getOrCreatePlayer(message.author.id).wallet.getAmount() < cmdobj.cost)
-                return util.replyWithTimedDelete(message, `You don't have enough ${currency.nameplural} to use this command, need ${currency.symbol}${cmdobj.cost}.`, 10 * 1000);
+                return util.createMessage(util.redel(`You don't have enough ${currency.nameplural} to use this command, need ${currency.symbol}${cmdobj.cost}.`),message);
             cmdobj.setCooldown(message);
             //use Promise.resolve just incase a process doesnt return a promise...
             Promise.resolve(cmdobj.process(message, args, client)).then(response => {
