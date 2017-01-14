@@ -70,13 +70,9 @@ client.on('message', message => {
     console.log(`MESSAGE: cmd(${cmd})  args(${args})`);
     if (cmdBase.cmdlist[cmd]) {
         let cmdobj = cmdBase.cmdlist[cmd];
+        let restriction = cmdobj.checkRestriction(message);
+        if (restriction !== '') return util.createMessage(util.redel(`This command is restricted to ${restriction} only.`), message);
 
-        if (cmdobj.dmOnly && message.channel.type === 'text')
-            return util.createMessage(util.redel("This command is restricted to direct message only."),message);
-        if (cmdobj.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group'))
-            return util.createMessage(util.redel("This command is restricted to server only."), message);
-        if (cmdobj.ownerOnly && message.author.id !== config.ownerid)
-            return util.createMessage(util.redel("This command is restricted to owner only."), message);
         if (cmdobj.reqBotPerms &&
             message.channel.type === 'text' &&
             !message.channel.permissionsFor(client.user).hasPermissions(cmdobj.reqBotPerms))
@@ -88,30 +84,42 @@ client.on('message', message => {
         if (inCD) {
             let msg = '';
             //this accounts for multiple cooldowns
-            if (inCD.userCooldown)
-                msg += `This command is time-restricted per user. Cooldown: ${inCD.userCooldown / 1000} seconds.\n`
-            if (inCD.serverCooldown)
-                msg += `This command is time-restricted per server. Cooldown: ${inCD.serverCooldown / 1000} seconds.\n`
-            if (inCD.channelCooldown)
-                msg += `This command is time-restricted per channel.. Cooldown: ${inCD.channelCooldown / 1000} seconds.\n`
+            if (inCD.userCooldown) msg += `This command is time-restricted per user. Cooldown: ${inCD.userCooldown / 1000} seconds.\n`
+            if (inCD.serverCooldown) msg += `This command is time-restricted per server. Cooldown: ${inCD.serverCooldown / 1000} seconds.\n`
+            if (inCD.channelCooldown) msg += `This command is time-restricted per channel. Cooldown: ${inCD.channelCooldown / 1000} seconds.\n`
             return util.createMessage(util.redel(msg), message);
-        } else {
-            //if this has a cost, and the user doesnt have any moneys
-            if (cmdobj.cost && playerData.getOrCreatePlayer(message.author.id).wallet.getAmount() < cmdobj.cost)
-                return util.createMessage(util.redel(`You don't have enough ${currency.nameplural} to use this command, need ${currency.symbol}${cmdobj.cost}.`),message);
-            cmdobj.setCooldown(message);
-            //use Promise.resolve just incase a process doesnt return a promise...
-            Promise.resolve(cmdobj.process(message, args, client)).then(response => {
-                console.log("cmd resolved");
-                console.log(response);
-                util.createMessage(response, message).catch(console.error);
-            }).catch(reject => {
-                console.log("cmd rejected");
-                cmdobj.clearCooldown(message);
-                console.log(reject);
-                util.createMessage(reject, message).catch(console.error);;
-            });
         }
+        //if this has a cost, and the user doesnt have any moneys
+        if (cmdobj.cost && playerData.getOrCreatePlayer(message.author.id).wallet.getAmount() < cmdobj.cost)
+            return util.createMessage(util.redel(`You don't have enough ${currency.nameplural} to use this command, need ${currency.symbol}${cmdobj.cost}.`),message);
+
+        //perliminary check of args
+        if (cmdobj.argsTemplate) {
+            args = cmdobj.checkArgs(args,message);
+            if (args.every(v => v === null)) {
+                let msg = 'Bad Parameter:\n' + cmdobj.getUseage();
+                return util.createMessage({
+                    messageContent: msg,
+                    reply: true,
+                    deleteTime: 3 * 60 * 1000
+                }, message);
+            }
+            console.log('bot args:')
+            console.log(args);
+        }
+        cmdobj.setCooldown(message);
+        //use Promise.resolve just incase a process doesnt return a promise...
+        Promise.resolve(cmdobj.process(message, args, client)).then(response => {
+            console.log("cmd resolved");
+            console.log(response);
+            util.createMessage(response, message).catch(console.error);
+        }).catch(reject => {
+            console.log("cmd rejected");
+            cmdobj.clearCooldown(message);
+            console.log(reject);
+            util.createMessage(reject, message).catch(console.error);;
+        });
+        
     } else {
         if (startmention && cmdBase.cmdlist['talk']) {//cleverbot
             let prefix = cont.split(' ').slice(1).join(' ');

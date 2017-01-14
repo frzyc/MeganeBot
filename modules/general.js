@@ -19,45 +19,24 @@ helpcmd.usage = [
     "[module]**\nget all commands in this module",
     "[cmd]**\nget help on indvidual cmd usage."
 ]
+helpcmd.argsTemplate = [
+    [new util.customType(arg => {
+        return {usage:0};
+    }, util.staticArgTypes['none'])],
+    [new util.customType(arg => {
+        arg = arg.toLowerCase();
+        if (arg.startsWith(config.prefix))
+            arg = arg.slice(config.prefix.length);//incase someone asked !help !command
+        if (arg === 'all') return { usage: 1 }
+        if (cmdBase.modulelist[arg]) return { usage: 2, module: cmdBase.modulelist[arg] }
+        if (cmdBase.cmdlist[arg]) return { usage: 3, command: cmdBase.cmdlist[arg] }
+        return {usage:-1, arg:arg}
+    }, util.staticArgTypes['word'])]
+]
 helpcmd.process = function (message, args) {
+    let arg = args.reverse().find(val => val != null)[0];
     let msg = '';
-    if (args && args[0]) {// if ask for a specific command
-        args[0] = args[0].toLowerCase();
-        if (args[0].startsWith(config.prefix))
-            args[0] = args[0].slice(config.prefix.length);//incase someone asked !help !command
-        if (args[0] === 'all') {
-            msg = `List of all commands:\n`
-            msg += `**${Object.keys(cmdBase.cmdlist).filter((cmd) => {
-                let cmdobj = cmdBase.cmdlist[cmd];
-                return canUseCmd(cmdobj, message);
-            }).sort().join(' ')}**`;
-        } else if (cmdBase.modulelist[args[0]]) {
-            let mod = cmdBase.modulelist[args[0]];
-            if (mod.dmOnly && message.channel.type === 'text')
-                return Promise.reject(util.redel("This module is restricted to direct message only."));
-            if (mod.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) 
-                return Promise.reject(util.redel("This module is restricted to server only."));
-            if (mod.ownerOnly && message.author.id !== config.ownerid) 
-                return Promise.reject(util.redel("This module is restricted to botowner only."));
-            msg = `List of all commands in module **${mod.name}**:`
-            let sortedcmdkeys = Object.keys(mod.cmdlist).filter((cmd) => {
-                let cmdobj = cmdBase.cmdlist[cmd];
-                return canUseCmd(cmdobj, message);
-            }).sort().map(key => mod.cmdlist[key]).forEach((cmd) => {
-                msg += `\n**${cmd.name.join('**, or **')}**`;
-                });
-        } else if (cmdBase.cmdlist[args[0]] && canUseCmd(cmdBase.cmdlist[args[0]],message))
-            msg = cmdBase.cmdlist[args[0]].getUseage();
-        else
-            msg = `command ${args[0]} does not exist.`;
-
-        function canUseCmd(cmdobj, message) {
-            if (cmdobj.dmOnly && message.channel.type === 'text') return false;
-            if (cmdobj.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) return false;
-            if (cmdobj.ownerOnly && message.author.id !== config.ownerid) return false;
-            return true;
-        }
-    } else {
+    if (arg.usage === 0) {//"**\nList the modules."
         msg = `List of all modules:\n`
         console.log(cmdBase.modulelist);
         for (modname in cmdBase.modulelist) {
@@ -72,11 +51,37 @@ helpcmd.process = function (message, args) {
                 msg += `This module does not have a description.`
             msg += `\n`;
         }
-        msg += `\nUse ${this.getUseage(2)}`; 
-    }
+        msg += `\nUse ${this.getUseage(2)}`;
+    } else if (arg.usage === 1) {//"all **\nget all the commands."
+        msg = `List of all commands:\n`
+        msg += `**${Object.keys(cmdBase.cmdlist).filter((cmd) => {
+            return cmdBase.cmdlist[cmd].checkRestriction(message) === '';
+        }).sort().join(' ')}**`;
+    } else if (arg.usage === 2) {//"[module]**\nget all commands in this module",
+        let mod = arg.module;
+        console.log("da mod:");
+        console.log(mod);
+        let restriction = mod.checkRestriction(message);
+        if (restriction === '') {
+            msg = `List of all commands in module **${mod.name}**:`
+            let sortedcmdkeys = Object.keys(mod.cmdlist).filter((cmd) => {
+                return cmdBase.cmdlist[cmd].checkRestriction(message) === '';
+            }).sort().map(key => mod.cmdlist[key]).forEach((cmd) => {
+                msg += `\n**${cmd.name.join('**, or **')}**`;
+            });
+        } else {
+            msg = `This module is restricted to ${restriction} only.`;
+        }
+    } else if (arg.usage === 3) {//"[cmd]**\nget help on indvidual cmd usage."
+        let restriction = arg.command.checkRestriction(message);
+        if (restriction === '')  msg = arg.command.getUseage();
+        else  msg = `This command is restricted to ${restriction} only.`;
+    } else
+        msg = `command ${arg.arg} does not exist.`;
     return Promise.resolve({
         messageContent: msg,
-        reply: true
+        reply: true,
+        deleteTime: 3*60*1000
     });
 }
 cmdModule.addCmd(helpcmd);
@@ -101,24 +106,26 @@ prune.usage = [
     + `Delete messages from @mentions\n`
     + `NOTE: delete need "manage messages" permission to delete other's messages. `
 ];
+let amounttype = new util.customType(v => v > 0 && v <=100 ? v : null, util.staticArgTypes['int']);
+prune.argsTemplate = [
+    [amounttype, util.staticArgTypes['none']],
+    [amounttype, util.staticArgTypes['mentions']]
+];
+
 prune.serverOnly = true;
 prune.reqBotPerms = ["MANAGE_MESSAGES"];
 prune.process = function (message, args) {
     return new Promise((resolve, reject) => {
-        let messagecount = 0;
-        console.log(args.length);
+        let arg = args.reverse().find(val => val != null);//find the longest matching first
+        let messagecount = arg[0];
         let matchid = [message.author.id];
-        if (args.length >= 1)
-            messagecount = parseInt(args[0]);
-        if (!messagecount) return reject(util.redel("invalid arguments"));
-        if (args.length > 1) {//means other people have been mentioned?
-            matchid = [];
-            let mentiondict = util.getMentionedUsers(message);
-            for (id in mentiondict)
-                matchid.push(id);
-
+        if (arg[1]) {//means other people have been mentioned?
             if (!message.member.hasPermission("MANAGE_MESSAGES"))
                 return reject(util.redel("You don't have the \"manage messages\" permissions to delete other people's messages"));
+            matchid = [];
+            let mentiondict = arg[1];
+            for (id in mentiondict)
+                matchid.push(id);
         }
         message.channel.fetchMessages({ limit: 100, before: message.id })
             .then(messages => {
@@ -154,12 +161,15 @@ cmdModule.addCmd(prune);
 
 let nick = new command(['nick']);
 nick.usage = ["[desiredNickname]** Change my server nickname, need the MANAGE_NICKNAMES permission."];
+nick.argsTemplate = [
+    [util.staticArgTypes['string']]
+];
 nick.reqUserPerms = ["MANAGE_NICKNAMES"];
 nick.serverOnly = true;
 nick.process = function (message, args) {
     return util.justOnePromise(
-        message.channel.members.get(client.user.id).setNickname(args.join(' ')),
-        util.redel(`Changed my name to: ${args.join(' ')}.`),
+        message.channel.members.get(client.user.id).setNickname(args[0][0]),
+        util.redel(`Changed my name to: ${args[0][0]}.`),
         util.redel(`Cannot change nickname.`)
     );
 }
@@ -167,12 +177,14 @@ cmdModule.addCmd(nick);
 
 let emojify = new command(['emojify']);
 emojify.usage = ["[string]** convert string to emojis"];
+emojify.argsTemplate = [
+    [util.staticArgTypes['oristring']]
+];
 emojify.process = function (message, args) {
-    if (!args || args.length === 0) return;
-    let msg = args.join(` `).toUpperCase().split(``).map(char => {
+    let msg = args[0][0].toUpperCase().split(``).map(char => {
         if (/\d/.test(char)) return util.getDigitSymbol(char);
         if (/[A-Z]/.test(char)) return util.getLetterSymbol(char);
-        return char;
+        return util.otherCharSymbol(char);
     }).join(' ');
     return Promise.resolve({ messageContent: msg });
 }
@@ -204,10 +216,12 @@ cmdModule.addCmd(mypermscmd);
 
 let saycmd = new command(['say']);
 saycmd.usage = ["[some message to repeat]** repeat what the sender says."];
+saycmd.argsTemplate = [
+    [util.staticArgTypes['oristring']]
+];
 saycmd.process = function (message, args) {
-    let start = message.content.indexOf(' ') + 1;
     return Promise.resolve({
-        messageContent: `${message.content.slice(start)}`,
+        messageContent: `${args[0][0]}`,
         deleteTime: 5 * 60 * 1000,
     });
 }
@@ -215,10 +229,12 @@ cmdModule.addCmd(saycmd);
 
 let sayttscmd = new command(['saytts']);
 sayttscmd.usage = ["[some message to repeat]** repeat what the sender says, with tts."];
+sayttscmd.argsTemplate = [
+    [util.staticArgTypes['oristring']]
+];
 sayttscmd.process = function (message, args) {
-    let start = message.content.indexOf(' ') + 1;
     return Promise.resolve({
-        messageContent: `${message.content.slice(start)}`,
+        messageContent: `${args[0][0]}`,
         deleteTime: 5 * 60 * 1000,
         messageOptions: { tts: true }
     });
@@ -227,26 +243,18 @@ cmdModule.addCmd(sayttscmd);
 
 let topiccmd = new command(['topic']);
 topiccmd.usage = ["[topic]** change channel topic."];
+topiccmd.argsTemplate = [
+    [util.staticArgTypes['oristring']]
+];
 topiccmd.serverOnly = true;
 topiccmd.channelCooldown = 5;
 topiccmd.reqUserPerms = ['MANAGE_CHANNELS'];
 topiccmd.reqBotPerms = ['MANAGE_CHANNELS'];
 topiccmd.process = function (message, args) {
     return util.justOnePromise(
-        message.channel.setTopic(args.join(' ')),
-        util.redel(`Changed Topic to: ${args.join(' ')}`),
+        message.channel.setTopic(args[0][0]),
+        util.redel(`Changed Topic to: ${args[0][0]}`),
         util.redel(`Cannot change channel topic.`)
     );
 }
 cmdModule.addCmd(topiccmd);
-
-/*
-let testcmd = new command(['test']);
-testcmd.process = function (message, args) {
-    return new Promise((resolve, reject)=>{
-        
-        reject();
-        resolve();
-    })
-}
-cmdModule.addCmd(testcmd);*/

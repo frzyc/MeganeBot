@@ -19,41 +19,57 @@ exports.cmdModule = cmdModule;
 let colorcmd = new command(['color']);
 colorcmd.cost = 10;
 colorcmd.usage = [`[desired color] pay ${colorcmd.cost} ${currency.nameplural} to change your color.**\nNOTE: choosing "White" will reset current color, but costs nothing.`];
+colorcmd.argsTemplate = [
+    [new util.customType((s,message) => {
+        if (!colorList || !colorList[message.guild.id]) return null;
+        if (s.toLowerCase() === "white") {
+            return 'White';
+        }
+        return null;
+    }, util.staticArgTypes['word'])],
+    [new util.customType((s, message) => {
+        if (!colorList || !colorList[message.guild.id]) return null;
+        if (colorList[message.guild.id].length === 0) return;
+        if (colorList[message.guild.id].length === 0) return;
+        let color = colorList[message.guild.id].find(val => val.toLowerCase() === s.toLowerCase())
+        if (!color) return null;
+        let colorrole = message.guild.roles.find(val => val.name === color);
+        if (!colorrole) return null;
+        return colorrole;
+    }, util.staticArgTypes['word'])]
+];
 //colorcmd.userCooldown = 10;//10 seconds
 colorcmd.process = function (message, args) {
     return new Promise((resolve, reject) => {
-        if (!colorList || !colorList[message.guild.id]) return;
-        if (args[0].toLowerCase() === "white") {
+        if (args[0]) {
             removeColorRoles().then(() => {
                 reject(util.redel(`resetted your color to default.`));
             });
             return;
         }
-        if (colorList[message.guild.id].length === 0) return;
-        let color = colorList[message.guild.id].find(val => val.toLowerCase() === args[0].toLowerCase())
-        let colorrole = message.guild.roles.find(val => val.name.toLowerCase() === args[0]);
-        if (!colorrole) return;
+        if (args[1]) {
+            let colorrole = args[1][0];
 
-        let needtopay = true;
-        if (message.member.roles.has(colorrole.id)) needtopay = false;
-        let playerwallet = playerData.getOrCreatePlayer(message.author.id).wallet;
-        if (needtopay && playerwallet.getAmount() < this.cost) return reject(util.redel(`You don't have enough money to change your color`));
+            let needtopay = true;
+            if (message.member.roles.has(colorrole.id)) needtopay = false;
+            let playerwallet = playerData.getOrCreatePlayer(message.author.id).wallet;
 
-        console.log("selected role: " + colorrole.name);
-        removeColorRoles().then(() => {
-            console.log("add role: " + colorrole.name);
-            message.member.addRole(colorrole);
-            if (needtopay) {
-                playerwallet.subMoney(10);
-                return resolve({
-                    messageContent: `You paid ${colorcmd.cost} ${currency.nameplural} to change your color to ${color}.`,
-                    reply: true,
-                    deleteTime: 3*60*1000
-                });
-            } else {
-                return reject(util.redel(`You already have ${color}.`));
-            }
-        })
+            console.log("selected role: " + colorrole.name);
+            removeColorRoles().then(() => {
+                console.log("add role: " + colorrole.name);
+                message.member.addRole(colorrole);
+                if (needtopay) {
+                    playerwallet.subMoney(10);
+                    return resolve({
+                        messageContent: `You paid ${colorcmd.cost} ${currency.nameplural} to change your color to <@&${colorrole.id}>.`,
+                        reply: true,
+                        deleteTime: 3 * 60 * 1000
+                    });
+                } else {
+                    return reject(util.redel(`You already have <@&${colorrole.id}>.`));
+                }
+            })
+        }
 
         function removeColorRoles(callback) {
             return new Promise((resolve, reject) => {
@@ -78,27 +94,36 @@ cmdModule.addCmd(colorlistcmd);
 
 let coloraddcmd = new command(['coloradd']);
 coloraddcmd.usage = [`[rolename]**\nNOTE: only works if a role with a color is present. All role permissions will be removed. Color "White" cannot be added.`];
+coloraddcmd.argsTemplate = [[util.staticArgTypes['word']]];
 coloraddcmd.reqUserPerms = ["MANAGE_ROLES_OR_PERMISSIONS"]
 coloraddcmd.process = function (message, args) {
     return new Promise((resolve, reject) => {
+        let arg = args[0][0]
         if (!colorList) return reject(util.redel(`There is no color database for this server.`));
         if (!colorList[message.guild.id]) colorList[message.guild.id] = [];
-        if (!args || !args[0]) return reject(util.redel(`Invalid Parameters`)); 
-        if (args[0] && args[0].toLowerCase() === "white") return reject(util.redel(`Color "White" cannot be added.`)); 
-        if (colorList[message.guild.id].find(val => val.toLowerCase() === args[0].toLowerCase())) return reject(util.redel("Color already added."));
-        let colorrole = message.guild.roles.find(val => val.name.toLowerCase() === args[0].toLowerCase());
+        if (arg && arg.toLowerCase() === "white") return reject(util.redel(`Color "White" cannot be added.`)); 
+        if (colorList[message.guild.id].find(val => val.toLowerCase() === arg.toLowerCase())) return reject(util.redel("Color already added."));
+        let colorrole = message.guild.roles.find(val => val.name.toLowerCase() === arg.toLowerCase());
         if (!colorrole) return reject(util.redel("Invalid role"));
         if (colorrole.color === 0) return reject(util.redel("Role does not have a color."));
-        let colorname = colorrole.name;
-        colorrole.setPermissions([]);
-        colorList[message.guild.id].push(colorname);
-        colorList[message.guild.id] = colorList[message.guild.id].sort();
-        fs.writeFile(__dirname + '/' + colorfile, JSON.stringify(colorList), 'utf8', (err) => {
-            if (err) {
-                console.error(err);
-                return reject(util.redel('Problem with writing to file'));
-            }
-            return resolve(util.redel(`${colorname} added, json file updated.`)) 
+        console.log(colorrole);
+        colorrole.edit({
+            mentionable: true,
+            permissions:[]
+        }).then(role => {
+            console.log(role.serialize());
+            colorList[message.guild.id].push(colorrole.name);
+            colorList[message.guild.id] = colorList[message.guild.id].sort();
+            fs.writeFile(__dirname + '/' + colorfile, JSON.stringify(colorList), 'utf8', (err) => {
+                if (err) {
+                    console.error(err);
+                    return reject(util.redel('Problem with writing to file'));
+                }
+                return resolve(util.redel(`<@&${colorrole.id}> added, file updated.`))
+            });
+        }).catch(err => {
+            console.error(err);
+            return reject(util.redel('Problem with setting permissions'));
         });
     });
     

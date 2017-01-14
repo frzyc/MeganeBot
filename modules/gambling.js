@@ -39,15 +39,16 @@ let eightball = new command(['8ball']);
 eightball.userCooldown = 5 * 60;//5 minutes
 eightball.cost = 5;
 eightball.usage = [`[Question] **\nPay ${currency.symbol}${eightball.cost} and ask the Magic 8ball a question. Affirmative answers awards you ${currency.nameplural}.`,];
-
+eightball.argsTemplate = [
+    [util.staticArgTypes['string']]
+    ]
 eightball.process = function (message, args) {
-    if (!args) return Promise.reject(util.redel(`Invalid Question`));
 
     let player8 = playerData.getOrCreatePlayer(message.author.id);
 
     let answerid = util.getRandomIntInclusive(0, 19);
     
-    let answer = `You paid the 9-ball ${currency.symbol}${eightball.cost} and asked, "${args.join(' ')}"\nThe Magic 8 Ball answers: "${eightBallResponse[answerid]}"\n`
+    let answer = `You paid the 9-ball ${currency.symbol}${eightball.cost} and asked, "${args[0][0]}"\nThe Magic 8 Ball answers: "${eightBallResponse[answerid]}"\n`
     if (answerid < 10) {
         answer += `Since the Magic 8 Ball answered affirmatively, you get ${this.cost * 2}${currency.nameplural}! :smiley: `
         player8.wallet.addMoney(this.cost);
@@ -74,26 +75,29 @@ dicecmd.usage = [
     `d[y]** roll one y-sided dice`,
     `[x]d[y]** roll x number of y-sided dice\nNOTE: max 30 dice can be rolled at once, max 1337 sides.\nNOTE: if you get max number on all the dice in a roll, you get an exponential reward`,
 ]
+dicecmd.argsTemplate = [
+    [new util.customType(arg => {
+        return [1, 6];
+    }, util.staticArgTypes['none'])],
+    [new util.customType(arg => {
+        let x, y;
+        let xy = arg.toLowerCase().split('d');
+        if (xy.length === 2) {//xdy notation
+            x = parseInt(xy[0]);
+            if (!x) x = 1;
+            y = parseInt(xy[1]);
+        } else {//asssume its x notation
+            x = parseInt(arg);
+            y = 6;
+        }
+        if (!x || x <= 0 || !y || y <= 1 || y > 1337) return null;
+        if (x > 30) x = 30;//limit number of dice rolls to 30;
+        return [x, y];
+    }, util.staticArgTypes['word'])]
+]
 dicecmd.process = function (message, args) {
     return new Promise((resolve, reject) => {
-        let x, y;
-        if (!args || !args[0]) {//roll 6-sided die
-            x = 1;
-            y = 6;
-        } else {
-            let xy = args[0].toLowerCase().split('d');
-            if (xy.length === 2) {//xdy notation
-                x = parseInt(xy[0]);
-                if (!x) x = 1;
-                y = parseInt(xy[1]);
-            } else {//asssume its x notation
-                x = parseInt(args[0]);
-                y = 6;
-            }
-        }
-        if (!x || x <= 0 || !y || y <= 1 || y > 1337) return Promise.reject(redel(`Invalid parameter`));
-        if (x > 30) x = 30;//limit number of dice rolls to 30;
-
+        let [x, y] = args.reverse().find(val => val != null)[0];
         //x = number of dices
         //y = number of faces
         this.setCooldown(message);//set cooldown now cause things might get desynced
@@ -233,13 +237,12 @@ cmdModule.addCmd(slotscmd);
 let betHundred = new command(['bethundred']);
 betHundred.userCooldown = 5 * 60;//5 minutes
 betHundred.usage = [`[Amount] **\nBets a certain amount of ${currency.nameplural} and get a number between 1-100. Getting over 66 yields x2 of your currency, over 90 - x3 and 100 x10.`,];
+betHundred.argsTemplate = [
+    [new util.customType(v => v > 0 ? v : null, util.staticArgTypes['int'])]
+];
 
 betHundred.process = function (message, args) {
-
-    if (!args || !args[0]) Promise.reject(util.redel(`Invalid amount`));
-    let amount = parseInt(args[0]);
-    if (!amount || amount <= 0) Promise.reject(util.redel(`Invalid amount`));
-
+    let amount = args[0][0];
     let player = playerData.getOrCreatePlayer(message.author.id);
     if (player.wallet.getAmount() < amount) Promise.reject(util.redel(`You don't have enough ${currency.nameplural} to bet.`));
 

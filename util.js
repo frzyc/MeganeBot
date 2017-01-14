@@ -159,8 +159,13 @@ exports.requireFile = function (filepath) {
         console.log(`requireF(): The file "${filepath}" couldn't be loaded.`);
     }
 }
+exports.getMentionStrings = function (message) {
+    let str = message.content;
+    return str.match(/(<@\d+>)|(<@!\d+>)|(<@&\d+>)|(@everyone)/g);
+}
 
 exports.getMentionedUsers = function (message) {
+    console.log('getMentionedUsers');
     let userarr = {};
     if (message.mentions.everyone) {
         message.guild.members.map(member => {
@@ -173,6 +178,7 @@ exports.getMentionedUsers = function (message) {
     }
 
     //TODO nothing on channels
+
     if (message.guild && message.guild.available) {
         message.mentions.roles.map((role => {
             role.members.map(member => {
@@ -261,7 +267,12 @@ exports.getLetterSymbol = function (letter) {
     letter = letter.toUpperCase();
     return letterarr[letter] ? letterarr[letter] : ``;
 }
-
+exports.otherCharSymbol = function (char) {
+    let symarr = {}
+    symarr[`!`] = `❕`;
+    symarr[`?`] = `❔`;
+    return symarr[char] ? symarr[char] : char; 
+}
 var messageQueue = function (channel) {
     this.id = channel.id;
     this.tchannel = channel;
@@ -313,3 +324,128 @@ exports.justOnePromise = function(promise,resolveResponse, rejectResponse){
         });
     });
 }
+exports.staticArgTypes = {
+    'none': {
+        type: 'none',//special process for none
+        process: (arg) => {
+            if (arg == null || arg.length === 0) return '';
+            else return null;
+        }
+    },
+    'string': {
+        type: 'string',//special process for string
+    },
+    'oristring': {
+        type: 'oristring',//special process for string
+        process: (arg, message) => {
+            if (arg == null || arg.length === 0) return null;
+            let cont = message.content;
+            let index = cont.indexOf(arg);
+            if (index >= 0)
+                return cont.slice(index);
+            return null;
+        }
+    },
+    'word': {//a word, can be literally anything in it
+        type: 'word',
+        process: (arg) => {
+            if (arg == null) return null;
+            console.log(`process:word(${arg})`);
+            if (arg.length === 0)
+                return null;
+            return arg;
+        }
+    },
+    'int': {
+        type: 'int',
+        process: (arg) => {
+            if (arg == null) return null;
+            console.log(`process:int(${arg})`);
+            if (!/^[-+]?[0-9]+$/.test(arg)) return null;
+            let ret = parseInt(arg);
+            if (isFinite(ret))
+                return ret;
+            else
+                return null;
+        }
+    },
+    'float': {
+        type: 'float',
+        process: (arg) => {
+            if (arg == null) return null;
+            console.log(`process:float(${arg})`);
+            //strict parsing
+            //  /^([-+]?(\d+\.?\d*|\d*\.?\d+))$/
+            if (!/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/.test(arg)) return null;
+            let ret = parseFloat(arg);
+            if (isFinite(ret)) return ret;
+            else
+                return null;
+        }
+    },
+    'mentions': {
+        type: 'mentions',
+        process: (arg, message) => {
+            let mentionedusers = exports.getMentionedUsers(message);
+            let mentioneduserscount = Object.keys(mentionedusers).length;
+            if (mentioneduserscount === 0) return null;
+            return mentionedusers;
+        }
+    }
+}
+let customType = function (evalfunc, statictype) {
+    this.type = 'custom';
+    this.evalfunc = evalfunc;
+    this.base = exports.int;
+    if (statictype && 'process' in statictype)
+        this.baseprocess = statictype.process;
+}
+customType.prototype.process = function (arg, message) {
+    console.log(`process:customType(${arg}:${typeof arg})`);
+    if (this.baseprocess) {
+        arg = this.baseprocess(arg,message);
+    }
+    if (arg == null) return null;
+    console.log(`process:customType2(${arg}:${typeof arg})`);
+    return this.evalfunc(arg, message);
+}
+exports.customType = customType;
+
+//will return null if args do not match template.
+exports.parseArgs = function (template, args, message) {
+    console.log(`parseargs`);
+    console.log(args);
+    let out = [];
+    for (argtype of template) {
+        /*if (argtype.type === 'none') {
+            return '';
+        } else*/ if (argtype.type === 'string') {
+            let str = args.join(' ') 
+            if (str.length === 0) return null;
+            out.push(str);
+            break;
+        } else {
+            if (!'process' in argtype) return;
+            let arg = args.shift();
+            let parsedarg = argtype.process(arg, message);
+            console.log('parsedarg:');
+            console.log(parsedarg);
+            if (parsedarg != null) out.push(parsedarg);
+            else return null;
+            if (argtype.type === 'oristring') break;//cause it includes everything after
+        }
+    }
+    console.log('before return, out:');
+    console.log(out);
+    return out;
+}
+const at = exports.staticArgTypes;
+const ct = exports.customType;
+let testtem = [at['word'], at['int'], at['float'], new ct((v) => {
+    if (v >= 0 && v < 10) return v;
+    else return null;
+}, at['int']), at['none']
+];
+let teststring = `test 12345 -.12e-19 9`;
+console.log("TEST PARSE");
+console.log(exports.parseArgs(testtem, teststring.split(' ')));

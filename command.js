@@ -1,6 +1,14 @@
 ﻿const util = require.main.exports.getRequire('util');
 const config = require.main.exports.getRequire('config');
 
+let checkRestriction = (message) => {
+    if (this.dmOnly && message.channel.type === 'text') return 'direct message';
+    if (this.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) return 'server';
+    if (this.ownerOnly && message.author.id !== config.ownerid) return 'botowner only';
+    return '';
+} 
+
+
 var cmdBaseobj = function () {
     this.cmdlist = {};
     this.modulelist = {};
@@ -26,6 +34,7 @@ cmdBaseobj.prototype.addCmd = function (cmdobj) {
     }
     return addcomplete;
 }
+/*
 //modules will have multiple cmdname mappings due to cmdname shortcuts. just use module mapping so all of cmdobj.name gets used.
 cmdBaseobj.prototype.addCmdWithName = function (cmdobj,name) {
     //console.log(`cmdBaseobj.addCmdWithName: ${name}`);
@@ -44,7 +53,7 @@ cmdBaseobj.prototype.addCmdWithName = function (cmdobj,name) {
     this.cmdlist[name] = cmdobj;
 
     return true;
-}
+}*/
 
 cmdBaseobj.prototype.addModule = function (moduleobj) {
     //console.log(`cmdBaseobj.prototype.addModule: ${moduleobj.name}`);
@@ -107,6 +116,7 @@ cmdModuleobj.prototype.getDesc = function () {
     if (this.description) return this.description;
     else return '';
 }
+cmdModuleobj.prototype.checkRestriction = checkRestriction;
 
 var command = function (cmdnames) {
     this.name = cmdnames;
@@ -170,6 +180,18 @@ command.prototype.clearCooldown = function (message) {
         clrCD('serverCooldown', message.guild.id);
     clrCD('channelCooldown', message.channel.id);
 }
+command.prototype.checkArgs = function (args,message) {
+    if (!this.argsTemplate) return;
+    console.log('checkArgs');
+    console.log(args);
+    let ert = this.argsTemplate.map(tem => util.parseArgs(tem, args.slice(0), message));
+    console.log('ert:');
+    console.log(ert);
+    return ert;
+}
+command.prototype.checkRestriction = checkRestriction;
+
+
 
 module.exports = {
     cmdBaseobj: cmdBaseobj,

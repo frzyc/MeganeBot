@@ -38,7 +38,11 @@ wallet.prototype.subMoney = function (val) {
     this.checkvalid();
     if (this.amount >= val) {
         this.amount -= val;
-    } else this.amount = 0;
+    } else {
+        let temp = this.amount;
+        this.amount = 0;
+        return temp;
+    }
 }
 wallet.prototype.getAmount = function () {
     this.checkvalid();
@@ -146,6 +150,7 @@ walletcmd.process = function (message, args) {
 }
 cmdModule.addCmd(walletcmd);
 
+let amounttype = new util.customType(v => v > 0 ? v : null, util.staticArgTypes['int']);
 let givecmd = new command(['give']);
 givecmd.usage = [
     `[amount] [mention someguy]**\nGive some amount of ${currency.nameplural} from your wallet to some guy.`,
@@ -153,22 +158,22 @@ givecmd.usage = [
     `[amount] [mention somerole] **\nGive everyone with that role a specified amount of ${currency.nameplural} each.`,
     `[amount] [mention everyone] **\nGive everyone in the server a specified amount of ${currency.nameplural} each.`,
 ];
+givecmd.argsTemplate = [
+    [amounttype, util.staticArgTypes['mentions']]
+];
+givecmd.cost = 1;//you need to give at least one
 givecmd.process = function (message, args) {
     return new Promise((resolve, reject) => {
-        if (!args || !args[0]) return reject(util.redel(`Invalid amount`));
-        let amount = parseInt(args.shift());
-        if (!amount || amount <= 0) return reject(util.redel(`Invalid amount`));
-
-        console.log(`give amount: ${amount}`);
+        let amount = args[0][0];
         let giverid = message.author.id;
         let giver = playerData.getOrCreatePlayer(giverid);
         console.log(giver);
         if (giver.wallet.getAmount() === 0) return reject(util.redel(`You have no ${currency.nameplural} to give`));
-        let mentionedusers = util.getMentionedUsers(message);
+        let mentionedusers = args[0][1];
         let mentioneduserscount = Object.keys(mentionedusers).length;
-        if (mentioneduserscount === 0) return reject(util.redel(`You didn't mention anyone!`));
         console.log(`ALL MENTIONS size: ${mentioneduserscount}`);
         let total = mentioneduserscount * amount;
+        console.log(`giver amount: ${giver.wallet.getAmount()}`);
         if (giver.wallet.getAmount() < total) return reject(util.redel(`You don't have enough ${currency.nameplural} to give, need ${currency.symbol}${total}.`));
 
         //start giving
@@ -178,7 +183,7 @@ givecmd.process = function (message, args) {
             receiver.wallet.addMoney(amount);
         }
         return resolve({
-            messageContent: `You gave ${currency.symbol}${amount} each to ${args.join(', and ')}!`,
+            messageContent: `You gave ${currency.symbol}${amount} each to ${util.getMentionStrings(message).join(', and ')}!`,
             deleteTime: 60 * 1000,
             reply: true
         });
@@ -190,21 +195,21 @@ let awardcmd = new command(['award']);
 awardcmd.usage = [
     `[amount] [mention someguy or guys or role or everyone]**\nAward the mentions some money.\nNOTE: botowner only.`,
 ];
+awardcmd.argsTemplate = [
+    [amounttype, util.staticArgTypes['mentions']]
+];
 awardcmd.ownerOnly = true;
 awardcmd.process = function (message, args) {
     return new Promise((resolve, reject) => {
-        if (!args || !args[0]) return reject(util.redel(`Invalid amount`));
-        let amount = parseInt(args.shift());
-        if (!amount || amount <= 0) return reject(util.redel(`Invalid amount`));
-        let mentionedusers = util.getMentionedUsers(message);
-        if (Object.keys(mentionedusers).length === 0) return reject(util.redel(`You didn't mention anyone!`));
+        let amount = args[0][0];
+        let mentionedusers = args[0][1];
         //start giving
         for (var id in mentionedusers) {
             let receiver = playerData.getOrCreatePlayer(id);
             receiver.wallet.addMoney(amount);
         }
         return resolve({
-            messageContent: `You awarded ${currency.symbol}${amount} each to ${args.join(', and ')}!`,
+            messageContent: `You awarded ${currency.symbol}${amount} each to ${util.getMentionStrings(message).join(', and ')}!`,
             deleteTime: 60 * 1000,
             reply: true
         });
@@ -217,21 +222,21 @@ let takecmd = new command(['take']);
 takecmd.usage = [
     `[amount] [mention someguy or guys or role or everyone]**\Take some money from everyone in the mentions.\nNOTE: botowner only.`,
 ];
+takecmd.argsTemplate = [
+    [amounttype, util.staticArgTypes['mentions']]
+];
 takecmd.ownerOnly = true;
 takecmd.process = function (message, args) {
     return new Promise((resolve, reject) => {
-        if (!args || !args[0]) return reject(util.redel(`Invalid amount`));
-        let amount = parseInt(args.shift());
-        if (!amount || amount <= 0) return reject(util.redel(`Invalid amount`));
-        let mentionedusers = util.getMentionedUsers(message);
-        if (Object.keys(mentionedusers).length === 0) return reject(util.redel(`You didn't mention anyone!`));
+        let amount = args[0][0];
+        let mentionedusers = args[0][1];
         //start taking
         for (var id in mentionedusers) {
             let receiver = playerData.getOrCreatePlayer(id);
             receiver.wallet.subMoney(amount);
         }
         return resolve({
-            messageContent: `You took ${currency.symbol}${amount} each from ${args.join(', and ')}!`,
+            messageContent: `You took ${currency.symbol}${amount} each from ${util.getMentionStrings(message).join(', and ')}!`,
             deleteTime: 60 * 1000,
             reply: true
         });

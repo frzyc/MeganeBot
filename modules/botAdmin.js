@@ -64,7 +64,8 @@ evalcmd.process = function (message, args) {
     }
     return new Promise((resolve,reject)=>{
         try {
-            let code = args.join(' ');
+            let code = message.content.split('eval')[1];
+            if (!code || code.length === 0) return reject(util.redel("Invalid Input."));
             let evaled = eval(code);
 
             if (typeof evaled !== "string")
@@ -81,14 +82,21 @@ evalcmd.process = function (message, args) {
 cmdModule.addCmd(evalcmd);
 
 let statuscmd = new command(['status']);
-statuscmd.usage = ["[online/idle/invisible/dnd(do not disturb)]** set bot status."];
+statuscmd.statuses = [`online`, `idle`, `invisible`, `dnd`];
+statuscmd.usage = [`[${statuscmd.statuses.join('/')}]** set bot status.`];
+statuscmd.argsTemplate = [
+    [new util.customType(s => statuscmd.statuses.includes(s) ? s : null)]
+];
 statuscmd.process = function (message, args, client) {
-    let statuses = [`online`, `idle`, `invisible`, `dnd`];
     return new Promise((resolve, reject) => {
-        if (!args || args.length < 1 || !status.includes(args[0])) return util.redel('Invalid parameters.');
-        client.user.setStatus(args[0]).then(user => {
-            resolve(util.redel(`Changed my status to ${args[0]}!`));
-        }).catch(reject(util.redel(`Cannot change my status to ${args[0]}!`)));
+        let status = args[0][0];
+        if (status === client.user.presence.status) return reject(util.redel(`I am currently ${status}!`));
+        client.user.setStatus(status).then(user => {
+            resolve(util.redel(`Changed my status to ${status}!`));
+        }).catch((err) => {
+            console.err(err);
+            reject(util.redel(`Cannot change my status to ${status}!`));
+        });
     })
 }
 cmdModule.addCmd(statuscmd);
@@ -96,8 +104,11 @@ cmdModule.addCmd(statuscmd);
 let getpermscmd = new command(['getperms']);
 getpermscmd.usage = ["[@mentions]** get the users' permissions in this channel."];
 getpermscmd.serverOnly = true;
+getpermscmd.argsTemplate = [
+    [util.staticArgTypes['mentions']]
+];
 getpermscmd.process = function (message, args) {
-    let users = util.getMentionedUsers(message);
+    let users = args[0][0];
     for (userid in users) {
         let user = users[userid];
         let perms = message.channel.permissionsFor(user).serialize();

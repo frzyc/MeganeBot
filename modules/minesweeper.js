@@ -15,12 +15,12 @@ let flag = `🚩`;//'f'
 let wrongflag = `❌`;//'x'
 let letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
-minesweeperGame = function (xs, ys) {
-    this.xsizemin = 15;
-    this.ysizemin = 15;
+minesweeperGame = function (xsmin, ysmin, xsmax, ysmax) {
+    this.xsizemin = xsmin;
+    this.ysizemin = ysmin;
 
-    this.xsizemax = xs;
-    this.ysizemax = ys;
+    this.xsizemax = xsmax;
+    this.ysizemax = ysmax;
 
     this.xsize = 0;
     this.ysize = 0;
@@ -92,19 +92,24 @@ minesweeperGame.prototype.addToPlayer = function (id, amount) {
 
 minesweeperGame.prototype.mark = function (x, y, message) {
     if (this.gameover) return;
+    if (x > this.xsize || y > this.ysize) return;
     if (this.playerboard[x][y] === 'o' && !this.gameover) {
         this.playerboard[x][y] = 'f';
         if (this.board[x][y] === 'b') this.addToPlayer(message.author.id, 1.0);
     }
-    this.boardmsg.edit(this.boardToString(this.playerboard));
+    util.createMessage({
+        message: this.boardmsg,
+        messageContent: this.boardToString(this.playerboard)
+    });
 }
 minesweeperGame.prototype.dig = function (x, y, message) {
     if (this.gameover) return;
+    if (x > this.xsize || y > this.ysize) return;
     if (this.playerboard[x][y] === 'o' || this.playerboard[x][y] === 'f') {
         if (this.board[x][y] === 0) {
             recursezero.bind(this)(x, y);
         } else if (this.board[x][y] === 'b') {
-            this.gameOver();
+            this.gameOver(message);
         } else {
             this.playerboard[x][y] = this.board[x][y];
         }
@@ -123,12 +128,16 @@ minesweeperGame.prototype.dig = function (x, y, message) {
             }
         }
     }
+    util.createMessage({
+        message: this.boardmsg,
+        messageContent: this.boardToString(this.playerboard)
+    });
+
     if (this.checkWin()) {
         this.gamewin = true;
-        this.gameOver();
+        this.gameOver(message);
         console.log("WIN GAME BOOO YEAH");
     }
-    this.boardmsg.edit(this.boardToString(this.playerboard));
 }
 
 minesweeperGame.prototype.boardToString = function(brd){
@@ -183,7 +192,7 @@ minesweeperGame.prototype.checkWin = function () {
 
     return false;
 }
-minesweeperGame.prototype.gameOver = function () {
+minesweeperGame.prototype.gameOver = function (message) {
     if (this.gameover) return '';
     this.gameover = true;
     let unmarkedbombs = 0;
@@ -201,9 +210,9 @@ minesweeperGame.prototype.gameOver = function () {
         for (var player in this.players)
             this.players[player] += average;
     }
-    return printWinners();
+    return this.printWinners(message);
 }
-minesweeperGame.prototype.printWinners = function () {
+minesweeperGame.prototype.printWinners = function (message) {
     msg = 'Player earnings:\n';
     if (Object.keys(this.players).length === 0) {
         msg = `No one earned anything! better luck next time.`
@@ -214,41 +223,50 @@ minesweeperGame.prototype.printWinners = function () {
             msg += `<@${player}> has received ${currency.symbol}${money}.\n`;
         }
     }
-    return msg;
+    return util.createMessage({
+        messageContent: msg
+    }, message);
 }
+
+const xmin = 15;
+const ymin = 15;
+const xmax = 35;
+const ymax = 26;
 
 msgames = {};
 msgames.getOrCreateGame = function (channelid) {
     if (!msgames[channelid])
-        msgames[channelid] = new minesweeperGame(35, 26);
+        msgames[channelid] = new minesweeperGame(xmin, ymin, xmax, ymax);
     return msgames[channelid];
 }
+
+let xyargsTemplate = [
+    [new util.customType(x => x >= 0 ? x : null, util.staticArgTypes['int']), new util.customType(y => {
+            if (y.length > 1) return null;
+            y = y.toLowerCase().charCodeAt(0) - 97;
+            return y >= 0 ? y : null;
+        })]
+];
+
+
 let minesweepercmd = new command(['minesweeper']);
 minesweepercmd.usage = [
-    `[xsize] [ysize]** Create a new minesweeper board with specified size.`,
+    `[xsize] [ysize]** Create a new minesweeper board with specified size. Minimum: ${xmin}x${ymin}, Maximum: ${xmax}x${ymax}`,
+];
+minesweepercmd.argsTemplate = [
+    [new util.customType(x => x >= xmin && x <= xmax ? x : null, util.staticArgTypes['int']), new util.customType(y => y >= ymin && y <= ymax ? y : null, util.staticArgTypes['int'])]
 ];
 minesweepercmd.channelCooldown = 10;//10 seconds
 minesweepercmd.process = function (message, args) {
     if (msgames[message.channel.id] && !msgames[message.channel.id].gameover) return Promise.reject(util.redel("There is still a game going on!"));
-    let xy = getxy(args)
-    if (!xy) return Promise.reject(util.redel("bad arguments"));
     let msgame = msgames.getOrCreateGame(message.channel.id);
-    msgame.newGame(xy.x, xy.y);
+    msgame.newGame(args[0][0], args[0][1]);
     
     /*message.channel.sendMessage(msgame.boardToString(msgame.playerboard))*/
     return util.createMessage({ messageContent: msgame.boardToString(msgame.playerboard) },message).then(msg => {
         msgame.boardmsg = msg;
         msgame.tchannel = message.channel;
     })
-
-    function getxy(args) {
-        if (!args) return null;
-        if (args.length < 2) return null;
-        let chosex = parseInt(args[0]);
-        let chosey = parseInt(args[1]);
-        if (isNaN(chosex) || isNaN(chosey)) return null;
-        return { x: chosex, y: chosey };
-    }
 }
 cmdModule.addCmd(minesweepercmd);
 
@@ -256,13 +274,12 @@ let minesweeperdig = new command(['minesweeperdig','dig']);
 minesweeperdig.usage = [
     `[x] [y]** Mine the block at (x,y)`,
 ];
+minesweeperdig.argsTemplate = xyargsTemplate;
 minesweeperdig.process = function (message, args) {
     if (!msgames[message.channel.id]) return Promise.reject(util.redel("No current minesweeper game."));
     let msgame = msgames.getOrCreateGame(message.channel.id);
     if (message.channel.id !== msgame.tchannel.id) return Promise.reject(util.redel('Bad channel binding'));
-    let xy = getxyfromargs(args, msgame);
-    if (!xy) return Promise.reject(util.redel("bad arguments"));
-    msgame.dig(xy.x, xy.y, message);
+    msgame.dig(args[0][0], args[0][1], message);
     return Promise.resolve({
         message: message,
         deleteTime: 5 * 1000
@@ -275,13 +292,13 @@ let minesweepermark = new command(['minesweepermark', 'mark']);
 minesweepermark.usage = [
     `[x][y]** Mark the block at (x,y) as a possible mine`,
 ];
+minesweepermark.argsTemplate = xyargsTemplate;
 minesweepermark.process = function (message, args) {
     if (!msgames[message.channel.id]) return Promise.reject(util.redel("No current minesweeper game."));
     let msgame = msgames.getOrCreateGame(message.channel.id);
     if (message.channel.id !== msgame.tchannel.id) return Promise.reject(util.redel('Bad channel binding'));
-    let xy = getxyfromargs(args, msgame);
-    if (!xy) return Promise.reject(util.redel("bad arguments"));
-    msgame.mark(xy.x, xy.y, message);
+
+    msgame.dig(args[0][0], args[0][1], message);
     return Promise.resolve({
         message: message,
         deleteTime: 5 * 1000
@@ -313,17 +330,6 @@ endminesweepercmd.process = function (message, args) {
     if (!msgames[message.channel.id] || msgames[message.channel.id].gameover) return Promise.reject(util.redel("No current minesweeper game."));
     let msgame = msgames.getOrCreateGame(message.channel.id);
     if (message.channel.id !== msgame.tchannel.id) return Promise.reject(util.redel('Bad channel binding'));
-    return util.createMessage({
-        messageContent: msgame.gameOver(),
-    });
+    msgame.gameOver();
 }
 cmdModule.addCmd(endminesweepercmd);
-
-function getxyfromargs(args, msgame) {
-    if (!args) return null;
-    if (args.length < 2) return null;
-    let chosex = parseInt(args[0]);
-    let chosey = args[1].toLowerCase().charCodeAt(0) - 97;
-    if (isNaN(chosex) || chosex >= msgame.xsize || isNaN(chosey) || chosey >= msgame.ysize) return null;
-    return { x:chosex, y:chosey };
-}

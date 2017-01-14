@@ -95,12 +95,13 @@ function addrpsvariation(cmds,list, amount, cooldown) {
     let rpsvariation = new command(cmds);
     rpsvariation.userCooldown = cooldown;
     rpsvariation.usage = [`[${list.join(', ')}]** choose an option to play`]
+    rpsvariation.argsTemplate = [
+        [new util.customType(arg => getfromrpslist(list, arg))]
+    ];
     rpsvariation.process = function (message, args) {
         return new Promise((resolve, reject) => {
-            if (!args[0]) return reject(util.redel(`Invalid entry. Use one of [${list.join(', ')}]`));
+            let playerans = args[0][0];
             let meganans = list[util.getRandomInt(0, list.length)];
-            let playerans = getfromrpslist(list, args[0]);
-            if (!playerans) return reject(util.redel(`Invalid entry. Use one of [${list.join(', ')}]`));
             let boolwin = false;
             if (meganans !== playerans) boolwin = checkWin(list, playerans, meganans);
             let ans = `You chose ${playerans}, I chose ${meganans}`;
