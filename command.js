@@ -181,17 +181,9 @@ command.prototype.clearCooldown = function (message) {
     clrCD('channelCooldown', message.channel.id);
 }
 command.prototype.checkArgs = function (args,message) {
-    if (!this.argsTemplate) return;
-    console.log('checkArgs');
-    console.log(args);
-    let ert = this.argsTemplate.map(tem => util.parseArgs(tem, args.slice(0), message));
-    console.log('ert:');
-    console.log(ert);
-    return ert;
+    if (this.argsTemplate) return this.argsTemplate.map(tem => util.parseArgs(tem, args.slice(0), message));
 }
 command.prototype.checkRestriction = checkRestriction;
-
-
 
 module.exports = {
     cmdBaseobj: cmdBaseobj,

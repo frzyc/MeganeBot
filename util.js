@@ -165,7 +165,7 @@ exports.getMentionStrings = function (message) {
 }
 
 exports.getMentionedUsers = function (message) {
-    console.log('getMentionedUsers');
+    //console.log('getMentionedUsers');
     let userarr = {};
     if (message.mentions.everyone) {
         message.guild.members.map(member => {
@@ -173,7 +173,7 @@ exports.getMentionedUsers = function (message) {
             if (!userarr[user.id])
                 userarr[user.id] = user;
         })
-        console.log(`everyone mention added. size: ${Object.keys(userarr).length}`);
+        //console.log(`everyone mention added. size: ${Object.keys(userarr).length}`);
         return userarr;
     }
 
@@ -188,12 +188,12 @@ exports.getMentionedUsers = function (message) {
             })
         }));
     }
-    console.log(`role mention added. size: ${Object.keys(userarr).length}`);
+    //console.log(`role mention added. size: ${Object.keys(userarr).length}`);
     message.mentions.users.map((user => {
         if (!userarr[user.id])
             userarr[user.id] = user;
     }));
-    console.log(`user mention added. size: ${Object.keys(userarr).length}`);
+    //console.log(`user mention added. size: ${Object.keys(userarr).length}`);
     
     
     return userarr;
@@ -350,7 +350,7 @@ exports.staticArgTypes = {
         type: 'word',
         process: (arg) => {
             if (arg == null) return null;
-            console.log(`process:word(${arg})`);
+            //console.log(`process:word(${arg})`);
             if (arg.length === 0)
                 return null;
             return arg;
@@ -360,7 +360,7 @@ exports.staticArgTypes = {
         type: 'int',
         process: (arg) => {
             if (arg == null) return null;
-            console.log(`process:int(${arg})`);
+            //console.log(`process:int(${arg})`);
             if (!/^[-+]?[0-9]+$/.test(arg)) return null;
             let ret = parseInt(arg);
             if (isFinite(ret))
@@ -373,7 +373,7 @@ exports.staticArgTypes = {
         type: 'float',
         process: (arg) => {
             if (arg == null) return null;
-            console.log(`process:float(${arg})`);
+            //console.log(`process:float(${arg})`);
             //strict parsing
             //  /^([-+]?(\d+\.?\d*|\d*\.?\d+))$/
             if (!/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/.test(arg)) return null;
@@ -401,20 +401,17 @@ let customType = function (evalfunc, statictype) {
         this.baseprocess = statictype.process;
 }
 customType.prototype.process = function (arg, message) {
-    console.log(`process:customType(${arg}:${typeof arg})`);
+    //console.log(`process:customType(${arg}:${typeof arg})`);
     if (this.baseprocess) {
         arg = this.baseprocess(arg,message);
     }
     if (arg == null) return null;
-    console.log(`process:customType2(${arg}:${typeof arg})`);
     return this.evalfunc(arg, message);
 }
 exports.customType = customType;
 
 //will return null if args do not match template.
 exports.parseArgs = function (template, args, message) {
-    console.log(`parseargs`);
-    console.log(args);
     let out = [];
     for (argtype of template) {
         /*if (argtype.type === 'none') {
@@ -428,17 +425,14 @@ exports.parseArgs = function (template, args, message) {
             if (!'process' in argtype) return;
             let arg = args.shift();
             let parsedarg = argtype.process(arg, message);
-            console.log('parsedarg:');
-            console.log(parsedarg);
             if (parsedarg != null) out.push(parsedarg);
             else return null;
             if (argtype.type === 'oristring') break;//cause it includes everything after
         }
     }
-    console.log('before return, out:');
-    console.log(out);
     return out;
 }
+/*
 const at = exports.staticArgTypes;
 const ct = exports.customType;
 let testtem = [at['word'], at['int'], at['float'], new ct((v) => {
@@ -448,4 +442,4 @@ let testtem = [at['word'], at['int'], at['float'], new ct((v) => {
 ];
 let teststring = `test 12345 -.12e-19 9`;
 console.log("TEST PARSE");
-console.log(exports.parseArgs(testtem, teststring.split(' ')));
+console.log(exports.parseArgs(testtem, teststring.split(' ')));*/
