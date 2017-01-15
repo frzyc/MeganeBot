@@ -27,6 +27,7 @@
     <Folder Include="typings\" />
     <Folder Include="typings\globals\" />
     <Folder Include="typings\globals\node\" />
+    <Folder Include="utility\" />
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="typings\globals\node\index.d.ts" />
@@ -39,7 +40,7 @@
     <Compile Include="modules\botAdmin.js" />
     <Compile Include="modules\cleverbot.js" />
     <Compile Include="modules\color.js" />
-    <Compile Include="command.js" />
+    <Compile Include="utility\command.js" />
     <Compile Include="modules\gambling.js" />
     <Compile Include="modules\games.js" />
     <Compile Include="modules\general.js" />
@@ -47,7 +48,7 @@
     <Compile Include="modules\music.js" />
     <Compile Include="modules\playerData.js" />
     <Compile Include="modules\rps.js" />
-    <Compile Include="util.js" />
+    <Compile Include="utility\util.js" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <!--Do not delete the following Import Project.  While this appears to do nothing it is a marker for setting TypeScript properties before our import that depends on them.-->

@@ -1,12 +1,16 @@
 {
   "name": "MeganeBot",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "a bot made by a glasses fetishtist",
   "main": "bot.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "frzyc",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frzyc/MeganeBot.git"
+  },
   "license": "ISC",
   "dependencies": {
     "cleverbot.io": "^1.0.4",

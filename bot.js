@@ -5,8 +5,8 @@ console.log(`Starting DiscordBot\nNode version: ${process.version}\nDiscord.js v
 
 //little helper function to keep track of the files... for now
 exports.getRequire = function (modulename) {
-    if (modulename === 'command') return require('./command.js');
-    if (modulename === 'util') return require('./util.js');
+    if (modulename === 'command') return require('./utility/command.js');
+    if (modulename === 'util') return require('./utility/util.js');
     if (modulename === 'config') return require('./data/config.json');
     if (modulename === 'playerdata') return require('./modules/playerData.js');
     throw 'codefile not found!';
@@ -158,9 +158,27 @@ client.on('messageReactionRemove', (messageReaction, user) => {
 
 // Handle discord.js warnings
 client.on('warn', (m) => console.log('[warn]', m));
-//client.on('debug', (m) => console.log('[debug]', m));
-
-client.login(config.token);
+client.on('debug', (m) => console.log('[debug]', m));
+client.on('disconnect', (m) => {
+    console.log('[disconnect]', m)
+    let reconn = function (time) {
+        console.log(`Reconnecting after ${time / 1000} seconds`);
+        setTimeout((m) => {
+            client.login(config.token).then(() => {
+                console.log('Reconnected! ${m}');
+            }).catch((m) => {
+                console.log('Error with reconnecting: ${m}');
+                reconn(time * 2);
+            })
+        }, time);
+    }
+    reconn(4000);
+});
+client.login(config.token).then(() => {
+    console.log('login success! ${m}');
+}).catch((m) => {
+    console.log('Error with login: ${m}');
+})
 
 process.on('uncaughtException', function (err) {
     if (err.code == 'ECONNRESET') {//occationally get this error using ytdl.... not sure what to do with it
