@@ -6,8 +6,20 @@ const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
 const playerData = require.main.exports.getRequire('playerdata').playerData;
 const currency = require.main.exports.getRequire('playerdata').currency;
 let colorfile = '../data/color.json';
-var colorList = require(colorfile);
-if (!colorList) colorList = {};
+let colorList = {};
+fs.readFile(__dirname + '/' + colorfile, 'utf8', (err, data) => {
+    if (err)
+        console.log(err);
+    else {
+        try {
+            colorList = JSON.parse(data);
+        } catch (e) {
+            console.log(e);
+            colorList = {};
+        }
+    }
+});
+//if (!colorList) colorList = {};
 
 let cmdModule = new cmdModuleobj('Color');
 cmdModule.description = `Allows the player to change their name color using roles.`;
