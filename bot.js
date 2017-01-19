@@ -13,6 +13,7 @@ exports.getRequire = function (modulename) {
 }
 const config = require.main.exports.getRequire('config');
 const util = require.main.exports.getRequire('util');
+const messageWatchList = require.main.exports.getRequire('util').messageWatchList;
 const command = require.main.exports.getRequire('command').command;
 const cmdBaseobj = require.main.exports.getRequire('command').cmdBaseobj;
 const playerData = require.main.exports.getRequire('playerdata').playerData;
@@ -41,7 +42,28 @@ moduledirlist.forEach(mod => {
     cmdBase.addModule(require(mod).cmdModule);
 });  
 
+let reconnTimer = null;
+client.on('disconnect', (m) => {
+    console.log('[disconnect]', m)
+    function reconn(time) {
+        if (reconnTimer != null) return;
+        console.log(`Reconnecting after ${time / 1000} seconds`);
+        reconnTimer = setTimeout((m) => {
+            client.login(config.token).then((m) => {
+                reconnTimer = null;
+                console.log(`Reconnected! ${m}`);
+            }).catch((m) => {
+                reconnTimer = null;
+                console.log(`Error with reconnecting: ${m}`);
+                reconn(time * 2);
+            })
+        }, time);
+    }
+    reconn(10000);
+});
+
 client.on('ready', () => {
+    if (reconnTimer) clearTimeout(reconnTimer);
     console.log(`Ready to serve in ${client.channels.size} channels on ${client.guilds.size} servers, for a total of ${client.users.size} users.`);
     console.log(client.user);
     //client.user.setUsername("MeganeBot");
@@ -134,23 +156,46 @@ client.on('guildMemberAdd', (member) => {
 });
 
 client.on('messageReactionAdd', (messageReaction, user) => {
+    console.log("messageReactionAdd");
+    messageReaction.remove().catch(console.error);
+});
+/*
+
+client.on('messageReactionAdd', (messageReaction, user) => {
     if (user.bot) return; //wont respond to bots
     console.log(`NEW REACTION BOOO YEAH emoji.name:${messageReaction.emoji.name}, emoji.id:${messageReaction.emoji.id}, emoji.identifier:${messageReaction.emoji.identifier}, emoji.toString():${messageReaction.emoji.toString()}`);
-    /*
-    console.log(messageReaction.emoji.name);
-    console.log(messageReaction.emoji.id);
-    console.log(messageReaction.emoji.identifier);
-    console.log(messageReaction.emoji.toString());*/
+    
+    //console.log(messageReaction.emoji.name);
+    //console.log(messageReaction.emoji.id);
+    //console.log(messageReaction.emoji.identifier);
+    //console.log(messageReaction.emoji.toString());
     //just give the player some money for now...
-    if (playerData && util.percentChance(5)) {
+    if (messageWatchList[messageReaction.message.id]) {
+        console.log("IN messageWatchList");
+        console.log(messageWatchList[messageReaction.message.id]);
+        console.log("messageReaction.toString():" + messageReaction.emoji.toString());
+        if (messageReaction.emoji.toString() in messageWatchList[messageReaction.message.id].emojiButtons) {
+            console.log("IN messageWatchList with emoji");
+            Promise.resolve(messageWatchList[messageReaction.message.id].emojiButtons[messageReaction.emoji.toString()](messageReaction, user)).then(response => {
+                console.log("emoji resolved");
+                console.log(response);
+                util.createMessage(response, messageReaction.message).catch(console.error);
+            }).catch(reject => {
+                console.log("emoji rejected");
+                console.log(reject);
+                util.createMessage(reject, messageReaction.message).catch(console.error);;
+            });
+            messageReaction.remove().catch(console.error);
+        }
+    } else if (playerData && util.percentChance(5)) {
         playerData.getOrCreatePlayer(messageReaction.message.author.id).wallet.addMoney(1);
         messageReaction.message.react(currency.emoji).catch(console.error);//TODO: need to find how emojis work
     }
-    /*
-    let msgOwnerAmount = msgOwnerPlayer.wallet.getAmount();
-    let currencyname = msgOwnerAmount > 1 ? currency.nameplural : currency.name
-    console.log(`${messageReaction.message.member.displayName} now has ${msgOwnerAmount} ${currencyname}`);*/
-});
+    
+    //let msgOwnerAmount = msgOwnerPlayer.wallet.getAmount();
+    //let currencyname = msgOwnerAmount > 1 ? currency.nameplural : currency.name
+    //console.log(`${messageReaction.message.member.displayName} now has ${msgOwnerAmount} ${currencyname}`);
+});*/
 
 client.on('messageReactionRemove', (messageReaction, user) => {
     console.log("REMOVE REACTION BOOO");
@@ -159,25 +204,11 @@ client.on('messageReactionRemove', (messageReaction, user) => {
 // Handle discord.js warnings
 client.on('warn', (m) => console.log('[warn]', m));
 client.on('debug', (m) => console.log('[debug]', m));
-client.on('disconnect', (m) => {
-    console.log('[disconnect]', m)
-    let reconn = function (time) {
-        console.log(`Reconnecting after ${time / 1000} seconds`);
-        setTimeout((m) => {
-            client.login(config.token).then(() => {
-                console.log('Reconnected! ${m}');
-            }).catch((m) => {
-                console.log('Error with reconnecting: ${m}');
-                reconn(time * 2);
-            })
-        }, time);
-    }
-    reconn(4000);
-});
-client.login(config.token).then(() => {
-    console.log('login success! ${m}');
+
+client.login(config.token).then((m) => {
+    console.log(`login success! ${m}`);
 }).catch((m) => {
-    console.log('Error with login: ${m}');
+    console.log(`Error with login: ${m}`);
 })
 
 process.on('uncaughtException', function (err) {
