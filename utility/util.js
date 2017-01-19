@@ -1,4 +1,6 @@
-﻿//my own function to send messages, should be able to queue messages, check length, segment/shorten messages, and do some parsing stuff
+﻿let watchlist = {};
+exports.messageWatchList = watchlist;
+//my own function to send messages, should be able to queue messages, check length, segment/shorten messages, and do some parsing stuff
 exports.createMessage = function (rmsg, message, channel) {
     //console.log(`createMessage:`);
     //console.log(rmsg);
@@ -7,58 +9,93 @@ exports.createMessage = function (rmsg, message, channel) {
         if (rmsg.messageContent) {
             //TODO check 2000 character message limit
         }
+        let msgPromise = null;
 
-        if (rmsg.message) {//basically an edit
-            if (rmsg.messageContent) {
-                rmsg.message.edit(rmsg.messageContent)
-                    .then((msg) => {
-                        return resolve(msg);
-                    })
-                    .catch((err) => {
-                        console.log("createMessage: fail to edit message.");
-                        console.error(err);
-                        return reject(err);
-                    });
-            }
-            if ('deleteTime' in rmsg) deletemsg(rmsg.message, message);
+        if (rmsg.message) {//edit msg
+            if (rmsg.messageContent)
+                msgPromise = rmsg.message.edit(rmsg.messageContent);
+            else
+                msgPromise = Promise.resolve(rmsg.message);
         } else if (rmsg.messageContent) {
             if (!message && !channel) return reject(new Error('no message or channel to send to.'));
-            let sendCreatedMessage = () => {
-                //console.log("sendCreatedMessage");
-                return new Promise((resolve, reject) => {
-                    let replyOrSend;
-                    if (message)
-                        replyOrSend = rmsg.reply ? message.reply(rmsg.messageContent, rmsg.messageOptions) : message.channel.sendMessage(rmsg.messageContent, rmsg.messageOptions);
-                    else if (channel)
-                        replyOrSend = channel.sendMessage(rmsg.messageContent, rmsg.messageOptions);
-
-                    replyOrSend.then((re) => {
-                        if (rmsg.then) rmsg.then(re);
-                        if ('deleteTime' in rmsg) deletemsg(re, message);
-                        //console.log("sendCreatedMessage: sent created message.");
-                        return resolve(re);
-                    }).catch((err) => {
-                        console.log("createMessage: fail to send message.");
-                        console.error(err);
-                        return reject(err);
-                    });
-                });
-            }
-
-            if (rmsg.typing) {
+            if (rmsg.typing) {//a simulated typing msg
                 let channel = message ? message.channel : channel;
-                if (!channel) return reject(new Error('no message or channel to send to.'));
                 channel.startTyping();
                 setTimeout(() => {
                     channel.stopTyping(true);
-                    return sendCreatedMessage().then(resolve, reject);
+                    msgPromise = sendCreatedMessage();
                 }, (rmsg.messageContent.length * 30 + 100))
-            } else {
-                return sendCreatedMessage().then(resolve, reject);
+            } else {//a normal msg
+                msgPromise = sendCreatedMessage();
             }
-        } else
+        }
+        if (msgPromise == null)
             return reject(new Error('Not a resolvable message.'));
+        msgPromise.then((msg) => {
+            postSendProcessing(msg).then(resolve);
+        })
+        .catch((err) => {
+            console.log("createMessage: fail to send/edit message.");
+            console.error(err);
+            return reject(err);
+        });
 
+        function postSendProcessing(msgtoprocess) {
+            console.log("postSendProcessing");
+            console.log(rmsg);
+            return new Promise((resolve, reject) => {
+                if ('deleteTime' in rmsg) deletemsg(msgtoprocess, message);
+                if ('deleteTime' in rmsg && rmsg.deleteTime === 0) return resolve(msgtoprocess);//message is gone
+                let promises = [];
+
+                function addemoji(li, i) {
+                    console.log(`li:${li}`);
+                    msgtoprocess.react(li[i]).then(() => {
+                        i++;
+                        if (i < li.length)
+                            return addemoji(li, i);
+                        else {
+                            console.log('done all emojs');
+                            return resolve('DONE ALL EMOJIS');
+                        }
+                    })
+
+                }
+
+                if ('emojis' in rmsg && 'emojiButtons' in rmsg) delete rmsg.emojis;//can only have one
+                if ('emojis' in rmsg && rmsg.emojis.length > 0) {
+                    addemoji(rmsg.emojis,0);
+                } else if ('emojiButtons' in rmsg && rmsg.emojiButtons.length > 0) {
+                    let emojibuttondict = {};
+                    for (emojiobj of rmsg.emojiButtons) {
+                        emojibuttondict[emojiobj.emoji] = emojiobj.process; 
+                    }
+                    watchlist[msgtoprocess.id] = {
+                        msg: msgtoprocess,
+                        emojiButtons: emojibuttondict
+                    };
+                    let emojilist = rmsg.emojiButtons.map(x => x.emoji);
+                    addemoji(emojilist, 0);
+                }
+                return resolve(msgtoprocess);
+            });
+        }
+        function sendCreatedMessage() {
+            //console.log("sendCreatedMessage");
+            return new Promise((resolve, reject) => {
+                let replyOrSend;
+                if (message)
+                    replyOrSend = rmsg.reply ? message.reply(rmsg.messageContent, rmsg.messageOptions) : message.channel.sendMessage(rmsg.messageContent, rmsg.messageOptions);
+                else if (channel)
+                    replyOrSend = channel.sendMessage(rmsg.messageContent, rmsg.messageOptions);
+
+                replyOrSend.then(resolve).catch((err) => {
+                    console.log("createMessage: fail to send message.");
+                    console.error(err);
+                    return reject(err);
+                });
+            });
+        }
         function deletemsg(re, message) {
             if (rmsg.deleteTime === 0) {
                 if (re.deletable) re.delete().catch(console.error);

@@ -120,3 +120,36 @@ getpermscmd.process = function (message, args) {
     return Promise.resolve({});
 }
 cmdModule.addCmd(getpermscmd);
+
+
+let testcmd = new command(['test']);
+testcmd.process = function (message, args) {
+    return Promise.resolve({
+        messageContent: 'testing',
+        //emojis: ['🇦', '🇧','🇨']
+        emojiButtons: [
+            {
+                emoji: '🇦',
+                process: (messageReaction, user) => {
+                    console.log("PROCESSA");
+                    return Promise.resolve({ messageContent: '🇦'})
+                }
+            },
+            {
+                emoji: '🇧',
+                process: (messageReaction, user) =>{
+                    console.log("PROCESSB");
+                    return Promise.resolve({ messageContent: '🇧' })
+                }
+            },
+            {
+                emoji: '🇨',
+                process: (messageReaction, user) => {
+                    console.log("PROCESSC");
+                    return Promise.resolve({ messageContent: '🇨' })
+                }
+            }
+        ],
+    });
+}
+cmdModule.addCmd(testcmd);

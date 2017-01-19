@@ -298,7 +298,7 @@ minesweepermark.process = function (message, args) {
     let msgame = msgames.getOrCreateGame(message.channel.id);
     if (message.channel.id !== msgame.tchannel.id) return Promise.reject(util.redel('Bad channel binding'));
 
-    msgame.dig(args[0][0], args[0][1], message);
+    msgame.mark(args[0][0], args[0][1], message);
     return Promise.resolve({
         message: message,
         deleteTime: 5 * 1000

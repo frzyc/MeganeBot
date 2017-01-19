@@ -1,6 +1,7 @@
 ﻿const util = require.main.exports.getRequire('util');
 const config = require.main.exports.getRequire('config');
 
+//this checkRestriction works both for commands and modules
 let checkRestriction = (message) => {
     if (this.dmOnly && message.channel.type === 'text') return 'direct message';
     if (this.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) return 'server';
@@ -8,7 +9,7 @@ let checkRestriction = (message) => {
     return '';
 } 
 
-
+//the cmdBaseobj basically stores modules. It does some preliminary checking when adding modules to itself.
 var cmdBaseobj = function () {
     this.cmdlist = {};
     this.modulelist = {};
@@ -34,26 +35,6 @@ cmdBaseobj.prototype.addCmd = function (cmdobj) {
     }
     return addcomplete;
 }
-/*
-//modules will have multiple cmdname mappings due to cmdname shortcuts. just use module mapping so all of cmdobj.name gets used.
-cmdBaseobj.prototype.addCmdWithName = function (cmdobj,name) {
-    //console.log(`cmdBaseobj.addCmdWithName: ${name}`);
-    if (!name) {
-        console.log(`cmdBaseobj.addCmdWithName:ERROR: Command has invalid cmdname.`);
-        return false;
-    }
-    if (!cmdobj.process) return console.log(`cmdBaseobj.addCmdWithName: ERROR: Command ${name} does not have a process.`);
-    if (!cmdobj.usage) console.log(`cmdBaseobj.addCmdWithName: WARN: Command ${name} does not have a usage.`);
-
-    if (this.cmdlist[name]) {
-        console.log(`cmdBaseobj.addCmdWithName: ERROR: Command ${name} already exists.`);
-        return false;
-    }
-
-    this.cmdlist[name] = cmdobj;
-
-    return true;
-}*/
 
 cmdBaseobj.prototype.addModule = function (moduleobj) {
     //console.log(`cmdBaseobj.prototype.addModule: ${moduleobj.name}`);
@@ -78,6 +59,18 @@ cmdBaseobj.prototype.addModule = function (moduleobj) {
     return addcomplete;
 }
 
+/*
+cmdModuleobj //all commands belong in a module
+//restrictions
+    .owneronly: bool //true -> only owner can use this command
+    .serverOnly: bool
+    .dmOnly: bool
+.cmdlist: {} //store all the commands in this module, based on name
+.description: string //describe this module
+.prototype.getDesc: function()// "" describe the module
+.prototype.addCmd: function()// add cmds to the cmdlist. basic check for name collison
+.prototype.checkRestriction: function(message)//check if a message is restricted in any manner(see restrictions above)
+*/
 var cmdModuleobj = function (modulename) {
     this.name = modulename;
     this.cmdlist = {};
@@ -91,16 +84,6 @@ cmdModuleobj.prototype.addCmd = function (cmdobj) {
     }
     let cmdname = cmdobj.name[0];
     if (!cmdobj.process) return console.log(`module.addCmd:ERROR: Command ${cmdname} does not have a process.`);
-    /*
-    for (n of cmdobj.name) {
-        if (this.cmdlist[n]) {
-            console.log(`module.addCmd:ERROR: Command ${n} already exists.`);
-            addcomplete = false;
-            return;
-        }
-
-        this.cmdlist[n] = cmdobj;
-    }*/
     if (this.cmdlist[cmdname]) {
         console.log(`module.addCmd:ERROR: Command ${cmdname} already exists in this module.`);
         addcomplete = false;
@@ -118,6 +101,40 @@ cmdModuleobj.prototype.getDesc = function () {
 }
 cmdModuleobj.prototype.checkRestriction = checkRestriction;
 
+
+/*
+command //This is a command object.
+.name: ['cmdname','cmdalias1','cmdalias1'] //can map to multiple names (shortcuts)
+
+//restrictions
+    .owneronly: bool //true -> only owner can use this command
+    .serverOnly: bool
+    .dmOnly: bool
+
+.usage: ['usemeoneway','usemeanotherway'] can support multiple usages, used by help command
+.argsTemplate: [[typings for usemeoneway],[typings for usemeanotherway]] //list of templates to precheck params against
+
+.reqperms: [] necessary permissions needed to run command
+.requserperms: [] require the user calling this command to have perms
+
+//Cooldowns
+    .usercooldown: number //time in second required for user to reuse this command
+	.servercooldown: number //time in second required for server to reuse this command
+	.channelcooldown: number //time in second required for channel to reuse this command
+
+.process: (message, args, client) => {
+    return new Promise((resolve,reject) => {
+	    //Whatever function you want here to process the command stuff look in util.js for resolve message formatting
+	    return resolve({ Resolved message });
+        return reject({ Resolved message });
+    })
+}
+.prototype.getusage: function(ind)//get all usage or usage[ind]
+.prototype.setCooldown: function(message)//put cmd on cooldown for specific cooldowns(see above in cooldowns)
+.prototype.inCooldown: function(message)//check if a specific cooldown still applies
+.prototype.clearCooldown: function(message)//clear all the cooldowns for this cmd
+.prototype.checkRestriction: function(message)//check if a message is restricted in any manner(see restrictions above)
+*/
 var command = function (cmdnames) {
     this.name = cmdnames;
 }

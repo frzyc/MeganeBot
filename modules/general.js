@@ -221,8 +221,7 @@ saycmd.argsTemplate = [
 ];
 saycmd.process = function (message, args) {
     return Promise.resolve({
-        messageContent: `${args[0][0]}`,
-        deleteTime: 5 * 60 * 1000,
+        messageContent: `${args[0][0]}`
     });
 }
 cmdModule.addCmd(saycmd);
@@ -235,7 +234,6 @@ sayttscmd.argsTemplate = [
 sayttscmd.process = function (message, args) {
     return Promise.resolve({
         messageContent: `${args[0][0]}`,
-        deleteTime: 5 * 60 * 1000,
         messageOptions: { tts: true }
     });
 }
