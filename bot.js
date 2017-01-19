@@ -154,12 +154,12 @@ client.on('guildMemberAdd', (member) => {
     console.log(`New User "${member.user.username}" has joined "${member.guild.name}"`);
     member.guild.defaultChannel.sendMessage(`"${member.user.username}" has joined this server`);
 });
-
+/*
 client.on('messageReactionAdd', (messageReaction, user) => {
     console.log("messageReactionAdd");
     messageReaction.remove().catch(console.error);
-});
-/*
+});*/
+
 
 client.on('messageReactionAdd', (messageReaction, user) => {
     if (user.bot) return; //wont respond to bots
@@ -195,7 +195,7 @@ client.on('messageReactionAdd', (messageReaction, user) => {
     //let msgOwnerAmount = msgOwnerPlayer.wallet.getAmount();
     //let currencyname = msgOwnerAmount > 1 ? currency.nameplural : currency.name
     //console.log(`${messageReaction.message.member.displayName} now has ${msgOwnerAmount} ${currencyname}`);
-});*/
+});
 
 client.on('messageReactionRemove', (messageReaction, user) => {
     console.log("REMOVE REACTION BOOO");
