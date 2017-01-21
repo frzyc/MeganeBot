@@ -1,5 +1,6 @@
-﻿const request = require('superagent');
+﻿//const request = require('superagent');
 const ytdl = require('ytdl-core');
+const Req = require('request');
 
 const util = require.main.exports.getRequire('util');
 const command = require.main.exports.getRequire('command').command;
@@ -13,7 +14,7 @@ cmdModule.description = `Music commands`
 cmdModule.serverOnly = true;
 exports.cmdModule = cmdModule;
 
-const MAX_NUM_SONGS_PER_PLAYLIST = 100;
+const MAX_NUM_SONGS_PER_PLAYLIST = 500;
 var queueList = {};//stores queuelists for all servers
 queueList.hasPlayQueue = function (guildid) {
     if (guildid in queueList) return true
@@ -31,7 +32,6 @@ queueList.getOrCreatePlayQueue = function (guildid) {
     return queueList.getPlayQueue(guildid);
 }
 
-
 var playQueue = function () {
     this.list = [];
     this.guildid = null;
@@ -40,132 +40,85 @@ var playQueue = function () {
     this.vchannel = null;
     this.volume = 0.25;//default volume
 };
-
 playQueue.prototype.addtoQueue = function (videoObj) {
     console.log("playQueue.addtoQueue");
-    if (this.list.length >= MAX_NUM_SONGS_PER_PLAYLIST) return this.tchannel.sendMessage("Max Playlist size.");
+    if (this.list.length >= MAX_NUM_SONGS_PER_PLAYLIST) return util.sendMessage(util.redel('Max Playlist size.'), null, this.tchannel);
     this.list.push(videoObj);
     if (this.tchannel) {
-        util.queueMessages(this.tchannel, `Queued ${videoObj.prettyPrint()}`);
+        util.createMessage({ messageContent: `Queued ${videoObj.prettyPrint()}` }, null, this.tchannel).then(msg => {
+            videoObj.queueMessage = msg;
+            console.log(videoObj.queueMessage);
+            this.playNextInQueue();
+        }, err => {
+            console.error(err);
+            this.playNextInQueue();//just incase music is allowed but text isnt?
+        });
     }
     console.log("playQueue.list.length:" + this.list.length);
-    if (!this.current) this.playNextInQueue();
 }
 playQueue.prototype.playNextInQueue = function () {
     console.log("playQueue.playNextInQueue");
-    if (this.list.length > 0) {
-        next = this.list.shift();
-        this.play(next);
-    }
+    if (this.current) return;//already have something playing
+    if (this.list.length > 0)
+        this.play(this.list.shift());
 }
 playQueue.prototype.play = function (video) {
     console.log("playQueue.play");
     this.current = video;
     const voiceConnection = client.voiceConnections.get(this.guildid);
-    if (voiceConnection != null) {
-        console.log("playQueue.play1");
-        let currentStream = video.getStream();
+    if (voiceConnection == null) return console.log('there is no voice connection.....');
 
-        currentStream.on('error', (err) => {
-            console.log(`There was an error during from stream ${err}`);
-            if (err.code === 'ECONNRESET') {
-                if (this.tchannel) this.tchannel.sendMessage(`There was a network error during playback! The connection to YouTube may be unstable. Auto-skipping to the next video...`);
-            } else {
-                if (this.tchannel) this.tchannel.sendMessage(`There was an error during playback! **${err}**`);
+    let currentStream = Req(video.url);
+    currentStream.on('error', (err) => console.error(err));
+    const streamOptions = { seek: 0, volume: this.volume };
+    let disp = voiceConnection.playStream(currentStream, streamOptions);
+    disp.once('end', () => {
+        console.log("dispatcher end");
+        setTimeout(() => this.playStopped(), 1000);
+    });
+    if (this.tchannel) {
+        util.createMessage({ messageContent: `Playing ${video.prettyPrint()}` }, null, this.tchannel).then(msg => {
+            this.playingMessage = msg;
+            if (video.queueMessage != null && video.queueMessage.deletable) {
+                video.queueMessage.delete();
+                video.queueMessage = null;
             }
         });
-
-        console.log("after getStream()");
-
-        //attach event to song end
-        const streamOptions = { seek: 0, volume: this.volume };
-        let disp = voiceConnection.playStream(currentStream, streamOptions);
-        disp.once('end', () => {
-            console.log("dispatcher end");
-            setTimeout(() => { this.playStopped(); }, 2000)// 2 second leeway for bad timing
-        });
-        if (this.tchannel) this.tchannel.sendMessage(`Playing ${video.prettyPrint()}`);
-        client.user.setGame(video.title);
-
     }
+        //client.user.setGame(video.title);
+    
 }
 playQueue.prototype.playStopped = function () {
     console.log(`playQueue.playStopped in vchannel:${this.vchannel}`);
-    if (this.tchannel) this.tchannel.sendMessage(`Finished playing **${this.current.title}**`);
-    client.user.setGame('');
-    this.current = false;
+    if (this.playingMessage)
+        util.createMessage({
+            message: this.playingMessage,
+            messageContent: `Finished playing **${this.current.title}**`
+        });
+    //client.user.setGame('');
+    this.current = null;
+    const voiceConnection = client.voiceConnections.get(this.guildid);
+    if (voiceConnection == null) return console.log('there is no voice connection.....');
     this.playNextInQueue();
 }
 
-var Track = function (vid, info) {
-    this.vid = vid;
+var Track = function (info) {
+    this.info = info;
     this.title = info.title;
-    this.author = info.author;
-    this.viewCount = info.viewCount || info.view_count;
-    this.lengthSeconds = info.lengthSeconds || info.length_seconds;
+    this.url = info.url;
+    this.thumbnail = info.thumbnail;
+    this.extractor = info.extractor;
+    this.webpage_url = info.webpage_url;
+    this.uploader = info.uploader;
+    this.lengthSeconds = info.duration;
+    this.userId = null;
+    this.playingMessage = null;
+    this.queueMessage = null;
 }
-Track.prototype.formatViewCount = function () { return this.viewCount ? this.viewCount.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : 'unknown'; };
 Track.prototype.formatTime = function () { return util.formatTime(this.lengthSeconds); };
-Track.prototype.prettyPrint = function () { return `**${this.title}** by **${this.author}** *(${this.formatViewCount()} views)* [${this.formatTime()}]`; };
+Track.prototype.prettyPrint = function () { return `**${this.title}** by **${this.uploader}** [${this.formatTime()}]`; };
 Track.prototype.fullPrint = function () { return `${this.prettyPrint()}, added by <@${this.userId}>`; };
 Track.prototype.getTime = function () { return this.lengthSeconds; };
-
-var YoutubeTrack = function () {
-    Track.apply(this, arguments);
-};
-
-YoutubeTrack.prototype = Object.create(Track.prototype);
-
-YoutubeTrack.getInfoFromVid = function (vid, m, cb) {
-    var requestUrl = '';
-    if (vid.includes("www.youtube.com/watch?v="))//source is a link
-        requestUrl = vid;
-    else
-        requestUrl = 'http://www.youtube.com/watch?v=' + vid; //source is just video ID
-    ytdl.getInfo(requestUrl, (err, info) => {
-        if (err) cb(err, undefined);
-        else {
-            var video = new YoutubeTrack(vid, info);
-            video.userId = m.author.id;
-            video.containedVideo = info;
-            cb(undefined, video);
-        }
-    });
-};
-
-YoutubeTrack.prototype.getStream = function () {
-    var options = {
-        filter: 'audioonly',//filter: (format) => format.container === 'mp4'
-        quality: 'lowest',
-    };
-    return ytdl.downloadFromInfo(this.containedVideo, options);
-};
-
-
-function getInfoAndQueue(vid, message, suppress) {
-    if (!queueList.hasPlayQueue(message.guild.id)) return;
-    let pq = queueList.getPlayQueue(message.guild.id);
-    console.log("getInfoAndQueue:" + vid);
-    YoutubeTrack.getInfoFromVid(vid, message, (err, video) => {
-        if (err) handleYTError(message, err);
-        else pq.addtoQueue(video);
-    });
-}
-
-function handleYTError(message, err) {
-    if (!queueList.hasPlayQueue(message.guild.id)) return;
-    let c = queueList.getPlayQueue(message.guild.id).tchannel;
-    if (err.toString().indexOf('Code 150') > -1) {// Video unavailable in country
-        util.queueMessages(c, 'This video is unavailable in the country the bot is running in! Please try a different video.');
-    } else if (err.message == 'Could not extract signature deciphering actions') {
-        util.queueMessages(c, 'YouTube streams have changed their formats, please update `ytdl-core` to account for the change!');
-    } else if (err.message == 'status code 404') {
-        util.queueMessages(c, 'That video does not exist!');
-    } else {
-        util.queueMessages(c, 'An error occurred while getting video information! Please try a different video.');
-    }
-    console.log(err.toString());
-}
 
 function getAuthorVoiceChannel(msg) {
     var voiceChannelArray = msg.guild.channels.filter((v) => v.type == "voice").filter((v) => v.members.has(msg.author.id)).array();
@@ -183,6 +136,7 @@ function canJoinUserVoice(msg) {
     };
     if (voiceConnection != null && voiceConnection.channel.id === voiceChannel.id) return {
         bool: false,
+        samechannel:true,
         msg: "BAKA... I'm already here! "
     };
     return {
@@ -192,59 +146,59 @@ function canJoinUserVoice(msg) {
 }
 function leaveVoice(msg) {
     const voiceConnection = client.voiceConnections.get(msg.guild.id);
-    if (voiceConnection != null) {
+    if (voiceConnection == null) return;
         voiceConnection.player.dispatcher.end();
         voiceConnection.channel.leave();
-        return;
-    }
 }
-
-let joinvoice = new command(['joinvoice']);
-joinvoice.reqBotPerms = ["CONNECT", "SPEAK"];
-joinvoice.serverCooldown = 5;//5 seconds
-joinvoice.process = function (message, args) {
+function joinvoice(message) {
     return new Promise((resolve, reject) => {
         let canJoinUserVoiceResponse = canJoinUserVoice(message);
         let voiceChannel = null;
         if (canJoinUserVoiceResponse.bool)
             voiceChannel = canJoinUserVoiceResponse.channel;
-        else
-            return Promise.reject(util.redel(canJoinUserVoiceResponse.msg));
+        else if (canJoinUserVoiceResponse.samechannel) {
+            return resolve(util.redel(canJoinUserVoiceResponse.msg));//technically a success cause already joined...
+        } else {
+            return reject(util.redel(canJoinUserVoiceResponse.msg));
+        }
         util.createMessage({ messageContent: "Connecting..." }, message).then(re => {
             voiceChannel.join().then(conn => {
                 let pq = queueList.getOrCreatePlayQueue(message.guild.id);
                 pq.tchannel = message.channel;
                 pq.vchannel = voiceChannel;
                 pq.guildid = message.guild.id;
+                pq.playNextInQueue();//just in case...
                 console.log(`joinvoice: server:${message.guild.name}, vchannel: ${pq.vchannel.name}, tchannel: ${pq.tchannel.name}`);
-                return resolve({
+                util.createMessage({
                     message: re,
                     messageContent: `Connected to voice channel **${pq.vchannel.name}**, I will accept all music commands in this text channel: **${pq.tchannel.name}**.`
                 });
+                return resolve();
             }).catch(console.error);
         }).catch(console.error);
     })
 }
-cmdModule.addCmd(joinvoice);
+
+let joinvoicecmd = new command(['joinvoice']);
+joinvoicecmd.reqBotPerms = ["CONNECT", "SPEAK"];
+joinvoicecmd.serverCooldown = 5;//5 seconds
+joinvoicecmd.process = function (message, args) {
+    return joinvoice(message);
+}
+cmdModule.addCmd(joinvoicecmd);
 
 let leavevoice = new command(['leavevoice']);
 leavevoice.process = function (message, args) {
-
     leaveVoice(message);
     //TODO delete queue?
+    return Promise.resolve();
 }
 cmdModule.addCmd(leavevoice);
 
-/*
-let thefuck = new command('thefuck')
-thefuck.process = function (message, args) {
-    if (playQueue.connection) playQueue.dispatcher = playQueue.connection.playFile('Whatthefuckdidyousaytome.mp3');
-}
-cmdModule.addCmd(thefuck);*/
 let pause = new command(['pause']);
 pause.channelCooldown = 3;
 pause.process = function (message, args) {
-    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("There is no playlist for this server."));
+    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     if (queueList.getPlayQueue(message.guild.id).tchannel.id !== message.channel.id) return Promise.reject();//wrong chat bro
     const voiceConnection = client.voiceConnections.get(message.guild.id);
     if (voiceConnection == null) return Promise.reject(util.redel("Not in a voice channel."));
@@ -256,7 +210,7 @@ cmdModule.addCmd(pause);
 let resume = new command(['resume']);
 resume.channelCooldown = 3;
 resume.process = function (message, args) {
-    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("There is no playlist for this server."));
+    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     if (queueList.getPlayQueue(message.guild.id).tchannel.id !== message.channel.id) return Promise.reject();//wrong chat bro
     const voiceConnection = client.voiceConnections.get(message.guild.id);
     if (voiceConnection == null) return Promise.reject(util.redel("Not in a voice channel."));
@@ -265,34 +219,98 @@ resume.process = function (message, args) {
 }
 cmdModule.addCmd(resume);
 
+let volumecmd = new command(['volume','vol']);
+volumecmd.usage = [
+    `** get the current volume`,
+    `[value]** Sets the volume in percentage. Must be < 200`,
+    `[vaule]%** Set the volume in percentage. Must be < 200%`,
+    `[vaule]dB** Set the volume in decibels. limited to [-50dB, 10dB]`,
+    
+];
+volumecmd.argsTemplate = [
+    [util.staticArgTypes['none']],
+    [new util.customType((args, message) => {
+        let match = args.match(/^(1?\d{0,2})$/);
+        if (match) return parseInt(match[1]);
+    })],
+    [new util.customType((args, message) => {
+        let match = args.match(/^(1?\d{0,2})%$/);
+        if (match) return parseInt(match[1]);
+    })],
+    [new util.customType((args, message) => {
+        let match = args.match(/^([-+]?[0-9]+)dB$/); 
+        if (match) {
+            let voldB = parseInt(match[1])
+            if (voldB <= 10 && voldB >= -50) return voldB;
+        }
+    })],
+];
+
+function getDisplayVolume(vol) {
+    return Math.pow(vol, 0.6020600085251697) * 100.0;
+}
+volumecmd.process = function (message, args) {
+    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
+    let pq = queueList.getPlayQueue(message.guild.id);
+    if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
+    const voiceConnection = client.voiceConnections.get(message.guild.id);
+    if (voiceConnection == null) return Promise.reject(util.redel("Not in a voice channel."));
+    console.log(`VOL BEFORE:${voiceConnection.player.dispatcher.volume}`);
+    if (args[3]) {//dB
+        console.log(`setvoldB:${(args[3][0])}`);
+        voiceConnection.player.dispatcher.setVolumeDecibels(args[3][0]);
+    } else if (args[2]) {//%
+        console.log(`setvollog%:${(args[2][0] / 100)}`);
+        voiceConnection.player.dispatcher.setVolumeLogarithmic((args[2][0] / 100));
+    } else if (args[1]) {//Sets the volume relative to the input stream
+        console.log(`setvollog:${(args[1][0] / 100)}`);
+        voiceConnection.player.dispatcher.setVolumeLogarithmic((args[1][0] / 100));
+    } else {//print the volume
+        return Promise.resolve({ messageContent: `Volume: ${getDisplayVolume(voiceConnection.player.dispatcher.volume)}`})
+    }
+    console.log(`VOL AFTER:${pq.volume = voiceConnection.player.dispatcher.volume}`);
+}
+cmdModule.addCmd(volumecmd);
+
+
 let nextcmd = new command(['next']);
 nextcmd.usage = [
     `** Skip to the next song in the playlist.`,
     `[number of songs]** Skip a few songs in the playlist.`
 ];
+nextcmd.argsTemplate = [
+    [util.staticArgTypes['none']],
+    [util.staticArgTypes['posint']]
+];
 nextcmd.process = function (message, args) {
-    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("There is no playlist for this server."));
+    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
     if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
-    if (args || args[0]) {
-        let amt = parseInt(args[0]);
-        if (amt > 0) {
-            let removed = pq.list.splice(0, amt);
-            return Promise.resolve({ messageContent: `${removed.length} songs have been removed from the playqueue.` });
-        }
+    let msg = null;
+    if (args[1]) {//2nd usage
+        let amt = args[1][0]-1;//cause the current song is going to be end()
+        let removed = pq.list.splice(0, amt);
+        removed.forEach((track) => {
+            if (track.queueMessage && track.queueMessage.deletable) track.queueMessage.delete();
+        });
+        console.log(`NEXT removed:${removed.length}`);
+        msg = `${removed.length} song${removed.length > 1 ? 's' : ''} have been removed from the playqueue.`;
     }
     const voiceConnection = client.voiceConnections.get(message.guild.id);
     if (voiceConnection != null)
         voiceConnection.player.dispatcher.end();
-
+    return Promise.resolve( msg ? util.redel(msg) : undefined);
 }
 cmdModule.addCmd(nextcmd);
 
 let clearpl = new command(['plclear', 'plc']);
 clearpl.process = function (message, args) {
-    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("There is no playlist for this server."));
+    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
     if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
+    pq.list.forEach((track) => {
+        if (track.queueMessage && track.queueMessage.deletable) track.queueMessage.delete();
+    })
     pq.list = [];
     return Promise.resolve({ messageContent: "Playlist cleared." });
 }
@@ -301,18 +319,19 @@ cmdModule.addCmd(clearpl);
 let plpop = new command(['playlistpop', 'plpop']);
 plpop.usage = [`**\nDequeue the last added song from the playlist.`];
 plpop.process = function (message, args) {
-    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("There is no playlist for this server."));
+    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
     if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
     let pvideo = pq.list.pop();
-    if (pvideo) if (pq.tchannel) return Promise.resolve({ messageContent: `Dequeued ${pvideo.prettyPrint()}` });
+    if (pvideo.queueMessage && pvideo.queueMessage.deletable) pvideo.queueMessage.delete();
+    if (pvideo) if (pq.tchannel) return Promise.resolve({ messageContent: `Dequeued ${pvideo.prettyPrint()}`, deleteTime:30*1000});
 }
 cmdModule.addCmd(plpop);
 
 let playlistcmd = new command(['playlist', 'pl']);
 playlistcmd.usage = [`**\nDisplay the playlist.`];
 playlistcmd.process = function (message, args) {
-    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("There is no playlist for this server."));
+    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
     if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
     var formattedList = '';
@@ -347,95 +366,70 @@ playlistcmd.process = function (message, args) {
 }
 cmdModule.addCmd(playlistcmd);
 
-let youtube = new command(['youtube', 'yt'])
-youtube.usage = [`[youtube video link]**\nAdd a song to the playlist using a youtube link.`]
-youtube.process = function (message, args) {
-    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("There is no playlist for this server."));
-    let pq = queueList.getPlayQueue(message.guild.id);
-    if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
-    if (!pq.vchannel) return Promise.reject({ messageContent: `I'm not connected to a voice channel! Use ${config.prefix}${joinvoice.name[0]}` });
-    if (!args || !args.length) return Promise.reject({ messageContent: "Invalid youtube query." });
-    getInfoAndQueue(args[0], message);
-}
-cmdModule.addCmd(youtube);
-
-let youtubeq = new command(['youtubeq', 'ytq']);
-youtubeq.usage = [`[search params]**\nQuery for a song on youtube and add it to the playlist. Will use the first search result from youtube search.`];
-youtubeq.process = function (message, args) {
-    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("There is no playlist for this server."));
-    let pq = queueList.getPlayQueue(message.guild.id);
-    if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
-    if (!config.googleapikey || config.googleapikey.length === 0) return message.reply("The Google API key in your config file is invalid. Query to youtube is disabled.");
-    if (!pq.vchannel) return message.reply(`I'm not connected to a voice channel! Use ${config.prefix}${joinvoice.name[0]}`);
-    if (!args || !args.length) return message.reply("Invalid youtube query.");
-    var requestUrl = 'https://www.googleapis.com/youtube/v3/search' +
-        `?part=snippet&q=${escape(args.join(' '))}&key=${config.googleapikey}`;
-
-    request(requestUrl, (error, response) => {
-        if (!error && response.statusCode == 200) {
-            var body = response.body;
-            if (body.items.length == 0) {
-                message.reply('Your query gave 0 results.');
-                return;
-            }
-
-            for (var item of body.items) {
-                if (item.id.kind === 'youtube#video') {//use the first youtube video!
-                    var vid = item.id.videoId;
-                    console.log("dat vid:" + vid);
-                    getInfoAndQueue(vid, message);
-                    return;
+let queuemusic = new command(['queuemusic', 'qm']);
+queuemusic.ownerOnly = true;
+queuemusic.usage = [`[link to video/song/playlist or search strings]**\n add a song/video/playlist to the playlist`]
+queuemusic.argsTemplate = [
+    [util.staticArgTypes['string']]
+];
+queuemusic.process = function (message, args) {
+    let YoutubeDL = require('youtube-dl');
+    return new Promise((resolve, reject) => {
+        joinvoice(message).then(() => queueytdl(args[0][0])).catch(reject);
+    });
+    function queueytdl(searchstring) {
+        YoutubeDL.exec(searchstring, ['-q', '-J', '--flat-playlist', '-i', '-f', 'bestaudio/best', '--default-search', 'gvsearch1:'], {}, function (err, info) {
+            if (err) throw err;
+            if (err) return util.createMessage(util.redel(`ERROR with query:${err}`));
+            let pq = queueList.getOrCreatePlayQueue(message.guild.id);
+            if (info.isArray || info instanceof Array) {
+                info = info.map(v => JSON.parse(v))[0];
+                if (info.url) {
+                    let track = new Track(info);
+                    pq.addtoQueue(track);
+                    track.userId = message.author.id;
+                } else if (info._type === 'playlist') {
+                    if (pq.list.length + info.entries.length >= MAX_NUM_SONGS_PER_PLAYLIST)
+                        return util.sendMessage(util.redel(`Adding this playlist will breach Max Playlist size.(${MAX_NUM_SONGS_PER_PLAYLIST})`), null, this.tchannel);
+                    info.entries.forEach((entry, index) => {
+                        setTimeout(() => {
+                            if (entry.ie_key === 'Youtube') {//the url only have the id...
+                                queueytdl('https://www.youtube.com/watch?v=' + entry.id);
+                            } else
+                                queueytdl(entry.url);
+                        }, index * 3000);
+                    });
                 }
             }
-
-            message.reply('No video has been found!');
-        } else {
-            message.reply('There was an error searching.');
-            return;
-        }
-    });
-
+            //console.log(info);
+        });
+    }
+    
+    
 }
-cmdModule.addCmd(youtubeq);
+cmdModule.addCmd(queuemusic);
 
-let youtubepl = new command(['youtubeplaylist', 'ytpl']);
-youtubepl.usage = [`[playlist ID]**\nQuery for a youtube playlists and add songs from it into the playlist.\nNOTE: Query is limited to 50 videos`];
-youtubepl.channelCooldown = 3 * 60;//3 minutes
-youtubepl.process = function (message, args) {
-    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("There is no playlist for this server."));
-    let pq = queueList.getPlayQueue(message.guild.id);
-    if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
-    if (!config.googleapikey || config.googleapikey.length === 0) return message.reply("The Google API key in your config file is invalid. Query to youtube is disabled.");
-    if (!pq.vchannel) return message.reply(`I'm not connected to a voice channel! Use ${config.prefix}${joinvoice.name[0]}`);
-    if (!args || !args.length) return message.reply("Invalid arguments.");
-    let maxResults = 50;
-    /*if (args[1]) { //resulst are 0-50 inclusive, so no point increasing this...
-        let newmax = parseInt(args[1]);
-        if (newmax > 50 && message.author.id === config.ownerid) maxResults = newmax;
-    }*/
-    var requestUrl = 'https://www.googleapis.com/youtube/v3/playlistItems' +
-        `?part=contentDetails&maxResults=${maxResults}&playlistId=${args[0]}&key=${config.googleapikey}`;
 
-    request.get(requestUrl).end((error, response) => {
-        if (!error && response.statusCode == 200) {
-            var body = response.body;
-            if (body.items.length == 0) {
-                message.reply('That playlist has no videos.');
-                return;
-            }
-            message.reply(`Loading ${body.items.length} videos...`);
-            var suppress = 0;
-            body.items.forEach((elem, idx) => {
-                var vid = elem.contentDetails.videoId;
-                //stagger loading
-                setTimeout(() => { getInfoAndQueue(vid, message); }, 200 * idx);
-            });
-        } else {
-            message.reply('There was an error finding playlist with that id.');
-            return;
-        }
-    });
-    this.setCooldown(message);
+/*
+youtube playlist
+{
+    entries: [ [Object], ...],
+    webpage_url_basename: 'playlist',
+    title: 'All Nightcore',
+    id: 'PLkMRAPworbEelkUPJrQEF5pBTVgzNLxWG',
+    webpage_url: 'https://www.youtube.com/playlist?list=PLkMRAPworbEelkUPJrQEF5pBTVgzNLxWG',
+    extractor: 'youtube:playlist',
+    extractor_key: 'YoutubePlaylist',
+    _type: 'playlist'
 }
-cmdModule.addCmd(youtubepl);
 
+soundcloud "set"
+ { extractor: 'soundcloud:set',
+    webpage_url_basename: 'electro-swing-elite-ese',
+    entries: [ [Object], ...],
+    _type: 'playlist',
+    webpage_url: 'https://soundcloud.com/electro-swing-elite/sets/electro-swing-elite-ese',
+    id: '266757238',
+    extractor_key: 'SoundcloudSet',
+    title: 'Electro Swing Elite - ESE Compilation 2016' }
+*/

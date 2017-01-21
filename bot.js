@@ -42,26 +42,6 @@ moduledirlist.forEach(mod => {
     cmdBase.addModule(require(mod).cmdModule);
 });  
 
-let reconnTimer = null;
-client.on('disconnect', (m) => {
-    console.log('[disconnect]', m)
-    function reconn(time) {
-        if (reconnTimer != null) return;
-        console.log(`Reconnecting after ${time / 1000} seconds`);
-        reconnTimer = setTimeout((m) => {
-            client.login(config.token).then((m) => {
-                reconnTimer = null;
-                console.log(`Reconnected! ${m}`);
-            }).catch((m) => {
-                reconnTimer = null;
-                console.log(`Error with reconnecting: ${m}`);
-                reconn(time * 2);
-            })
-        }, time);
-    }
-    reconn(10000);
-});
-
 client.on('ready', () => {
     if (reconnTimer) clearTimeout(reconnTimer);
     console.log(`Ready to serve in ${client.channels.size} channels on ${client.guilds.size} servers, for a total of ${client.users.size} users.`);
@@ -134,12 +114,12 @@ client.on('message', message => {
         Promise.resolve(cmdobj.process(message, args, client)).then(response => {
             console.log("cmd resolved");
             console.log(response);
-            util.createMessage(response, message).catch(console.error);
+            if(response) util.createMessage(response, message).catch(console.error);
         }).catch(reject => {
             console.log("cmd rejected");
             cmdobj.clearCooldown(message);
             console.log(reject);
-            util.createMessage(reject, message).catch(console.error);;
+            if(reject) util.createMessage(reject, message).catch(console.error);;
         });
         
     } else {
@@ -154,6 +134,7 @@ client.on('guildMemberAdd', (member) => {
     console.log(`New User "${member.user.username}" has joined "${member.guild.name}"`);
     member.guild.defaultChannel.sendMessage(`"${member.user.username}" has joined this server`);
 });
+
 /*
 client.on('messageReactionAdd', (messageReaction, user) => {
     console.log("messageReactionAdd");
@@ -184,8 +165,9 @@ client.on('messageReactionAdd', (messageReaction, user) => {
                 console.log("emoji rejected");
                 console.log(reject);
                 util.createMessage(reject, messageReaction.message).catch(console.error);;
-            });
-            messageReaction.remove().catch(console.error);
+                });
+            console.log(user);
+            messageReaction.remove(user.id).catch(console.error);
         }
     } else if (playerData && util.percentChance(5)) {
         playerData.getOrCreatePlayer(messageReaction.message.author.id).wallet.addMoney(1);
@@ -205,34 +187,38 @@ client.on('messageReactionRemove', (messageReaction, user) => {
 client.on('warn', (m) => console.log('[warn]', m));
 client.on('debug', (m) => console.log('[debug]', m));
 
+let reconnTimer = null;
+client.on('disconnect', (m) => {
+    console.log('[disconnect]', m)
+    function reconn(time) {
+        if (reconnTimer != null) return;
+        console.log(`Reconnecting after ${time / 1000} seconds`);
+        reconnTimer = setTimeout((m) => {
+            client.login(config.token).then((m) => {
+                reconnTimer = null;
+                console.log(`Reconnected! ${m}`);
+            }).catch((m) => {
+                reconnTimer = null;
+                console.log(`Error with reconnecting: ${m}`);
+                reconn(time * 2);
+            })
+        }, time);
+    }
+    reconn(10000);
+});
+
 client.login(config.token).then((m) => {
     console.log(`login success! ${m}`);
 }).catch((m) => {
     console.log(`Error with login: ${m}`);
 })
-
-process.on('uncaughtException', function (err) {
-    if (err.code == 'ECONNRESET') {//occationally get this error using ytdl.... not sure what to do with it
-        console.log('Got an ECONNRESET!');
-        console.log(err.stack);
-    } else {
-        // Normal error handling
-        console.log(err);
-        console.log(err.stack);
-        //process.exit(0);
-    }
+process.on("unhandledRejection", err => {
+    console.error("Uncaught Promise Error: \n" + err.stack);
 });
-process.on('uncaughtException', function (err) {
-    if (err.code == 'ECONNRESET') {//occationally get this error using ytdl.... not sure what to do with it
-        console.log('Got an ECONNRESET!');
-        console.log(err.stack);
-    } else {
-        // Normal error handling
-        console.log(err);
-        console.log(err.stack);
-        //process.exit(0);
-    }
-}); 
+process.on('uncaughtException', function (err) {//technically not a good idea, but YOLO
+    console.log(err);
+    console.log(err.stack);
+});
 
 /*
 process.stdin.resume();//so the program will not close instantly

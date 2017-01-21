@@ -1,6 +1,6 @@
 {
   "name": "MeganeBot",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "a bot made by a glasses fetishtist",
   "main": "bot.js",
   "scripts": {
@@ -20,6 +20,7 @@
     "opusscript": "0.0.1",
     "superagent": "^3.3.0",
     "uws": "^0.11.1",
+    "youtube-dl": "^1.11.1",
     "ytdl-core": "^0.7.20"
   }
 }

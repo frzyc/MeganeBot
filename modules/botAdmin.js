@@ -117,10 +117,32 @@ getpermscmd.process = function (message, args) {
             deleteTime: 15 * 60 * 1000
         },message);
     }
-    return Promise.resolve({});
+    return Promise.resolve();
 }
 cmdModule.addCmd(getpermscmd);
 
+let versionscmd = new command(['version']);
+versionscmd.usage = ["** returns the git commit this bot is running."];
+versionscmd.process = function (message, args) {
+    return new Promise((resolve, reject) => {
+        var commit = require('child_process').spawn('git', ['log', '-n', '1']);
+        commit.stdout.on('data', (data) => {
+            console.log(`stdout: ${data}`);
+            return resolve({ messageContent: `\`\`\`${data}\`\`\`` })
+        });
+        commit.stderr.on('data', (data) => {
+            console.log(`stderr: ${data}`);
+            return reject({ messageContent: `\`\`\`${data}\`\`\`` })
+        });
+        commit.on('close', function (code) {
+            console.log(`code:${code}`);
+            if (code != 0) {
+                return reject({ messageContent: `failed checking git version!` });
+            }
+        });
+    });
+}
+cmdModule.addCmd(versionscmd);
 
 let testcmd = new command(['test']);
 testcmd.process = function (message, args) {
@@ -132,24 +154,25 @@ testcmd.process = function (message, args) {
                 emoji: '🇦',
                 process: (messageReaction, user) => {
                     console.log("PROCESSA");
-                    return Promise.resolve({ messageContent: '🇦'})
+                    return Promise.resolve({ msg: messageReaction.message, messageContent: '🇦'})
                 }
             },
             {
                 emoji: '🇧',
                 process: (messageReaction, user) =>{
                     console.log("PROCESSB");
-                    return Promise.resolve({ messageContent: '🇧' })
+                    return Promise.resolve({ msg: messageReaction.message, messageContent: '🇧' })
                 }
             },
             {
                 emoji: '🇨',
                 process: (messageReaction, user) => {
                     console.log("PROCESSC");
-                    return Promise.resolve({ messageContent: '🇨' })
+                    return Promise.resolve({ msg: messageReaction.message, messageContent: '🇨' })
                 }
             }
         ],
     });
 }
 cmdModule.addCmd(testcmd);
+

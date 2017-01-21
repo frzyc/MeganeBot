@@ -5,7 +5,7 @@ exports.createMessage = function (rmsg, message, channel) {
     //console.log(`createMessage:`);
     //console.log(rmsg);
     return new Promise((resolve, reject) => {
-        if (!rmsg) return reject(Error('no resolve message obj'));
+        if (!rmsg) return reject(console.warn('no resolve message obj'));
         if (rmsg.messageContent) {
             //TODO check 2000 character message limit
         }
@@ -30,7 +30,7 @@ exports.createMessage = function (rmsg, message, channel) {
             }
         }
         if (msgPromise == null)
-            return reject(new Error('Not a resolvable message.'));
+            return reject(console.warn('Not a resolvable message.'));
         msgPromise.then((msg) => {
             postSendProcessing(msg).then(resolve);
         })
@@ -44,7 +44,10 @@ exports.createMessage = function (rmsg, message, channel) {
             console.log("postSendProcessing");
             console.log(rmsg);
             return new Promise((resolve, reject) => {
-                if ('deleteTime' in rmsg) deletemsg(msgtoprocess, message);
+                if ('deleteTime' in rmsg) {
+                    if (msgtoprocess.deletable) msgtoprocess.delete(rmsg.deleteTime).catch(console.error);
+                    if (message && message.deletable) message.delete(rmsg.deleteTime).catch(console.error);
+                }
                 if ('deleteTime' in rmsg && rmsg.deleteTime === 0) return resolve(msgtoprocess);//message is gone
                 let promises = [];
 
@@ -96,17 +99,6 @@ exports.createMessage = function (rmsg, message, channel) {
                 });
             });
         }
-        function deletemsg(re, message) {
-            if (rmsg.deleteTime === 0) {
-                if (re.deletable) re.delete().catch(console.error);
-                if (message && message.deletable) message.delete().catch(console.error);
-                return;
-            }
-            setTimeout(() => {
-                if (re.deletable) re.delete().catch(console.error);
-                if (message && message.deletable && re.id !== message.id) message.delete().catch(console.error);
-            }, rmsg.deleteTime);
-        }
     });
 }
 
@@ -134,40 +126,6 @@ exports.hasChain = function (obj, key) {
         return true;
     });
 }
-/*
-//reply with the message with a reply, then delete the message and the reply after timeout.
-exports.replyWithTimedDelete = function (message, msgstr, deletetime, options) {
-    return new Promise((resolve, reject) => {
-        if (!deletetime) deletetime = 10 * 1000;//10 second by default, so undefined, null, or zero gets a default value.
-        message.reply(msgstr, options).then(re => {
-            setTimeout(() => {
-                if (re.deletable) re.delete().catch(console.error);
-                if (message.deletable) message.delete().catch(console.error);
-            }, deletetime);
-            resolve();
-        }).catch(err => {
-            console.err(err);
-            reject();
-        });
-    }); 
-}
-
-//reply with the message with a reply, then delete the message and the reply after timeout.
-exports.sendMessageWithTimedDelete = function (message, msgstr, deletetime, options) {
-    return new Promise((resolve, reject) => {
-        if (!deletetime) deletetime = 10 * 1000;//10 second by default
-        message.channel.sendMessage(msgstr, options).then(re => {
-            setTimeout(() => {
-                if (re.deletable) re.delete().catch(console.error);
-                if (message.deletable) message.delete().catch(console.error);
-            }, deletetime);
-            resolve();
-        }).catch(err => {
-            console.err(err);
-            reject();
-        });
-    });
-}*/
 //since this gets used so much, im creating a shortcut template for this
 exports.redel = function (msg) {
     let smdelobj = exports.smdel(msg)
@@ -406,6 +364,19 @@ exports.staticArgTypes = {
                 return null;
         }
     },
+    'posint': {
+        type: 'posint',
+        process: (arg) => {
+            if (arg == null) return null;
+            //console.log(`process:int(${arg})`);
+            if (!/^[0-9]+$/.test(arg)) return null;
+            let ret = parseInt(arg);
+            if (isFinite(ret))
+                return ret;
+            else
+                return null;
+        }
+    },
     'float': {
         type: 'float',
         process: (arg) => {
@@ -433,7 +404,7 @@ exports.staticArgTypes = {
 let customType = function (evalfunc, statictype) {
     this.type = 'custom';
     this.evalfunc = evalfunc;
-    this.base = exports.int;
+    //this.base = exports.int;
     if (statictype && 'process' in statictype)
         this.baseprocess = statictype.process;
 }
@@ -446,6 +417,22 @@ customType.prototype.process = function (arg, message) {
     return this.evalfunc(arg, message);
 }
 exports.customType = customType;
+
+let customTypeRegex = function (regex, statictype) {
+    this.type = 'customregex';
+    this.reg = regex;
+    if (statictype && 'process' in statictype)
+        this.baseprocess = statictype.process;
+}
+customTypeRegex.prototype.process = function (arg, message) {
+    console.log(`process:customTypeRegex(${arg}:${typeof arg})`);
+    if (arg == null) return null;
+    let match = arg.match(this.reg);//TODO this doesnt really work for some reason
+    if (match == null) return null;
+    console.log(match);
+    return match.map(m => { this.baseprocess(m, message) });
+}
+exports.customTypeRegex = customTypeRegex;
 
 //will return null if args do not match template.
 exports.parseArgs = function (template, args, message) {
@@ -470,13 +457,29 @@ exports.parseArgs = function (template, args, message) {
     return out;
 }
 /*
+console.log('100% 200%'.match(/(\d{0,3})%/g));
+console.log(/(\d{0,3})%/g.exec('100% 200%'));
+
+var myString = '100% 200%';
+var myRegexp = /\d{0,3}%/g;
+match = myRegexp.exec(myString);
+while (match != null) {
+    // matched text: match[0]
+    // match start: match.index
+    // capturing group n: match[n]
+    console.log(match[1])
+    match = myRegexp.exec(myString);
+}
+
 const at = exports.staticArgTypes;
 const ct = exports.customType;
+const ctr = exports.customTypeRegex;
 let testtem = [at['word'], at['int'], at['float'], new ct((v) => {
     if (v >= 0 && v < 10) return v;
     else return null;
-}, at['int']), at['none']
+}, at['int']), new ctr(/^([0 - 9]{0,3})%$/g, at['posint']), at['none']
 ];
-let teststring = `test 12345 -.12e-19 9`;
+let teststring = `test 12345 -.12e-19 9 100%`;
 console.log("TEST PARSE");
-console.log(exports.parseArgs(testtem, teststring.split(' ')));*/
+console.log(exports.parseArgs(testtem, teststring.split(' ')));
+*/
