@@ -158,32 +158,33 @@ cmdModule.addCmd(versionscmd);
 
 let pullanddeploycmd = new command(['pullanddeploy']);
 pullanddeploycmd.usage = ["** returns the git commit this bot is running."];
-pullanddeploycmd.process = function (message, args) {
-    util.createMessage({ messageContent: "fetching updates..." }).then(function (sentMsg) {
+pullanddeploycmd.process = function (message, args, client) {
+    util.createMessage({ messageContent: "fetching updates..." }, message).then(function (sentMsg) {
         console.log("updating...");
-        var spawn = require('child_process').spawn;
-        var log = function (err, stdout, stderr) {
-            if (stdout) { console.log(stdout); }
-            if (stderr) { console.log(stderr); }
-        };
+        let spawn = require('child_process').spawn;
         var fetch = spawn('git', ['fetch']);
         fetch.stdout.on('data', function (data) {
             console.log(data.toString());
         });
         fetch.on("close", function (code) {
-            var reset = spawn('git', ['log', '-n', '1']);//'git', ['reset', '--hard', 'origin/master']
+            var reset = spawn('git', ['reset', '--hard', 'origin/master']);
             reset.stdout.on('data', function (data) {
                 console.log(data.toString());
             });
             reset.on("close", function (code) {
-                var npm = spawn('npm', ['install']);
-                npm.stdout.on('data', function (data) {
+                let isWin = /^win/.test(process.platform);
+                let npmspawn = null;
+                if (isWin) {
+                    npmspawn = spawn('npm.cmd', ['install']);
+                }else
+                    npmspawn = spawn('npm', ['install']);
+                npmspawn.stdout.on('data', function (data) {
                     console.log(data.toString());
                 });
-                npm.on("close", function (code) {
+                npmspawn.on("close", function (code) {
                     console.log("goodbye");
                     sentMsg.edit("brb!").then(function () {
-                        bot.destroy().then(function () {
+                        client.destroy().then(function () {
                             process.exit();
                         });
                     });
