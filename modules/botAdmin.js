@@ -3,7 +3,6 @@ const util = require.main.exports.getRequire('util');
 const command = require.main.exports.getRequire('command').command;
 const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
 const config = require.main.exports.getRequire('config');
-const client = require.main.exports.client;
 const cmdBase = require.main.exports.cmdBase
 const package = require('../package.json');
 
@@ -14,7 +13,7 @@ exports.cmdModule = cmdModule;
 
 let glassescmd = new command(['glasses']);
 glassescmd.usage = ['**\nChange my display picture.\nNOTE:Botowner only.'];
-glassescmd.process = function (message, args) {
+glassescmd.process = function (message, args, client) {
     console.log("GLASSES");
     return new Promise((resolve, reject) => {
         let prom1 = util.createMessage({ messageContent: "Changing my glasses..." }, message);
@@ -49,6 +48,19 @@ glassescmd.process = function (message, args) {
 }
 cmdModule.addCmd(glassescmd);
 
+let setplaying = new command(['playing']);
+setplaying.usage = ["[desired game/message]** Change what im playing."];
+setplaying.argsTemplate = [
+    [util.staticArgTypes['string']]
+];
+setplaying.process = function (message, args, client) {
+    return util.justOnePromise(
+        client.user.setGame(args[0][0]),
+        util.redel(`Changed my playing to: ${args[0][0]}.`),
+        util.redel(`Cannot change playing.`)
+    );
+}
+cmdModule.addCmd(setplaying);
 
 let evalcmd = new command(['eval']);
 evalcmd.usage = ["[string]** \nNOTE: bot owner only"];
@@ -144,12 +156,82 @@ versionscmd.process = function (message, args) {
 }
 cmdModule.addCmd(versionscmd);
 
+let pullanddeploycmd = new command(['pullanddeploy']);
+pullanddeploycmd.usage = ["** returns the git commit this bot is running."];
+pullanddeploycmd.process = function (message, args) {
+    util.createMessage({ messageContent: "fetching updates..." }).then(function (sentMsg) {
+        console.log("updating...");
+        var spawn = require('child_process').spawn;
+        var log = function (err, stdout, stderr) {
+            if (stdout) { console.log(stdout); }
+            if (stderr) { console.log(stderr); }
+        };
+        var fetch = spawn('git', ['fetch']);
+        fetch.stdout.on('data', function (data) {
+            console.log(data.toString());
+        });
+        fetch.on("close", function (code) {
+            var reset = spawn('git', ['log', '-n', '1']);//'git', ['reset', '--hard', 'origin/master']
+            reset.stdout.on('data', function (data) {
+                console.log(data.toString());
+            });
+            reset.on("close", function (code) {
+                var npm = spawn('npm', ['install']);
+                npm.stdout.on('data', function (data) {
+                    console.log(data.toString());
+                });
+                npm.on("close", function (code) {
+                    console.log("goodbye");
+                    sentMsg.edit("brb!").then(function () {
+                        bot.destroy().then(function () {
+                            process.exit();
+                        });
+                    });
+                });
+            });
+        });
+    });
+
+}
+cmdModule.addCmd(pullanddeploycmd);
+
 let testcmd = new command(['test']);
-testcmd.process = function (message, args) {
+testcmd.process = function (message, args, client) {
     return Promise.resolve({
         messageContent: 'testing',
         deleteTimeCmdMessage:5*1000,
         //emojis: ['🇦', '🇧','🇨']
+        messageOptions: {
+            embed: {
+                color: 3447003,
+                author: {
+                    name: client.user.username,
+                    icon_url: client.user.avatarURL
+                },
+                title: 'This is an embed',
+                url: 'http://google.com',
+                description: 'This is a test embed to showcase what they look like and what they can do.',
+                fields: [
+                    {
+                        name: 'Fields',
+                        value: 'They can have different fields with small headlines.'
+                    },
+                    {
+                        name: 'Masked links',
+                        value: 'You can put [masked links](http://google.com) inside of rich embeds.'
+                    },
+                    {
+                        name: 'Markdown',
+                        value: 'You can put all the *usual* **__Markdown__** inside of them.'
+                    }
+                ],
+                timestamp: new Date(),
+                footer: {
+                    icon_url: client.user.avatarURL,
+                    text: '© Example'
+                }
+            }
+        },
         emojiButtons: [
             {
                 emoji: '🇦',

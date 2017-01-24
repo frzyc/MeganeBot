@@ -46,6 +46,7 @@ playQueue.prototype.addtoQueue = function (videoObj,message) {
     console.log("playQueue.addtoQueue");
     if (this.list.length >= MAX_NUM_SONGS_PER_PLAYLIST) return util.sendMessage(util.redel('Max Playlist size.'), null, this.tchannel);
     this.list.push(videoObj);
+    if (this.list.length === 1) this.updatePlayingMessage();//update the next playing part of playing message
     videoObj.trackId = this.getTrackId();
     if (this.tchannel) {
         let msgresolvable = {
@@ -103,40 +104,39 @@ playQueue.prototype.play = function (video) {
         setTimeout(() => this.playStopped(), 1000);
     });
     if (this.tchannel) {
-        util.createMessage({
-            messageContent: this.getPlayingmessage(),
-            emojiButtons: [
-                {
-                    emoji: '⏯',
-                    process: (messageReaction, user) => {
-                        if (this.paused) this.resume();
-                        else this.pause();
-                        return Promise.resolve({ message: messageReaction.message, messageContent: this.getPlayingmessage(), });
-                    }
-                },
-                {
-                    emoji: '⏭',
-                    process: (messageReaction, user) => {
-                        this.stop();
-                        return Promise.resolve();
-                    }
-                },
-                {
-                    emoji: '🔉',
-                    process: (messageReaction, user) => {
-                        this.volDec();
-                        return Promise.resolve({ message: messageReaction.message, messageContent: this.getPlayingmessage(), });
-                    }
-                },
-                {
-                    emoji: '🔊',
-                    process: (messageReaction, user) => {
-                        this.volInc();
-                        return Promise.resolve({ message: messageReaction.message, messageContent: this.getPlayingmessage(), });
-                    }
+        let playmsgres = this.getPlayingmessageResolvable();
+        playmsgres.emojiButtons = [
+            {
+                emoji: '⏯',
+                process: (messageReaction, user) => {
+                    if (this.paused) this.resume();
+                    else this.pause();
+                    return Promise.resolve();//already updates the message, so no point updating message again...//this.getPlayingmessageResolvable(messageReaction.message)
                 }
-            ],
-        }, null, this.tchannel).then(msg => {
+            },
+            {
+                emoji: '⏭',
+                process: (messageReaction, user) => {
+                    this.stop();
+                    return Promise.resolve();
+                }
+            },
+            {
+                emoji: '🔉',
+                process: (messageReaction, user) => {
+                    this.volDec();
+                    return Promise.resolve();//already updates the message, so no point updating message again...//this.getPlayingmessageResolvable(messageReaction.message)
+                }
+            },
+            {
+                emoji: '🔊',
+                process: (messageReaction, user) => {
+                    this.volInc();
+                    return Promise.resolve();//already updates the message, so no point updating message again...//this.getPlayingmessageResolvable(messageReaction.message)
+                }
+            }
+        ];
+        util.createMessage(playmsgres, null, this.tchannel).then(msg => {
             video.playingMessage = msg;
             if (video.queueMessage != null && video.queueMessage.deletable) {
                 video.queueMessage.delete();
@@ -147,9 +147,46 @@ playQueue.prototype.play = function (video) {
         //client.user.setGame(video.title);
     
 }
-playQueue.prototype.getPlayingmessage = function () {
+playQueue.prototype.getPlayingmessageResolvable = function (editmsg) {
     if (!this.current) return;
-    return `${this.paused ? 'Paused' : 'Playing'} ${this.current.prettyPrint()}\nVolume: ${this.getVol()}`;
+    let playmsgresolvable = {
+        //messageContent: `${this.paused ? 'Paused' : 'Playing'} ${this.current.prettyPrint()}\nVolume: ${this.getVol()}`,
+        messageOptions: {
+            embed: {
+                color: 3447003,
+                title: `${this.paused ? 'Paused' : 'Playing'} ${this.current.title}`,
+                url: this.current.webpage_url,
+                //description: 'This is a test embed to showcase what they look like and what they can do.',
+                thumbnail: {
+                    url: this.current.thumbnail,
+                },
+                fields: [
+                    {
+                        name: 'Uploader',
+                        value: this.current.uploader
+                    },
+                    {
+                        name: 'Duration',
+                        value: this.current.formatTime()
+                    },
+                    {
+                        name: 'Volume',
+                        value: this.getVol()
+                    },
+                    {
+                        name: 'Playing Next',
+                        value: this.list[0] ? this.list[0].title : `None`
+                    }
+                ],
+            }
+        },
+    }
+    if (editmsg)
+        playmsgresolvable.message = editmsg;
+    return playmsgresolvable;
+}
+playQueue.prototype.updatePlayingMessage = function () {
+    if (this.current && this.current.playingMessage) util.createMessage(this.getPlayingmessageResolvable(this.current.playingMessage));
 }
 playQueue.prototype.playStopped = function () {
     console.log(`playQueue.playStopped in vchannel:${this.vchannel}`);
@@ -158,6 +195,9 @@ playQueue.prototype.playStopped = function () {
         util.createMessage({
             message: vid.playingMessage,
             messageContent: `Finished playing **${vid.title}**`,
+            messageOptions: {
+                embed: {}
+            },
             emojiButtons: [{
                 emoji: '↪',
                 process: (messageReaction, user) => {
@@ -174,14 +214,16 @@ playQueue.prototype.playStopped = function () {
 }
 playQueue.prototype.stop = function () {
     const voiceConnection = client.voiceConnections.get(this.guildid);
-    if (voiceConnection != null)
+    if (voiceConnection != null) {
         voiceConnection.player.dispatcher.end();
+    }
 }
 playQueue.prototype.pause = function () {
     const voiceConnection = client.voiceConnections.get(this.guildid);
     if (voiceConnection != null) {
         voiceConnection.player.dispatcher.pause();
         this.paused = true;
+        this.updatePlayingMessage();
         return true;
     }
     return false;
@@ -191,6 +233,7 @@ playQueue.prototype.resume = function () {
     if (voiceConnection != null) {
         voiceConnection.player.dispatcher.resume();
         this.paused = false;
+        this.updatePlayingMessage();
         return true;
     }
     return false;
@@ -203,12 +246,16 @@ playQueue.prototype.getVol = function () {
 playQueue.prototype.setVolLog = function (val) {
     const voiceConnection = client.voiceConnections.get(this.guildid);
     if (voiceConnection == null) return false;
-        voiceConnection.player.dispatcher.setVolumeLogarithmic((val / 100));
+    voiceConnection.player.dispatcher.setVolumeLogarithmic((val / 100));
+    this.volume = voiceConnection.player.dispatcher.volume;
+    this.updatePlayingMessage();
 }
 playQueue.prototype.setVoldB = function (val) {
     const voiceConnection = client.voiceConnections.get(this.guildid);
     if (voiceConnection == null) return false;
     voiceConnection.player.dispatcher.setVolumeLogarithmic((val));
+    this.volume = voiceConnection.player.dispatcher.volume;
+    this.updatePlayingMessage();
 }
 playQueue.prototype.volInc = function () {
     if (this.getVol() === 200) return;
@@ -375,6 +422,9 @@ function getDisplayVolume(vol) {
     if (isNaN(vol)) vol = 0;
     return Math.round(Math.pow(vol, 0.6020600085251697) * 100.0);
 }
+function getSystemVolFromDisplay(disvol) {
+    return Math.pow((disvol / 100), 1.660964);
+}
 volumecmd.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
@@ -521,11 +571,8 @@ queuemusic.process = function (message, args) {
                     });
                 }
             }
-            //console.log(info);
         });
-    }
-    
-    
+    } 
 }
 cmdModule.addCmd(queuemusic);
 

@@ -3,7 +3,6 @@ const util = require.main.exports.getRequire('util');
 const command = require.main.exports.getRequire('command').command;
 const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
 const config = require.main.exports.getRequire('config');
-const client = require.main.exports.client;
 const cmdBase = require.main.exports.cmdBase
 const package = require('../package.json');
 
@@ -166,7 +165,7 @@ nick.argsTemplate = [
 ];
 nick.reqUserPerms = ["MANAGE_NICKNAMES"];
 nick.serverOnly = true;
-nick.process = function (message, args) {
+nick.process = function (message, args, client) {
     return util.justOnePromise(
         message.channel.members.get(client.user.id).setNickname(args[0][0]),
         util.redel(`Changed my name to: ${args[0][0]}.`),
