@@ -38,14 +38,33 @@ var playQueue = function () {
     this.current = null;
     this.tchannel = null;
     this.vchannel = null;
-    this.volume = 0.25;//default volume
+    this.volume = 0.15;//default volume
+    this.trackId = 0;
+    this.paused = false;
 };
-playQueue.prototype.addtoQueue = function (videoObj) {
+playQueue.prototype.addtoQueue = function (videoObj,message) {
     console.log("playQueue.addtoQueue");
     if (this.list.length >= MAX_NUM_SONGS_PER_PLAYLIST) return util.sendMessage(util.redel('Max Playlist size.'), null, this.tchannel);
     this.list.push(videoObj);
+    videoObj.trackId = this.getTrackId();
     if (this.tchannel) {
-        util.createMessage({ messageContent: `Queued ${videoObj.prettyPrint()}` }, null, this.tchannel).then(msg => {
+        let msgresolvable = {
+            messageContent: `Queued ${videoObj.prettyPrint()}`,
+            emojiButtons: [{
+                emoji: '❌',
+                process: (messageReaction, user) => {
+                    if (videoObj.userId != user.id) return;
+                    messageReaction.remove();
+                    this.removefromQueue(videoObj.trackId);
+                    //return Promise.resolve({ message: messageReaction.message, messageContent: `Dequeued ${videoObj.prettyPrint()}`, deleteTime: 30 * 1000 })
+                    return Promise.resolve();
+                }
+            }],
+        }
+        if (message) msgresolvable.message = message;
+
+        util.createMessage(msgresolvable
+            , null, this.tchannel).then(msg => {
             videoObj.queueMessage = msg;
             console.log(videoObj.queueMessage);
             this.playNextInQueue();
@@ -55,6 +74,13 @@ playQueue.prototype.addtoQueue = function (videoObj) {
         });
     }
     console.log("playQueue.list.length:" + this.list.length);
+}
+playQueue.prototype.removefromQueue = function (trackId) {
+    console.log(`removefromQueue:${trackId}`)
+    let ind = this.list.findIndex((track) => track.trackId === trackId);
+    if (ind < 0) return console.log(`removefromQueue:${trackId} FAILED TO FIND VIDEO IN QUEUE`);
+    let vid = this.list.splice(ind, 1)[0];
+    util.createMessage({ message: vid.queueMessage, messageContent: `Dequeued ${vid.prettyPrint()}`, deleteTime: 30 * 1000 });
 }
 playQueue.prototype.playNextInQueue = function () {
     console.log("playQueue.playNextInQueue");
@@ -77,8 +103,41 @@ playQueue.prototype.play = function (video) {
         setTimeout(() => this.playStopped(), 1000);
     });
     if (this.tchannel) {
-        util.createMessage({ messageContent: `Playing ${video.prettyPrint()}` }, null, this.tchannel).then(msg => {
-            this.playingMessage = msg;
+        util.createMessage({
+            messageContent: this.getPlayingmessage(),
+            emojiButtons: [
+                {
+                    emoji: '⏯',
+                    process: (messageReaction, user) => {
+                        if (this.paused) this.resume();
+                        else this.pause();
+                        return Promise.resolve({ message: messageReaction.message, messageContent: this.getPlayingmessage(), });
+                    }
+                },
+                {
+                    emoji: '⏭',
+                    process: (messageReaction, user) => {
+                        this.stop();
+                        return Promise.resolve();
+                    }
+                },
+                {
+                    emoji: '🔉',
+                    process: (messageReaction, user) => {
+                        this.volDec();
+                        return Promise.resolve({ message: messageReaction.message, messageContent: this.getPlayingmessage(), });
+                    }
+                },
+                {
+                    emoji: '🔊',
+                    process: (messageReaction, user) => {
+                        this.volInc();
+                        return Promise.resolve({ message: messageReaction.message, messageContent: this.getPlayingmessage(), });
+                    }
+                }
+            ],
+        }, null, this.tchannel).then(msg => {
+            video.playingMessage = msg;
             if (video.queueMessage != null && video.queueMessage.deletable) {
                 video.queueMessage.delete();
                 video.queueMessage = null;
@@ -88,18 +147,85 @@ playQueue.prototype.play = function (video) {
         //client.user.setGame(video.title);
     
 }
+playQueue.prototype.getPlayingmessage = function () {
+    if (!this.current) return;
+    return `${this.paused ? 'Paused' : 'Playing'} ${this.current.prettyPrint()}\nVolume: ${this.getVol()}`;
+}
 playQueue.prototype.playStopped = function () {
     console.log(`playQueue.playStopped in vchannel:${this.vchannel}`);
-    if (this.playingMessage)
+    let vid = this.current;
+    if (vid.playingMessage)
         util.createMessage({
-            message: this.playingMessage,
-            messageContent: `Finished playing **${this.current.title}**`
+            message: vid.playingMessage,
+            messageContent: `Finished playing **${vid.title}**`,
+            emojiButtons: [{
+                emoji: '↪',
+                process: (messageReaction, user) => {
+                    this.addtoQueue(vid, vid.playingMessage);
+                    return Promise.resolve()
+                }
+            }],
         });
     //client.user.setGame('');
     this.current = null;
     const voiceConnection = client.voiceConnections.get(this.guildid);
     if (voiceConnection == null) return console.log('there is no voice connection.....');
     this.playNextInQueue();
+}
+playQueue.prototype.stop = function () {
+    const voiceConnection = client.voiceConnections.get(this.guildid);
+    if (voiceConnection != null)
+        voiceConnection.player.dispatcher.end();
+}
+playQueue.prototype.pause = function () {
+    const voiceConnection = client.voiceConnections.get(this.guildid);
+    if (voiceConnection != null) {
+        voiceConnection.player.dispatcher.pause();
+        this.paused = true;
+        return true;
+    }
+    return false;
+}
+playQueue.prototype.resume = function () {
+    const voiceConnection = client.voiceConnections.get(this.guildid);
+    if (voiceConnection != null) {
+        voiceConnection.player.dispatcher.resume();
+        this.paused = false;
+        return true;
+    }
+    return false;
+}
+playQueue.prototype.getVol = function () {
+    const voiceConnection = client.voiceConnections.get(this.guildid);
+    if (voiceConnection == null) return false;
+        return getDisplayVolume(voiceConnection.player.dispatcher.volume);
+}
+playQueue.prototype.setVolLog = function (val) {
+    const voiceConnection = client.voiceConnections.get(this.guildid);
+    if (voiceConnection == null) return false;
+        voiceConnection.player.dispatcher.setVolumeLogarithmic((val / 100));
+}
+playQueue.prototype.setVoldB = function (val) {
+    const voiceConnection = client.voiceConnections.get(this.guildid);
+    if (voiceConnection == null) return false;
+    voiceConnection.player.dispatcher.setVolumeLogarithmic((val));
+}
+playQueue.prototype.volInc = function () {
+    if (this.getVol() === 200) return;
+    let vol = this.getVol();
+    vol = Math.round(vol / 10) * 10 + 10;
+    if (vol > 200) vol = 200;
+    this.setVolLog(vol);
+}
+playQueue.prototype.volDec = function () {
+    if (this.getVol() === 0) return;
+    let vol = this.getVol();
+    vol = Math.round(vol / 10) * 10 - 10;
+    if (vol <0) vol = 0;
+    this.setVolLog(vol);
+}
+playQueue.prototype.getTrackId = function () {
+    return ++this.trackId;
 }
 
 var Track = function (info) {
@@ -199,11 +325,10 @@ let pause = new command(['pause']);
 pause.channelCooldown = 3;
 pause.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
-    if (queueList.getPlayQueue(message.guild.id).tchannel.id !== message.channel.id) return Promise.reject();//wrong chat bro
-    const voiceConnection = client.voiceConnections.get(message.guild.id);
-    if (voiceConnection == null) return Promise.reject(util.redel("Not in a voice channel."));
-    voiceConnection.player.dispatcher.pause();
-    return Promise.resolve({ messageContent: "Music Paused." });
+    let pq = queueList.getPlayQueue(message.guild.id);
+    if (pq.tchannel.id !== message.channel.id) return Promise.reject();//wrong chat bro
+    if (pq.pause()) return Promise.resolve({ messageContent: "Music Paused." });
+    else return Promise.reject(util.redel('Not in a voice channel.'));
 }
 cmdModule.addCmd(pause);
 
@@ -211,11 +336,10 @@ let resume = new command(['resume']);
 resume.channelCooldown = 3;
 resume.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
-    if (queueList.getPlayQueue(message.guild.id).tchannel.id !== message.channel.id) return Promise.reject();//wrong chat bro
-    const voiceConnection = client.voiceConnections.get(message.guild.id);
-    if (voiceConnection == null) return Promise.reject(util.redel("Not in a voice channel."));
-    voiceConnection.player.dispatcher.resume();
-    return Promise.resolve({ messageContent: "Music Resumed." });
+    let pq = queueList.getPlayQueue(message.guild.id);
+    if (pq.tchannel.id !== message.channel.id) return Promise.reject();//wrong chat bro
+    if (pq.resume()) return Promise.resolve({ messageContent: "Music Resumed." });
+    else return Promise.reject(util.redel('Not in a voice channel.'));
 }
 cmdModule.addCmd(resume);
 
@@ -224,7 +348,7 @@ volumecmd.usage = [
     `** get the current volume`,
     `[value]** Sets the volume in percentage. Must be < 200`,
     `[vaule]%** Set the volume in percentage. Must be < 200%`,
-    `[vaule]dB** Set the volume in decibels. limited to [-50dB, 10dB]`,
+    //`[vaule]dB** Set the volume in decibels. limited to [-50dB, 10dB]`,
     
 ];
 volumecmd.argsTemplate = [
@@ -237,38 +361,33 @@ volumecmd.argsTemplate = [
         let match = args.match(/^(1?\d{0,2})%$/);
         if (match) return parseInt(match[1]);
     })],
-    [new util.customType((args, message) => {
+    /*[new util.customType((args, message) => {
         let match = args.match(/^([-+]?[0-9]+)dB$/); 
         if (match) {
             let voldB = parseInt(match[1])
             if (voldB <= 10 && voldB >= -50) return voldB;
         }
-    })],
+    })],*/
 ];
 
 function getDisplayVolume(vol) {
-    return Math.pow(vol, 0.6020600085251697) * 100.0;
+    console.log(`getDisplayVolume:${vol}`)
+    if (isNaN(vol)) vol = 0;
+    return Math.round(Math.pow(vol, 0.6020600085251697) * 100.0);
 }
 volumecmd.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
     if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
-    const voiceConnection = client.voiceConnections.get(message.guild.id);
-    if (voiceConnection == null) return Promise.reject(util.redel("Not in a voice channel."));
-    console.log(`VOL BEFORE:${voiceConnection.player.dispatcher.volume}`);
+    if (client.voiceConnections.get(message.guild.id) == null) return Promise.reject(util.redel("Not in a voice channel."));
     if (args[3]) {//dB
-        console.log(`setvoldB:${(args[3][0])}`);
-        voiceConnection.player.dispatcher.setVolumeDecibels(args[3][0]);
+        pq.setVoldB(args[3][0])
     } else if (args[2]) {//%
-        console.log(`setvollog%:${(args[2][0] / 100)}`);
-        voiceConnection.player.dispatcher.setVolumeLogarithmic((args[2][0] / 100));
+        pq.setVolLog(args[2][0])
     } else if (args[1]) {//Sets the volume relative to the input stream
-        console.log(`setvollog:${(args[1][0] / 100)}`);
-        voiceConnection.player.dispatcher.setVolumeLogarithmic((args[1][0] / 100));
-    } else {//print the volume
-        return Promise.resolve({ messageContent: `Volume: ${getDisplayVolume(voiceConnection.player.dispatcher.volume)}`})
-    }
-    console.log(`VOL AFTER:${pq.volume = voiceConnection.player.dispatcher.volume}`);
+        pq.setVolLog(args[1][0])
+    } //else print the volume
+    return Promise.resolve({ messageContent: `Volume: ${pq.getVol()}` })
 }
 cmdModule.addCmd(volumecmd);
 
@@ -283,23 +402,21 @@ nextcmd.argsTemplate = [
     [util.staticArgTypes['posint']]
 ];
 nextcmd.process = function (message, args) {
+    console.log(`NEXTCMD`);
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
     if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
-    let msg = null;
+    let msg = null
+    let amt = 0;
     if (args[1]) {//2nd usage
-        let amt = args[1][0]-1;//cause the current song is going to be end()
-        let removed = pq.list.splice(0, amt);
-        removed.forEach((track) => {
-            if (track.queueMessage && track.queueMessage.deletable) track.queueMessage.delete();
-        });
-        console.log(`NEXT removed:${removed.length}`);
-        msg = `${removed.length} song${removed.length > 1 ? 's' : ''} have been removed from the playqueue.`;
+        amt = args[1][0] - 1;//cause the current song is going to be end()
+        if (amt > 1) {
+            let removing = pq.list.slice(0, amt);
+            removing.forEach((track) => pq.removefromQueue(track.trackId));
+        }
     }
-    const voiceConnection = client.voiceConnections.get(message.guild.id);
-    if (voiceConnection != null)
-        voiceConnection.player.dispatcher.end();
-    return Promise.resolve( msg ? util.redel(msg) : undefined);
+    pq.stop();
+    return Promise.resolve(amt > 1 ? util.redel(`${amt} songs have been removed from the playqueue.`) : undefined);
 }
 cmdModule.addCmd(nextcmd);
 
@@ -307,11 +424,8 @@ let clearpl = new command(['plclear', 'plc']);
 clearpl.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
-    if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
-    pq.list.forEach((track) => {
-        if (track.queueMessage && track.queueMessage.deletable) track.queueMessage.delete();
-    })
-    pq.list = [];
+    if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return Promise.reject();
+    pq.list.forEach((track) => pq.removefromQueue(track.trackId));
     return Promise.resolve({ messageContent: "Playlist cleared." });
 }
 cmdModule.addCmd(clearpl);
@@ -321,10 +435,11 @@ plpop.usage = [`**\nDequeue the last added song from the playlist.`];
 plpop.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
-    if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
-    let pvideo = pq.list.pop();
-    if (pvideo.queueMessage && pvideo.queueMessage.deletable) pvideo.queueMessage.delete();
-    if (pvideo) if (pq.tchannel) return Promise.resolve({ messageContent: `Dequeued ${pvideo.prettyPrint()}`, deleteTime:30*1000});
+    if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return Promise.reject();
+    let pvideo = pq.list[pq.list.length - 1];
+    if (!pvideo) return Promise.reject();
+    pq.removefromQueue(pvideo.trackId)
+    return Promise.resolve();
 }
 cmdModule.addCmd(plpop);
 
@@ -340,14 +455,11 @@ playlistcmd.process = function (message, args) {
         formattedList += `Currently playing: ${pq.current.fullPrint()}\n`;
         overallTime = Number(pq.current.getTime());
     }
-
     if (pq.list.length === 0) {
         formattedList += `The play queue is empty!`;
     } else {
         formattedList += 'Here are the videos currently in the play queue: \n';
-
         var shouldBreak = false;
-
         pq.list.forEach((video, idx) => {
             overallTime = Number(overallTime) + Number(video.getTime());
             if (shouldBreak) return;
@@ -362,7 +474,14 @@ playlistcmd.process = function (message, args) {
         });
         formattedList += `\n**Remaining play time:** ${util.formatTime(overallTime)} minutes.`;
     }
-    return Promise.resolve({ messageContent: formattedList });
+    if (pq.playlistMessage && pq.playlistMessage.deletable) pq.playlistMessage.delete();
+    util.createMessage({
+        messageContent: formattedList,
+        deleteTimeCmdMessage: 3 * 1000,
+    }, null, pq.tchannel).then((re) => {
+        pq.playlistMessage = re;
+    })
+    return Promise.resolve();
 }
 cmdModule.addCmd(playlistcmd);
 
@@ -379,9 +498,10 @@ queuemusic.process = function (message, args) {
     });
     function queueytdl(searchstring) {
         YoutubeDL.exec(searchstring, ['-q', '-J', '--flat-playlist', '-i', '-f', 'bestaudio/best', '--default-search', 'gvsearch1:'], {}, function (err, info) {
-            if (err) throw err;
-            if (err) return util.createMessage(util.redel(`ERROR with query:${err}`));
+            if (err) throw err
             let pq = queueList.getOrCreatePlayQueue(message.guild.id);
+            if (err) return util.createMessage(util.redel(`ERROR with query:${err}`), null, pq.tchannel);
+            
             if (info.isArray || info instanceof Array) {
                 info = info.map(v => JSON.parse(v))[0];
                 if (info.url) {

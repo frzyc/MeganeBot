@@ -12,9 +12,18 @@ exports.createMessage = function (rmsg, message, channel) {
         let msgPromise = null;
 
         if (rmsg.message) {//edit msg
-            if (rmsg.messageContent)
-                msgPromise = rmsg.message.edit(rmsg.messageContent);
-            else
+            if (rmsg.messageContent) {
+                //msgPromise = rmsg.message.edit(rmsg.messageContent);
+                //TODO so there is a bug with editing a message with a reaction in it.... this is annoying so im literally bypassing it... #11.1.0
+                msgPromise = new Promise((res, rej) => {
+                    rmsg.message.edit(rmsg.messageContent).then((re) => {
+                        return res(re);
+                    }).catch((err) => {
+                        console.log(`createMessage:msgediterr:${err}`);
+                        return res(rmsg.message);
+                    });
+                });
+            }else
                 msgPromise = Promise.resolve(rmsg.message);
         } else if (rmsg.messageContent) {
             if (!message && !channel) return reject(new Error('no message or channel to send to.'));
@@ -32,7 +41,7 @@ exports.createMessage = function (rmsg, message, channel) {
         if (msgPromise == null)
             return reject(console.warn('Not a resolvable message.'));
         msgPromise.then((msg) => {
-            postSendProcessing(msg).then(resolve);
+            postSendProcessing(msg).then(resolve,reject);
         })
         .catch((err) => {
             console.log("createMessage: fail to send/edit message.");
@@ -42,33 +51,38 @@ exports.createMessage = function (rmsg, message, channel) {
 
         function postSendProcessing(msgtoprocess) {
             console.log("postSendProcessing");
-            console.log(rmsg);
-            return new Promise((resolve, reject) => {
-                if ('deleteTime' in rmsg) {
-                    if (msgtoprocess.deletable) msgtoprocess.delete(rmsg.deleteTime).catch(console.error);
-                    if (message && message.deletable) message.delete(rmsg.deleteTime).catch(console.error);
+            //console.log(rmsg);
+            return new Promise((pspresolve, pspreject) => {
+                if ('deleteTime' in rmsg && msgtoprocess.deletable) msgtoprocess.delete(rmsg.deleteTime).catch(console.error);
+                if (message && message.deletable) {//deleting cmd message
+                    if ('deleteTimeCmdMessage' in rmsg)
+                        message.delete(rmsg.deleteTimeCmdMessage).catch(console.error);
+                    else if ('deleteTime' in rmsg)
+                        message.delete(rmsg.deleteTime).catch(console.error);
                 }
-                if ('deleteTime' in rmsg && rmsg.deleteTime === 0) return resolve(msgtoprocess);//message is gone
-                let promises = [];
+                if ('deleteTime' in rmsg && rmsg.deleteTime === 0) return pspresolve(msgtoprocess);//message is gone
 
-                function addemoji(li, i) {
-                    console.log(`li:${li}`);
-                    msgtoprocess.react(li[i]).then(() => {
+                function addemoji(msgtoemojify,li, i) {
+                    msgtoemojify.react(li[i]).then(() => {
                         i++;
                         if (i < li.length)
-                            return addemoji(li, i);
+                            return addemoji(msgtoemojify,li, i);
                         else {
-                            console.log('done all emojs');
-                            return resolve('DONE ALL EMOJIS');
+                            return console.log('DONE ALL EMOJIS');
                         }
                     })
-
                 }
 
                 if ('emojis' in rmsg && 'emojiButtons' in rmsg) delete rmsg.emojis;//can only have one
                 if ('emojis' in rmsg && rmsg.emojis.length > 0) {
-                    addemoji(rmsg.emojis,0);
+                    msgtoprocess.clearReactions().then((rem) => {
+                        addemoji(rem, rmsg.emojis, 0);
+                    }).catch(console.error);
                 } else if ('emojiButtons' in rmsg && rmsg.emojiButtons.length > 0) {
+                    //first of all, clear watchlist's emojibuttons
+                    if (msgtoprocess.id in watchlist && 'emojiButtons' in watchlist[msgtoprocess.id])
+                        delete watchlist[msgtoprocess.id].emojiButtons;
+
                     let emojibuttondict = {};
                     for (emojiobj of rmsg.emojiButtons) {
                         emojibuttondict[emojiobj.emoji] = emojiobj.process; 
@@ -78,24 +92,27 @@ exports.createMessage = function (rmsg, message, channel) {
                         emojiButtons: emojibuttondict
                     };
                     let emojilist = rmsg.emojiButtons.map(x => x.emoji);
-                    addemoji(emojilist, 0);
+                    msgtoprocess.clearReactions().then((rem) => {
+                        addemoji(rem, emojilist, 0);
+                    }).catch(console.error);
                 }
-                return resolve(msgtoprocess);
+                console.log("RESOLVE POSTPROCESSING");
+                return pspresolve(msgtoprocess);
             });
         }
         function sendCreatedMessage() {
             //console.log("sendCreatedMessage");
-            return new Promise((resolve, reject) => {
+            return new Promise((scresolve, screject) => {
                 let replyOrSend;
                 if (message)
                     replyOrSend = rmsg.reply ? message.reply(rmsg.messageContent, rmsg.messageOptions) : message.channel.sendMessage(rmsg.messageContent, rmsg.messageOptions);
                 else if (channel)
                     replyOrSend = channel.sendMessage(rmsg.messageContent, rmsg.messageOptions);
 
-                replyOrSend.then(resolve).catch((err) => {
+                replyOrSend.then(scresolve).catch((err) => {
                     console.log("createMessage: fail to send message.");
                     console.error(err);
-                    return reject(err);
+                    return screject(err);
                 });
             });
         }

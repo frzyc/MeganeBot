@@ -148,27 +148,28 @@ let testcmd = new command(['test']);
 testcmd.process = function (message, args) {
     return Promise.resolve({
         messageContent: 'testing',
+        deleteTimeCmdMessage:5*1000,
         //emojis: ['🇦', '🇧','🇨']
         emojiButtons: [
             {
                 emoji: '🇦',
                 process: (messageReaction, user) => {
                     console.log("PROCESSA");
-                    return Promise.resolve({ msg: messageReaction.message, messageContent: '🇦'})
+                    return Promise.resolve({ message: messageReaction.message, messageContent: '🇦'})
                 }
             },
             {
                 emoji: '🇧',
                 process: (messageReaction, user) =>{
                     console.log("PROCESSB");
-                    return Promise.resolve({ msg: messageReaction.message, messageContent: '🇧' })
+                    return Promise.resolve({ message: messageReaction.message, messageContent: '🇧' })
                 }
             },
             {
                 emoji: '🇨',
                 process: (messageReaction, user) => {
                     console.log("PROCESSC");
-                    return Promise.resolve({ msg: messageReaction.message, messageContent: '🇨' })
+                    return Promise.resolve({ message: messageReaction.message, messageContent: '🇨' })
                 }
             }
         ],

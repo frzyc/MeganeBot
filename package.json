@@ -1,6 +1,6 @@
 {
   "name": "MeganeBot",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "a bot made by a glasses fetishtist",
   "main": "bot.js",
   "scripts": {
@@ -13,13 +13,12 @@
   },
   "license": "ISC",
   "dependencies": {
-    "cleverbot.io": "^1.0.4",
-    "discord.js": "^11.0.0",
+    "discord.js": "https://github.com/hydrabolt/discord.js/tarball/master",
     "erlpack": "github:hammerandchisel/erlpack",
     "node-opus": "^0.2.4",
     "opusscript": "0.0.1",
     "superagent": "^3.3.0",
-    "uws": "^0.11.1",
+    "uws": "^0.12.0",
     "youtube-dl": "^1.11.1",
     "ytdl-core": "^0.7.20"
   }

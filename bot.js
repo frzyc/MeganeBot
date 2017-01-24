@@ -43,7 +43,10 @@ moduledirlist.forEach(mod => {
 });  
 
 client.on('ready', () => {
-    if (reconnTimer) clearTimeout(reconnTimer);
+    if (reconnTimer) {
+        clearTimeout(reconnTimer);
+        reconnTimer = null;
+    }
     console.log(`Ready to serve in ${client.channels.size} channels on ${client.guilds.size} servers, for a total of ${client.users.size} users.`);
     console.log(client.user);
     //client.user.setUsername("MeganeBot");
@@ -113,12 +116,12 @@ client.on('message', message => {
         //use Promise.resolve just incase a process doesnt return a promise...
         Promise.resolve(cmdobj.process(message, args, client)).then(response => {
             console.log("cmd resolved");
-            console.log(response);
+            //console.log(response);
             if(response) util.createMessage(response, message).catch(console.error);
         }).catch(reject => {
             console.log("cmd rejected");
             cmdobj.clearCooldown(message);
-            console.log(reject);
+            //console.log(reject);
             if(reject) util.createMessage(reject, message).catch(console.error);;
         });
         
@@ -189,7 +192,7 @@ client.on('debug', (m) => console.log('[debug]', m));
 
 let reconnTimer = null;
 client.on('disconnect', (m) => {
-    console.log('[disconnect]', m)
+    console.log(`[disconnect]:ReconnTimer:${reconnTimer}`, m)
     function reconn(time) {
         if (reconnTimer != null) return;
         console.log(`Reconnecting after ${time / 1000} seconds`);
