@@ -437,7 +437,7 @@ volumecmd.process = function (message, args) {
     } else if (args[1]) {//Sets the volume relative to the input stream
         pq.setVolLog(args[1][0])
     } //else print the volume
-    return Promise.resolve({ messageContent: `Volume: ${pq.getVol()}` })
+    return Promise.resolve(util.redel(`Volume: ${pq.getVol()}`));
 }
 cmdModule.addCmd(volumecmd);
 
