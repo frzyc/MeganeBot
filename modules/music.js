@@ -81,6 +81,7 @@ playQueue.prototype.removefromQueue = function (trackId) {
     let ind = this.list.findIndex((track) => track.trackId === trackId);
     if (ind < 0) return console.log(`removefromQueue:${trackId} FAILED TO FIND VIDEO IN QUEUE`);
     let vid = this.list.splice(ind, 1)[0];
+    if (ind === 0) this.updatePlayingMessage();
     util.createMessage({ message: vid.queueMessage, messageContent: `Dequeued ${vid.prettyPrint()}`, deleteTime: 30 * 1000 });
 }
 playQueue.prototype.playNextInQueue = function () {
