@@ -156,19 +156,19 @@ client.on('messageReactionAdd', (messageReaction, user) => {
     //just give the player some money for now...
     if (messageWatchList[messageReaction.message.id]) {
         console.log("IN messageWatchList");
-        console.log(messageWatchList[messageReaction.message.id]);
+        //console.log(messageWatchList[messageReaction.message.id]);
         console.log("messageReaction.toString():" + messageReaction.emoji.toString());
         if (messageReaction.emoji.toString() in messageWatchList[messageReaction.message.id].emojiButtons) {
             console.log("IN messageWatchList with emoji");
             Promise.resolve(messageWatchList[messageReaction.message.id].emojiButtons[messageReaction.emoji.toString()](messageReaction, user)).then(response => {
                 console.log("emoji resolved");
-                console.log(response);
-                util.createMessage(response, messageReaction.message).catch(console.error);
+                //console.log(response);
+                if(response) util.createMessage(response, messageReaction.message).catch(console.error);
             }).catch(reject => {
                 console.log("emoji rejected");
-                console.log(reject);
-                util.createMessage(reject, messageReaction.message).catch(console.error);;
-                });
+                //console.log(reject);
+                if(reject) util.createMessage(reject, messageReaction.message).catch(console.error);;
+            });
             console.log(user);
             messageReaction.remove(user.id).catch(console.error);
         }
@@ -183,6 +183,7 @@ client.on('messageReactionAdd', (messageReaction, user) => {
 });
 
 client.on('messageReactionRemove', (messageReaction, user) => {
+    if (user.bot) return; //wont respond to bots
     console.log("REMOVE REACTION BOOO");
 });
 

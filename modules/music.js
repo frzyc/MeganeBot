@@ -36,6 +36,7 @@ var playQueue = function () {
     this.list = [];
     this.guildid = null;
     this.current = null;
+    this.lastAdded = null;
     this.tchannel = null;
     this.vchannel = null;
     this.volume = 0.15;//default volume
@@ -46,7 +47,9 @@ playQueue.prototype.addtoQueue = function (videoObj,message) {
     console.log("playQueue.addtoQueue");
     if (this.list.length >= MAX_NUM_SONGS_PER_PLAYLIST) return util.sendMessage(util.redel('Max Playlist size.'), null, this.tchannel);
     this.list.push(videoObj);
+    this.lastAdded = videoObj;
     if (this.list.length === 1) this.updatePlayingMessage();//update the next playing part of playing message
+    this.updatePlaylistMessage();
     videoObj.trackId = this.getTrackId();
     if (this.tchannel) {
         let msgresolvable = {
@@ -82,7 +85,25 @@ playQueue.prototype.removefromQueue = function (trackId) {
     if (ind < 0) return console.log(`removefromQueue:${trackId} FAILED TO FIND VIDEO IN QUEUE`);
     let vid = this.list.splice(ind, 1)[0];
     if (ind === 0) this.updatePlayingMessage();
+    this.updatePlaylistMessage();
     util.createMessage({ message: vid.queueMessage, messageContent: `Dequeued ${vid.prettyPrint()}`, deleteTime: 30 * 1000 });
+}
+playQueue.prototype.shuffleQueue = function () {
+    if (this.list.length > 1) {
+        shuffleArray(this.list);
+        this.updatePlayingMessage();
+        this.updatePlaylistMessage();
+        util.createMessage({ messageContent: `Playlist Shuffled.`, deleteTime: 30 * 1000 }, null, this.tchannel);
+    }
+    function shuffleArray(array) {
+        for (var i = array.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var temp = array[i];
+            array[i] = array[j];
+            array[j] = temp;
+        }
+        return array;
+    }
 }
 playQueue.prototype.playNextInQueue = function () {
     console.log("playQueue.playNextInQueue");
@@ -104,50 +125,9 @@ playQueue.prototype.play = function (video) {
         console.log("dispatcher end");
         setTimeout(() => this.playStopped(), 1000);
     });
-    if (this.tchannel) {
-        let playmsgres = this.getPlayingmessageResolvable();
-        playmsgres.emojiButtons = [
-            {
-                emoji: '⏯',
-                process: (messageReaction, user) => {
-                    if (this.paused) this.resume();
-                    else this.pause();
-                    return Promise.resolve();//already updates the message, so no point updating message again...//this.getPlayingmessageResolvable(messageReaction.message)
-                }
-            },
-            {
-                emoji: '⏭',
-                process: (messageReaction, user) => {
-                    this.stop();
-                    return Promise.resolve();
-                }
-            },
-            {
-                emoji: '🔉',
-                process: (messageReaction, user) => {
-                    this.volDec();
-                    return Promise.resolve();//already updates the message, so no point updating message again...//this.getPlayingmessageResolvable(messageReaction.message)
-                }
-            },
-            {
-                emoji: '🔊',
-                process: (messageReaction, user) => {
-                    this.volInc();
-                    return Promise.resolve();//already updates the message, so no point updating message again...//this.getPlayingmessageResolvable(messageReaction.message)
-                }
-            }
-        ];
-        util.createMessage(playmsgres, null, this.tchannel).then(msg => {
-            video.playingMessage = msg;
-            if (video.queueMessage != null && video.queueMessage.deletable) {
-                video.queueMessage.delete();
-                video.queueMessage = null;
-            }
-        });
-    }
-        //client.user.setGame(video.title);
-    
+    this.sendPlayingmessage();
 }
+
 playQueue.prototype.getPlayingmessageResolvable = function (editmsg) {
     if (!this.current) return;
     let playmsgresolvable = {
@@ -182,13 +162,122 @@ playQueue.prototype.getPlayingmessageResolvable = function (editmsg) {
             }
         },
     }
-    if (editmsg)
+    if (editmsg) {
         playmsgresolvable.message = editmsg;
+    } else {//if there is not a edit message, it means sending a new play message, so attach buttons to this new resolvable
+        playmsgresolvable.emojiButtons = [
+            {
+                emoji: '⏯',
+                process: (messageReaction, user) => {
+                    if (this.paused) this.resume();
+                    else this.pause();
+                    return Promise.resolve();//already updates the message, so no point updating message again...//this.getPlayingmessageResolvable(messageReaction.message)
+                }
+            },
+            {
+                emoji: '⏭',
+                process: (messageReaction, user) => {
+                    this.stop();
+                    return Promise.resolve();
+                }
+            },
+            {
+                emoji: '🔀',
+                process: (messageReaction, user) => {
+                    this.shuffleQueue();
+                    return Promise.resolve();
+                }
+            },
+            {
+                emoji: '🔉',
+                process: (messageReaction, user) => {
+                    this.volDec();
+                    return Promise.resolve();//already updates the message, so no point updating message again...//this.getPlayingmessageResolvable(messageReaction.message)
+                }
+            },
+            {
+                emoji: '🔊',
+                process: (messageReaction, user) => {
+                    this.volInc();
+                    return Promise.resolve();//already updates the message, so no point updating message again...//this.getPlayingmessageResolvable(messageReaction.message)
+                }
+            },
+            {
+                emoji: '🔠',
+                process: (messageReaction, user) => {
+                    this.sendPlaylistMessage();
+                    return Promise.resolve();
+                }
+            },
+            {
+                emoji: '⬇',
+                process: (messageReaction, user) => {
+                    this.sendPlayingmessage();
+                    return Promise.resolve();
+                }
+            }
+        ];
+    }
     return playmsgresolvable;
+}
+playQueue.prototype.sendPlayingmessage= function () {
+    if (this.current.playingMessage && this.current.playingMessage.deletable) this.current.playingMessage.delete();
+    util.createMessage(this.getPlayingmessageResolvable(), null, this.tchannel).then((re) => {
+        this.current.playingMessage = re;
+        if (this.current.queueMessage != null && this.current.queueMessage.deletable) {//delete the queue message
+            this.current.queueMessage.delete();
+            this.current.queueMessage = null;
+        }
+    })
 }
 playQueue.prototype.updatePlayingMessage = function () {
     if (this.current && this.current.playingMessage) util.createMessage(this.getPlayingmessageResolvable(this.current.playingMessage));
 }
+
+playQueue.prototype.getPlaylistmessageResolvable = function (editmsg) {
+    var formattedList = '';
+    var overallTime = 0;
+    if (this.current) {
+        formattedList += `Currently playing: ${this.current.fullPrint()}\n`;
+        overallTime = Number(this.current.getTime());
+    }
+    if (this.list.length === 0) {
+        formattedList += `The play queue is empty!`;
+    } else {
+        formattedList += 'Here are the videos currently in the play queue: \n';
+        var shouldBreak = false;
+        this.list.forEach((video, idx) => {
+            overallTime = Number(overallTime) + Number(video.getTime());
+            if (shouldBreak) return;
+            var formattedVideo = `${idx + 1}. ${video.fullPrint()}\n`;
+
+            if ((formattedList.length + formattedVideo.length) > 1920) {
+                formattedList += `... and ${this.list.length - idx} more`;
+                shouldBreak = true;
+            } else {
+                formattedList += formattedVideo;
+            }
+        });
+        formattedList += `\n**Remaining play time:** ${util.formatTime(overallTime)} minutes.`;
+    }
+
+    let playmsgresolvable = {
+        messageContent: formattedList,
+    }
+    if (editmsg)
+        playmsgresolvable.message = editmsg;
+    return playmsgresolvable;
+}
+playQueue.prototype.sendPlaylistMessage = function () {
+    if (this.playlistMessage && this.playlistMessage.deletable) this.playlistMessage.delete();
+    util.createMessage(this.getPlaylistmessageResolvable(), null, this.tchannel).then((re) => {
+        this.playlistMessage = re;
+    })
+}
+playQueue.prototype.updatePlaylistMessage = function () {
+    if (this.playlistMessage) util.createMessage(this.getPlaylistmessageResolvable(this.playlistMessage));
+}
+
 playQueue.prototype.playStopped = function () {
     console.log(`playQueue.playStopped in vchannel:${this.vchannel}`);
     let vid = this.current;
@@ -369,6 +458,17 @@ leavevoice.process = function (message, args) {
 }
 cmdModule.addCmd(leavevoice);
 
+let playingcmd = new command(['musicplaying']);
+playingcmd.channelCooldown = 3;
+playingcmd.process = function (message, args) {
+    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
+    let pq = queueList.getPlayQueue(message.guild.id);
+    if (pq.tchannel.id !== message.channel.id) return Promise.reject();//wrong chat bro
+    pq.sendPlayingmessage();
+    return Promise.resolve();
+}
+cmdModule.addCmd(playingcmd);
+
 let pause = new command(['pause']);
 pause.channelCooldown = 3;
 pause.process = function (message, args) {
@@ -487,12 +587,23 @@ plpop.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
     if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return Promise.reject();
-    let pvideo = pq.list[pq.list.length - 1];
+    let pvideo = pq.lastAdded;
     if (!pvideo) return Promise.reject();
     pq.removefromQueue(pvideo.trackId)
     return Promise.resolve();
 }
 cmdModule.addCmd(plpop);
+
+let shufflecmd = new command(['shuffle']);
+shufflecmd.process = function (message, args) {
+    if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
+    let pq = queueList.getPlayQueue(message.guild.id);
+    if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return Promise.reject();
+    pq.shuffleQueue();
+    return Promise.resolve();
+}
+cmdModule.addCmd(shufflecmd);
+
 
 let playlistcmd = new command(['playlist', 'pl']);
 playlistcmd.usage = [`**\nDisplay the playlist.`];
@@ -500,38 +611,8 @@ playlistcmd.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
     if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
-    var formattedList = '';
-    var overallTime = 0;
-    if (pq.current) {
-        formattedList += `Currently playing: ${pq.current.fullPrint()}\n`;
-        overallTime = Number(pq.current.getTime());
-    }
-    if (pq.list.length === 0) {
-        formattedList += `The play queue is empty!`;
-    } else {
-        formattedList += 'Here are the videos currently in the play queue: \n';
-        var shouldBreak = false;
-        pq.list.forEach((video, idx) => {
-            overallTime = Number(overallTime) + Number(video.getTime());
-            if (shouldBreak) return;
-            var formattedVideo = `${idx + 1}. ${video.fullPrint()}\n`;
-
-            if ((formattedList.length + formattedVideo.length) > 1920) {
-                formattedList += `... and ${pq.list.length - idx} more`;
-                shouldBreak = true;
-            } else {
-                formattedList += formattedVideo;
-            }
-        });
-        formattedList += `\n**Remaining play time:** ${util.formatTime(overallTime)} minutes.`;
-    }
-    if (pq.playlistMessage && pq.playlistMessage.deletable) pq.playlistMessage.delete();
-    util.createMessage({
-        messageContent: formattedList,
-        deleteTimeCmdMessage: 3 * 1000,
-    }, null, pq.tchannel).then((re) => {
-        pq.playlistMessage = re;
-    })
+    pq.sendPlaylistMessage();
+    if (message.deletable) message.delete(3 * 1000);
     return Promise.resolve();
 }
 cmdModule.addCmd(playlistcmd);
@@ -557,8 +638,8 @@ queuemusic.process = function (message, args) {
                 info = info.map(v => JSON.parse(v))[0];
                 if (info.url) {
                     let track = new Track(info);
-                    pq.addtoQueue(track);
                     track.userId = message.author.id;
+                    pq.addtoQueue(track);
                 } else if (info._type === 'playlist') {
                     if (pq.list.length + info.entries.length >= MAX_NUM_SONGS_PER_PLAYLIST)
                         return util.sendMessage(util.redel(`Adding this playlist will breach Max Playlist size.(${MAX_NUM_SONGS_PER_PLAYLIST})`), null, this.tchannel);
