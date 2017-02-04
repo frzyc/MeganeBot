@@ -12,19 +12,8 @@ exports.createMessage = function (rmsg, message, channel) {
         let msgPromise = null;
 
         if (rmsg.message) {//edit msg
-            if (rmsg.messageContent || rmsg.messageOptions) {
-                //msgPromise = rmsg.message.edit(rmsg.messageContent);
-                //TODO so there is a bug with editing a message with a reaction in it.... this is annoying so im literally bypassing it... #11.1.0
-                msgPromise = new Promise((res, rej) => {
-                    rmsg.message.edit(rmsg.messageContent, rmsg.messageOptions).then((re) => {
-                        return res(re);
-                    }).catch((err) => {
-                        console.log(`createMessage:msgediterr:${err}`);
-                        return res(rmsg.message);
-                    });
-                });
-            }else
-                msgPromise = Promise.resolve(rmsg.message);
+            if (rmsg.messageContent || rmsg.messageOptions)  msgPromise = rmsg.message.edit(rmsg.messageContent, rmsg.messageOptions);
+            else msgPromise = Promise.resolve(rmsg.message);
         } else if (rmsg.messageContent || rmsg.messageOptions) {
             if (!message && !channel) return reject(new Error('no message or channel to send to.'));
             if (rmsg.typing) {//a simulated typing msg
@@ -96,7 +85,7 @@ exports.createMessage = function (rmsg, message, channel) {
                         addemoji(rem, emojilist, 0);
                     }).catch(console.error);
                 }
-                console.log("RESOLVE POSTPROCESSING");
+                console.log("RESOLVE postSendProcessing");
                 return pspresolve(msgtoprocess);
             });
         }

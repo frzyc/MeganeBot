@@ -51,32 +51,31 @@ playQueue.prototype.addtoQueue = function (videoObj,message) {
     if (this.list.length === 1) this.updatePlayingMessage();//update the next playing part of playing message
     this.updatePlaylistMessage();
     videoObj.trackId = this.getTrackId();
-    if (this.tchannel) {
-        let msgresolvable = {
-            messageContent: `Queued ${videoObj.prettyPrint()}`,
-            emojiButtons: [{
-                emoji: '❌',
-                process: (messageReaction, user) => {
-                    if (videoObj.userId != user.id) return;
-                    messageReaction.remove();
-                    this.removefromQueue(videoObj.trackId);
-                    //return Promise.resolve({ message: messageReaction.message, messageContent: `Dequeued ${videoObj.prettyPrint()}`, deleteTime: 30 * 1000 })
-                    return Promise.resolve();
-                }
-            }],
-        }
-        if (message) msgresolvable.message = message;
-
-        util.createMessage(msgresolvable
-            , null, this.tchannel).then(msg => {
-            videoObj.queueMessage = msg;
-            console.log(videoObj.queueMessage);
-            this.playNextInQueue();
-        }, err => {
-            console.error(err);
-            this.playNextInQueue();//just incase music is allowed but text isnt?
-        });
+    if (!this.tchannel) return;
+    let msgresolvable = {
+        messageContent: `Queued ${videoObj.prettyPrint()}`,
+        emojiButtons: [{
+            emoji: '❌',
+            process: (messageReaction, user) => {
+                if (videoObj.userId != user.id) return;
+                messageReaction.remove();
+                this.removefromQueue(videoObj.trackId);
+                //return Promise.resolve({ message: messageReaction.message, messageContent: `Dequeued ${videoObj.prettyPrint()}`, deleteTime: 30 * 1000 })
+                return Promise.resolve();
+            }
+        }],
     }
+    if (message) msgresolvable.message = message;
+
+    util.createMessage(msgresolvable
+        , null, this.tchannel).then(msg => {
+        videoObj.queueMessage = msg;
+        this.playNextInQueue();
+    }, err => {
+        console.error(err);
+        this.playNextInQueue();//just incase music is allowed but sending message isnt?
+    });
+    
     console.log("playQueue.list.length:" + this.list.length);
 }
 playQueue.prototype.removefromQueue = function (trackId) {
@@ -108,8 +107,19 @@ playQueue.prototype.shuffleQueue = function () {
 playQueue.prototype.playNextInQueue = function () {
     console.log("playQueue.playNextInQueue");
     if (this.current) return;//already have something playing
-    if (this.list.length > 0)
-        this.play(this.list.shift());
+    if (this.list.length > 0) {
+        let voiceConn = this.getVoiceConnection();// just in case the player left the channel...
+        if (!voiceConn) this.vchannel.join().then(() => this.play(this.list.shift()));
+        else this.play(this.list.shift());
+    } else {
+        setTimeout(() => {
+            if (this.list.length > 0 || this.current) return;
+            const voiceConnection = client.voiceConnections.get(this.guildid);
+            if (voiceConnection && voiceConnection.player.dispatcher)
+                voiceConnection.player.dispatcher.end();
+            voiceConnection.channel.leave();
+        }, 60*1000);
+    }
 }
 playQueue.prototype.play = function (video) {
     console.log("playQueue.play");
@@ -304,47 +314,43 @@ playQueue.prototype.playStopped = function () {
 }
 playQueue.prototype.stop = function () {
     const voiceConnection = client.voiceConnections.get(this.guildid);
-    if (voiceConnection != null) {
+    if (voiceConnection != null && voiceConnection.player.dispatcher) {
         voiceConnection.player.dispatcher.end();
     }
 }
 playQueue.prototype.pause = function () {
-    const voiceConnection = client.voiceConnections.get(this.guildid);
-    if (voiceConnection != null) {
-        voiceConnection.player.dispatcher.pause();
-        this.paused = true;
-        this.updatePlayingMessage();
-        return true;
-    }
-    return false;
+    let dispatcher = this.getDispatcher();
+    if (!dispatcher) return false;
+    dispatcher.pause();
+    this.paused = true;
+    this.updatePlayingMessage();
+    return true;
 }
 playQueue.prototype.resume = function () {
-    const voiceConnection = client.voiceConnections.get(this.guildid);
-    if (voiceConnection != null) {
-        voiceConnection.player.dispatcher.resume();
-        this.paused = false;
-        this.updatePlayingMessage();
-        return true;
-    }
-    return false;
+    let dispatcher = this.getDispatcher();
+    if (!dispatcher) return false;
+    dispatcher.resume();
+    this.paused = false;
+    this.updatePlayingMessage();
+    return true;
 }
 playQueue.prototype.getVol = function () {
-    const voiceConnection = client.voiceConnections.get(this.guildid);
-    if (voiceConnection == null) return false;
-        return getDisplayVolume(voiceConnection.player.dispatcher.volume);
+    let dispatcher = this.getDispatcher();
+    if (!dispatcher) return false;
+    return getDisplayVolume(dispatcher.volume);
 }
 playQueue.prototype.setVolLog = function (val) {
-    const voiceConnection = client.voiceConnections.get(this.guildid);
-    if (voiceConnection == null) return false;
-    voiceConnection.player.dispatcher.setVolumeLogarithmic((val / 100));
-    this.volume = voiceConnection.player.dispatcher.volume;
+    let dispatcher = this.getDispatcher();
+    if (!dispatcher) return false;
+    dispatcher.setVolumeLogarithmic((val / 100));
+    this.volume = dispatcher.volume;
     this.updatePlayingMessage();
 }
 playQueue.prototype.setVoldB = function (val) {
-    const voiceConnection = client.voiceConnections.get(this.guildid);
-    if (voiceConnection == null) return false;
-    voiceConnection.player.dispatcher.setVolumeLogarithmic((val));
-    this.volume = voiceConnection.player.dispatcher.volume;
+    let dispatcher = this.getDispatcher();
+    if (!dispatcher) return false;
+    dispatcher.setVolumeLogarithmic((val));
+    this.volume = dispatcher.volume;
     this.updatePlayingMessage();
 }
 playQueue.prototype.volInc = function () {
@@ -363,6 +369,17 @@ playQueue.prototype.volDec = function () {
 }
 playQueue.prototype.getTrackId = function () {
     return ++this.trackId;
+}
+playQueue.prototype.getVoiceConnection = function(){
+    const voiceConnection = client.voiceConnections.get(this.guildid);
+    if (voiceConnection) return voiceConnection;
+    return null;
+}
+playQueue.prototype.getDispatcher = function () {
+    const voiceConnection = this.getVoiceConnection();
+    if (voiceConnection && voiceConnection.player.dispatcher)
+        return voiceConnection.player.dispatcher;
+    return null;
 }
 
 var Track = function (info) {
@@ -388,7 +405,6 @@ function getAuthorVoiceChannel(msg) {
     if (voiceChannelArray.length == 0) return null;
     else return voiceChannelArray[0];
 }
-
 function canJoinUserVoice(msg) {
     const voiceConnection = client.voiceConnections.get(msg.guild.id);
     //if (voiceConnection != null) return reject('already in a channel'); //means bot already in a voice channel on this server... will just join the one the user is in
@@ -409,21 +425,21 @@ function canJoinUserVoice(msg) {
 }
 function leaveVoice(msg) {
     const voiceConnection = client.voiceConnections.get(msg.guild.id);
-    if (voiceConnection == null) return;
+    if (voiceConnection && voiceConnection.player.dispatcher) return;
         voiceConnection.player.dispatcher.end();
-        voiceConnection.channel.leave();
+    voiceConnection.channel.leave();
 }
 function joinvoice(message) {
     return new Promise((resolve, reject) => {
+
         let canJoinUserVoiceResponse = canJoinUserVoice(message);
-        let voiceChannel = null;
-        if (canJoinUserVoiceResponse.bool)
-            voiceChannel = canJoinUserVoiceResponse.channel;
-        else if (canJoinUserVoiceResponse.samechannel) {
-            return resolve(util.redel(canJoinUserVoiceResponse.msg));//technically a success cause already joined...
-        } else {
-            return reject(util.redel(canJoinUserVoiceResponse.msg));
-        }
+
+        const voiceConnection = client.voiceConnections.get(message.guild.id);
+        //if (voiceConnection != null) return reject('already in a channel'); //means bot already in a voice channel on this server... will just join the one the user is in
+        var voiceChannel = getAuthorVoiceChannel(message);
+        if (voiceChannel == null) return reject(util.redel('BAKA... You are not in a voice channel.'));
+        
+        if (voiceConnection != null && voiceConnection.channel.id === voiceChannel.id)  return resolve(util.redel("BAKA... I'm already here! "));//technically a success cause already joined...
         util.createMessage({ messageContent: "Connecting..." }, message).then(re => {
             voiceChannel.join().then(conn => {
                 let pq = queueList.getOrCreatePlayQueue(message.guild.id);
@@ -432,17 +448,18 @@ function joinvoice(message) {
                 pq.guildid = message.guild.id;
                 pq.playNextInQueue();//just in case...
                 console.log(`joinvoice: server:${message.guild.name}, vchannel: ${pq.vchannel.name}, tchannel: ${pq.tchannel.name}`);
-                util.createMessage({
+                return resolve(util.createMessage({
                     message: re,
                     messageContent: `Connected to voice channel **${pq.vchannel.name}**, I will accept all music commands in this text channel: **${pq.tchannel.name}**.`
-                });
-                return resolve();
+                }));
+                
             }).catch(console.error);
         }).catch(console.error);
     })
 }
 
 let joinvoicecmd = new command(['joinvoice']);
+joinvoicecmd.usage = ["** Meganebot will join the current voice channel you are in. This also binds other music commands to this channel."];
 joinvoicecmd.reqBotPerms = ["CONNECT", "SPEAK"];
 joinvoicecmd.serverCooldown = 5;//5 seconds
 joinvoicecmd.process = function (message, args) {
@@ -451,14 +468,15 @@ joinvoicecmd.process = function (message, args) {
 cmdModule.addCmd(joinvoicecmd);
 
 let leavevoice = new command(['leavevoice']);
+leavevoice.usage = ["** Meganebot will leave the current voicechannel."];
 leavevoice.process = function (message, args) {
     leaveVoice(message);
-    //TODO delete queue?
     return Promise.resolve();
 }
 cmdModule.addCmd(leavevoice);
 
 let playingcmd = new command(['musicplaying']);
+playingcmd.usage = ["** Meganebot will reprint the current playing song."];
 playingcmd.channelCooldown = 3;
 playingcmd.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
@@ -470,6 +488,7 @@ playingcmd.process = function (message, args) {
 cmdModule.addCmd(playingcmd);
 
 let pause = new command(['pause']);
+pause.usage = ["** Pause song."];
 pause.channelCooldown = 3;
 pause.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
@@ -481,6 +500,7 @@ pause.process = function (message, args) {
 cmdModule.addCmd(pause);
 
 let resume = new command(['resume']);
+resume.usage = ["** Resume song."];
 resume.channelCooldown = 3;
 resume.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
@@ -517,7 +537,6 @@ volumecmd.argsTemplate = [
         }
     })],*/
 ];
-
 function getDisplayVolume(vol) {
     console.log(`getDisplayVolume:${vol}`)
     if (isNaN(vol)) vol = 0;
@@ -553,7 +572,6 @@ nextcmd.argsTemplate = [
     [util.staticArgTypes['posint']]
 ];
 nextcmd.process = function (message, args) {
-    console.log(`NEXTCMD`);
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
     if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return;
@@ -572,6 +590,7 @@ nextcmd.process = function (message, args) {
 cmdModule.addCmd(nextcmd);
 
 let clearpl = new command(['plclear', 'plc']);
+clearpl.usage = ["** Remove every song in the playqueue."];
 clearpl.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
@@ -595,6 +614,7 @@ plpop.process = function (message, args) {
 cmdModule.addCmd(plpop);
 
 let shufflecmd = new command(['shuffle']);
+shufflecmd.usage = ["** Shuffle the playqueue."];
 shufflecmd.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
@@ -626,14 +646,16 @@ queuemusic.argsTemplate = [
 queuemusic.process = function (message, args) {
     let YoutubeDL = require('youtube-dl');
     return new Promise((resolve, reject) => {
-        joinvoice(message).then(() => queueytdl(args[0][0])).catch(reject);
+        joinvoice(message).then(() => {
+            queueytdl(args[0][0]);
+            resolve();
+        }).catch(reject);
     });
     function queueytdl(searchstring) {
         YoutubeDL.exec(searchstring, ['-q', '-J', '--flat-playlist', '-i', '-f', 'bestaudio/best', '--default-search', 'gvsearch1:'], {}, function (err, info) {
             if (err) throw err
             let pq = queueList.getOrCreatePlayQueue(message.guild.id);
             if (err) return util.createMessage(util.redel(`ERROR with query:${err}`), null, pq.tchannel);
-            
             if (info.isArray || info instanceof Array) {
                 info = info.map(v => JSON.parse(v))[0];
                 if (info.url) {
@@ -657,7 +679,6 @@ queuemusic.process = function (message, args) {
     } 
 }
 cmdModule.addCmd(queuemusic);
-
 
 /*
 youtube playlist

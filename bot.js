@@ -56,7 +56,6 @@ client.on('ready', () => {
 client.on('message', message => {
     if (message.author.bot) return; //wont respond to bots
 
-    //if(message.author.id !== config.ownerid) return;//locked to me, FRED!
     if (playerData && util.percentChance(3)) {
         playerData.getOrCreatePlayer(message.author.id).wallet.addMoney(1);
         message.react(currency.emoji).catch(console.error);
@@ -125,11 +124,6 @@ client.on('message', message => {
             if(reject) util.createMessage(reject, message).catch(console.error);;
         });
         
-    } else {
-        if (startmention && cmdBase.cmdlist['talk']) {//cleverbot
-            let prefix = cont.split(' ').slice(1).join(' ');
-            cmdBase.cmdlist['talk'].process(message, prefix, client);
-        }
     }
 });
 
@@ -169,7 +163,7 @@ client.on('messageReactionAdd', (messageReaction, user) => {
                 //console.log(reject);
                 if(reject) util.createMessage(reject, messageReaction.message).catch(console.error);;
             });
-            console.log(user);
+            //console.log(user);
             messageReaction.remove(user.id).catch(console.error);
         }
     } else if (playerData && util.percentChance(5)) {
@@ -189,7 +183,7 @@ client.on('messageReactionRemove', (messageReaction, user) => {
 
 // Handle discord.js warnings
 client.on('warn', (m) => console.log('[warn]', m));
-client.on('debug', (m) => console.log('[debug]', m));
+//client.on('debug', (m) => console.log('[debug]', m));
 
 let reconnTimer = null;
 client.on('disconnect', (m) => {

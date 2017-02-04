@@ -198,16 +198,16 @@ cmdModule.addCmd(pullanddeploycmd);
 
 let testcmd = new command(['test']);
 testcmd.process = function (message, args, client) {
-    return Promise.resolve({
+    let res = {
         messageContent: 'testing',
-        deleteTimeCmdMessage:5*1000,
-        //emojis: ['🇦', '🇧','🇨']
+        deleteTimeCmdMessage:5 * 1000,
+            //emojis: ['🇦', '🇧','🇨']
         messageOptions: {
             embed: {
                 color: 3447003,
-                author: {
+                    author: {
                     name: client.user.username,
-                    icon_url: client.user.avatarURL
+                        icon_url: client.user.avatarURL
                 },
                 title: 'This is an embed',
                 url: 'http://google.com',
@@ -238,12 +238,12 @@ testcmd.process = function (message, args, client) {
                 emoji: '🇦',
                 process: (messageReaction, user) => {
                     console.log("PROCESSA");
-                    return Promise.resolve({ message: messageReaction.message, messageContent: '🇦'})
+                    return Promise.resolve({ message: messageReaction.message, messageContent: '🇦' })
                 }
             },
             {
                 emoji: '🇧',
-                process: (messageReaction, user) =>{
+                process: (messageReaction, user) => {
                     console.log("PROCESSB");
                     return Promise.resolve({ message: messageReaction.message, messageContent: '🇧' })
                 }
@@ -256,7 +256,14 @@ testcmd.process = function (message, args, client) {
                 }
             }
         ],
-    });
+    }
+    /*for (var i = 0; i < 100; i++){
+        res.messageOptions.embed.fields.push({
+            name: `${i}`,
+            value: 'You can put [masked links](http://google.com) inside of rich embeds.'
+        })
+    }*/
+    return Promise.resolve(res);
 }
 cmdModule.addCmd(testcmd);
 

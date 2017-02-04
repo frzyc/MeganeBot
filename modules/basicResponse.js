@@ -25,6 +25,7 @@ var basicResponseCmd = function (cmdnames) {
     this.name = cmdnames;
 }
 basicResponseCmd.prototype = Object.create(command.prototype);//clone all properties
+basicResponseCmd.prototype.usage = ["** MeganeBot will reply with something personal!"];
 basicResponseCmd.prototype.process = function (message, args) {
     let res = {
         typing: true,

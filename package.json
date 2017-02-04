@@ -13,7 +13,7 @@
   },
   "license": "ISC",
   "dependencies": {
-    "discord.js": "https://github.com/hydrabolt/discord.js/tarball/master",
+    "discord.js": "hydrabolt/discord.js",
     "erlpack": "github:hammerandchisel/erlpack",
     "node-opus": "^0.2.4",
     "opusscript": "0.0.1",
