@@ -1,5 +1,4 @@
 ﻿//const request = require('superagent');
-const ytdl = require('ytdl-core');
 const Req = require('request');
 
 const util = require.main.exports.getRequire('util');
