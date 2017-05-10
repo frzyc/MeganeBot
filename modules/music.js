@@ -13,7 +13,7 @@ cmdModule.description = `Music commands`
 cmdModule.serverOnly = true;
 exports.cmdModule = cmdModule;
 
-const MAX_NUM_SONGS_PER_PLAYLIST = 500;
+const MAX_NUM_SONGS_PER_PLAYLIST = 100;
 var queueList = {};//stores queuelists for all servers
 queueList.hasPlayQueue = function (guildid) {
     if (guildid in queueList) return true
@@ -42,23 +42,23 @@ var playQueue = function () {
     this.trackId = 0;
     this.paused = false;
 };
-playQueue.prototype.addtoQueue = function (videoObj,message) {
+playQueue.prototype.addtoQueue = function (trackObj,message) {
     console.log("playQueue.addtoQueue");
     if (this.list.length >= MAX_NUM_SONGS_PER_PLAYLIST) return util.sendMessage(util.redel('Max Playlist size.'), null, this.tchannel);
-    this.list.push(videoObj);
-    this.lastAdded = videoObj;
+    this.list.push(trackObj);
+    this.lastAdded = trackObj;
+    trackObj.trackId = this.getTrackId();
     if (this.list.length === 1) this.updatePlayingMessage();//update the next playing part of playing message
     this.updatePlaylistMessage();
-    videoObj.trackId = this.getTrackId();
     if (!this.tchannel) return;
     let msgresolvable = {
-        messageContent: `Queued ${videoObj.prettyPrint()}`,
+        messageContent: `Queued ${trackObj.prettyPrint()}`,
         emojiButtons: [{
             emoji: '❌',
             process: (messageReaction, user) => {
-                if (videoObj.userId != user.id) return;
+                if (user.id !== trackObj.userId) return;
                 messageReaction.remove();
-                this.removefromQueue(videoObj.trackId);
+                this.removefromQueue(trackObj.trackId);
                 //return Promise.resolve({ message: messageReaction.message, messageContent: `Dequeued ${videoObj.prettyPrint()}`, deleteTime: 30 * 1000 })
                 return Promise.resolve();
             }
@@ -68,7 +68,7 @@ playQueue.prototype.addtoQueue = function (videoObj,message) {
 
     util.createMessage(msgresolvable
         , null, this.tchannel).then(msg => {
-        videoObj.queueMessage = msg;
+        trackObj.queueMessage = msg;
         this.playNextInQueue();
     }, err => {
         console.error(err);
@@ -130,9 +130,21 @@ playQueue.prototype.play = function (video) {
     currentStream.on('error', (err) => console.error(err));
     const streamOptions = { seek: 0, volume: this.volume };
     let disp = voiceConnection.playStream(currentStream, streamOptions);
-    disp.once('end', () => {
-        console.log("dispatcher end");
+    disp.once('start', () => {
+        console.log("DISPATCHER START");
+    });
+    disp.once('end', reason => {
+        console.log("DISPATCHER END:" + reason);
         setTimeout(() => this.playStopped(), 1000);
+    });
+    disp.once('error', (err) => {
+        console.log("DISPATCHER ERROR:");
+        console.error(err);
+        setTimeout(() => this.playStopped(), 1000);
+    });
+    disp.once('debug', (debug) => {
+        console.log("DISPATCHER DEBUG:");
+        console.log(debug);
     });
     this.sendPlayingmessage();
 }

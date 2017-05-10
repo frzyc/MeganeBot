@@ -89,6 +89,7 @@ cmdModuleobj.prototype.addCmd = function (cmdobj) {
         addcomplete = false;
         return;
     }
+    cmdobj.module = this;
     this.cmdlist[cmdname] = cmdobj;
     if (this.serverOnly) cmdobj.serverOnly = true;
     if (this.dmOnly) cmdobj.dmOnly = true;
@@ -202,8 +203,20 @@ command.prototype.checkArgs = function (args,message) {
 }
 command.prototype.checkRestriction = checkRestriction;
 
+let cmdModule = new cmdModuleobj('Commands');
+cmdModule.description = `Contains Command administration commands`;
+
+//TODO command to:
+    //restrict a command to a specific channel
+    //disable a command on a server
+    //disable a modules on a server
+    //set server prefix
+    
+
 module.exports = {
     cmdBaseobj: cmdBaseobj,
     cmdModuleobj: cmdModuleobj,
-    command:command,
+    command: command,
+    //cmdModule: cmdModule
 }
+

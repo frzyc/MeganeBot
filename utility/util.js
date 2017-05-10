@@ -94,7 +94,7 @@ exports.createMessage = function (rmsg, message, channel) {
             return new Promise((scresolve, screject) => {
                 let replyOrSend;
                 if (message)
-                    replyOrSend = rmsg.reply ? message.reply(rmsg.messageContent, rmsg.messageOptions) : message.channel.sendMessage(rmsg.messageContent, rmsg.messageOptions);
+                    replyOrSend = rmsg.reply ? message.reply(rmsg.messageContent, rmsg.messageOptions) : message.channel.send(rmsg.messageContent, rmsg.messageOptions);
                 else if (channel)
                     replyOrSend = channel.sendMessage(rmsg.messageContent, rmsg.messageOptions);
 

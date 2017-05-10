@@ -213,7 +213,9 @@ client.login(config.token).then((m) => {
 process.on("unhandledRejection", err => {
     console.error("Uncaught Promise Error: \n" + err.stack);
 });
+
 process.on('uncaughtException', function (err) {//technically not a good idea, but YOLO
+    console.log("UNCAUGHTEXCEPTION!");
     console.log(err);
     console.log(err.stack);
 });
