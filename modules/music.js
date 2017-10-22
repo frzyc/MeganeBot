@@ -442,12 +442,12 @@ Track.prototype.prettyPrint = function () { return `**${this.title}** by **${thi
 Track.prototype.fullPrint = function () { return `${this.prettyPrint()}, added by <@${this.userId}>`; };
 Track.prototype.getTime = function () { return this.lengthSeconds; };
 
-function getAuthorVoiceChannel(msg) {
-    var voiceChannelArray = msg.guild.channels.filter((v) => v.type == "voice").filter((v) => v.members.has(msg.author.id)).array();
+function getAuthorVoiceChannel(message) {
+    var voiceChannelArray = message.guild.channels.filter((v) => v.type == "voice").filter((v) => v.members.has(message.author.id)).array();
     if (voiceChannelArray.length == 0) return null;
     else return voiceChannelArray[0];
 }
-function leaveVoice(msg) {
+function leaveVoice(message) {
     let pq = queueList.getPlayQueue(message.guild.id);
     if (pq.tchannel.id !== message.channel.id) return Promise.reject();//wrong chat bro
     const voiceConnection = pq.getVoiceConnection();
@@ -458,8 +458,8 @@ function leaveVoice(msg) {
 function joinvoice(message) {
     return new Promise((resolve, reject) => {
         let usrVoiceChannel = getAuthorVoiceChannel(message);
-        if (usrVoiceChannel == null)  return reject(util.redel('BAKA... You are not in a voice channel.'));
-        const voiceConnection = client.voiceConnections.get(usrVoiceChannel.id);
+        if (usrVoiceChannel == null) return reject(util.redel('BAKA... You are not in a voice channel.'));
+        const voiceConnection = client.voiceConnections.get(message.guild.id);
         
         if (voiceConnection != null && voiceConnection.channel.id === usrVoiceChannel.id)  return resolve(util.redel("BAKA... I'm already here! "));//technically a success cause already joined...
         util.createMessage({ messageContent: "Connecting..." }, message).then(re => {
