@@ -13,8 +13,7 @@
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">11.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
     <StartWebBrowser>True</StartWebBrowser>
-    <NodeExeArguments>
-    </NodeExeArguments>
+    <NodeExeArguments>--inspect</NodeExeArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
   <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
@@ -40,6 +39,7 @@
   <ItemGroup>
     <Compile Include="bot.js" />
     <Compile Include="data\playerData.json" />
+    <Compile Include="dispatcher.js" />
     <Compile Include="modules\basicResponse.js" />
     <Compile Include="modules\botAdmin.js" />
     <Compile Include="modules\cleverbot.js" />

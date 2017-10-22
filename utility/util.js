@@ -1,28 +1,33 @@
 ﻿let watchlist = {};
 exports.messageWatchList = watchlist;
-//my own function to send messages, should be able to queue messages, check length, segment/shorten messages, and do some parsing stuff
+/*my own function to send messages, should be able to queue messages, check length, segment/shorten messages, and do some parsing stuff
+ * rmsg my own resolved message object, should have relavent stuff like the message to edit, emojis, reply  
+*/
 exports.createMessage = function (rmsg, message, channel) {
     //console.log(`createMessage:`);
     //console.log(rmsg);
     return new Promise((resolve, reject) => {
         if (!rmsg) return reject(console.warn('no resolve message obj'));
+        if (!rmsg.message && !message && !channel) return reject(console.warn('no message or channel to send to.'));
         if (rmsg.messageContent) {
+            console.log(`messageSize: ${rmsg.messageContent.length}`);
             //TODO check 2000 character message limit
         }
         let msgPromise = null;
 
-        if (rmsg.message) {//edit msg
-            if (rmsg.messageContent || rmsg.messageOptions)  msgPromise = rmsg.message.edit(rmsg.messageContent, rmsg.messageOptions);
-            else msgPromise = Promise.resolve(rmsg.message);
+        if (rmsg.message) {//an message obj is attached, so this message needs to be edited
+            if ((rmsg.messageContent || rmsg.messageOptions) && rmsg.message.editable) msgPromise = rmsg.message.edit(rmsg.messageContent, rmsg.messageOptions);
+            else msgPromise = Promise.resolve(rmsg.message); //resolve the message, because some postSendingProcessing might need to be done (e.g. add emoji)
         } else if (rmsg.messageContent || rmsg.messageOptions) {
-            if (!message && !channel) return reject(new Error('no message or channel to send to.'));
-            if (rmsg.typing) {//a simulated typing msg
+            if (rmsg.typing && rmsg.messageContent) {//a simulated typing msg
                 let channel = message ? message.channel : channel;
                 channel.startTyping();
-                setTimeout(() => {
-                    channel.stopTyping(true);
-                    msgPromise = sendCreatedMessage();
-                }, (rmsg.messageContent.length * 30 + 100))
+                msgPromise = new Promise((replyResolve, replyReject) => {
+                    setTimeout(() => {
+                        channel.stopTyping(true);
+                        return replyResolve(sendCreatedMessage());
+                    }, (rmsg.messageContent.length * 30 + 100))
+                });
             } else {//a normal msg
                 msgPromise = sendCreatedMessage();
             }
@@ -30,73 +35,79 @@ exports.createMessage = function (rmsg, message, channel) {
         if (msgPromise == null)
             return reject(console.warn('Not a resolvable message.'));
         msgPromise.then((msg) => {
-            postSendProcessing(msg).then(resolve,reject);
-        })
-        .catch((err) => {
+            //message has been sent/edited, now post process, delay deleting, add emoji, etc...
+            postSendProcessing(msg).then(() => {
+                console.log("RESOLVE postSendProcessing");
+                resolve(msg);
+            }, reject);
+        }).catch((err) => {
             console.log("createMessage: fail to send/edit message.");
             console.error(err);
-            return reject(err);
+            return reject();
         });
 
         function postSendProcessing(msgtoprocess) {
             console.log("postSendProcessing");
             //console.log(rmsg);
-            return new Promise((pspresolve, pspreject) => {
+            return new Promise((pspResolve) => {
                 if ('deleteTime' in rmsg && msgtoprocess.deletable) msgtoprocess.delete(rmsg.deleteTime).catch(console.error);
                 if (message && message.deletable) {//deleting cmd message
                     if ('deleteTimeCmdMessage' in rmsg)
                         message.delete(rmsg.deleteTimeCmdMessage).catch(console.error);
-                    else if ('deleteTime' in rmsg)
+                    else if ('deleteTime' in rmsg)//since we are going to delete the reply message, we delete the original cmd msg as well.
                         message.delete(rmsg.deleteTime).catch(console.error);
                 }
-                if ('deleteTime' in rmsg && rmsg.deleteTime === 0) return pspresolve(msgtoprocess);//message is gone
+                if ('deleteTime' in rmsg && rmsg.deleteTime === 0) return pspResolve(msgtoprocess);//message is gone
 
-                function addemoji(msgtoemojify,li, i) {
-                    msgtoemojify.react(li[i]).then(() => {
-                        i++;
-                        if (i < li.length)
-                            return addemoji(msgtoemojify,li, i);
-                        else {
-                            return console.log('DONE ALL EMOJIS');
-                        }
-                    })
-                }
-
-                if ('emojis' in rmsg && 'emojiButtons' in rmsg) delete rmsg.emojis;//can only have one
+                //handle emoji and emoji buttons.
                 if ('emojis' in rmsg && rmsg.emojis.length > 0) {
-                    msgtoprocess.clearReactions().then((rem) => {
-                        addemoji(rem, rmsg.emojis, 0);
-                    }).catch(console.error);
-                } else if ('emojiButtons' in rmsg && rmsg.emojiButtons.length > 0) {
                     //first of all, clear watchlist's emojibuttons
                     if (msgtoprocess.id in watchlist && 'emojiButtons' in watchlist[msgtoprocess.id])
-                        delete watchlist[msgtoprocess.id].emojiButtons;
-
+                        delete watchlist[msgtoprocess.id].emojis;
                     let emojibuttondict = {};
-                    for (emojiobj of rmsg.emojiButtons) {
-                        emojibuttondict[emojiobj.emoji] = emojiobj.process; 
+                    for (emojiobj of rmsg.emojis) {
+                        if (emojiobj.process)
+                            emojibuttondict[emojiobj.emoji] = emojiobj.process;
                     }
                     watchlist[msgtoprocess.id] = {
                         msg: msgtoprocess,
                         emojiButtons: emojibuttondict
                     };
-                    let emojilist = rmsg.emojiButtons.map(x => x.emoji);
+                    let emojilist = rmsg.emojis.map(x => x.emoji);
                     msgtoprocess.clearReactions().then((rem) => {
-                        addemoji(rem, emojilist, 0);
+                        return pspResolve(addemoji(rem, emojilist, 0));
                     }).catch(console.error);
+
+                    function addemoji(msgtoemojify, li, i) {
+                        return new Promise((addEmojiResolve) => {
+                            console.log("reacting:" + li[i]);
+                            msgtoemojify.react(li[i]).then(() => {
+                                i++;
+                                if (i < li.length)
+                                    addEmojiResolve(addemoji(msgtoemojify, li, i));
+                                else {
+                                    console.log('DONE ALL EMOJIS')
+                                    addEmojiResolve(msgtoemojify);
+                                }
+                            }).catch(() => {
+                                console.log('FAILED REACTION:' + li[i]);
+                                addEmojiResolve(msgtoemojify);
+                            });
+                        });
+                    }
                 }
-                console.log("RESOLVE postSendProcessing");
-                return pspresolve(msgtoprocess);
+                console.log("end of postSendProcessing Promise");
+                pspResolve(msgtoprocess);
             });
         }
         function sendCreatedMessage() {
-            //console.log("sendCreatedMessage");
+            console.log("sendCreatedMessage");
             return new Promise((scresolve, screject) => {
                 let replyOrSend;
-                if (message)
+                if (message) //if there is a message object, it might be an reply or just to send a message in that channel
                     replyOrSend = rmsg.reply ? message.reply(rmsg.messageContent, rmsg.messageOptions) : message.channel.send(rmsg.messageContent, rmsg.messageOptions);
-                else if (channel)
-                    replyOrSend = channel.sendMessage(rmsg.messageContent, rmsg.messageOptions);
+                else if (channel) //since only channel, send the message in the channel
+                    replyOrSend = channel.send(rmsg.messageContent, rmsg.messageOptions);
 
                 replyOrSend.then(scresolve).catch((err) => {
                     console.log("createMessage: fail to send message.");
@@ -133,8 +144,8 @@ exports.hasChain = function (obj, key) {
     });
 }
 //since this gets used so much, im creating a shortcut template for this
-exports.redel = function (msg) {
-    let smdelobj = exports.smdel(msg)
+exports.redel = function (msgstring) {
+    let smdelobj = exports.smdel(msgstring)
     smdelobj.reply = true;
     return smdelobj;
     /*
@@ -145,10 +156,10 @@ exports.redel = function (msg) {
     }*/
 }
 //since this gets used so much, im creating a shortcut template for this
-exports.smdel = function (msg, suc) {
+exports.smdel = function (msgstring, time) {
     return {
-        messageContent: msg,
-        deleteTime: 10 * 1000,
+        messageContent: msgstring,
+        deleteTime: time? time : 10 * 1000,
     }
 }
 
@@ -304,7 +315,7 @@ messageQueue.prototype.queue = function(msg){
         }
         if (msgcontent.length === 0) return;
         //console.log(`NEW MESSAGE: msgcontent.length(${msgcontent.length})`);
-        this.tchannel.sendMessage(msgcontent).then(msg => {}).catch(console.error);
+        this.tchannel.send(msgcontent).then(msg => {}).catch(console.error);
     }, 3000);
 }
 
@@ -431,7 +442,7 @@ let customTypeRegex = function (regex, statictype) {
         this.baseprocess = statictype.process;
 }
 customTypeRegex.prototype.process = function (arg, message) {
-    console.log(`process:customTypeRegex(${arg}:${typeof arg})`);
+    //console.log(`process:customTypeRegex(${arg}:${typeof arg})`);
     if (arg == null) return null;
     let match = arg.match(this.reg);//TODO this doesnt really work for some reason
     if (match == null) return null;

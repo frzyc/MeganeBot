@@ -2,8 +2,8 @@
 const util = require.main.exports.getRequire('util');
 const command = require.main.exports.getRequire('command').command;
 const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
-const config = require.main.exports.getRequire('config');
-const cmdBase = require.main.exports.cmdBase
+const client = require.main.exports.client;
+const cmdBase = client.cmdBase;
 const package = require('../package.json');
 
 let cmdModule = new cmdModuleobj('General');
@@ -24,8 +24,8 @@ helpcmd.argsTemplate = [
     }, util.staticArgTypes['none'])],
     [new util.customType(arg => {
         arg = arg.toLowerCase();
-        if (arg.startsWith(config.prefix))
-            arg = arg.slice(config.prefix.length);//incase someone asked !help !command
+        if (arg.startsWith(client.prefix))
+            arg = arg.slice(client.prefix.length);//incase someone asked !help !command
         if (arg === 'all') return { usage: 1 }
         if (cmdBase.modulelist[arg]) return { usage: 2, module: cmdBase.modulelist[arg] }
         if (cmdBase.cmdlist[arg]) return { usage: 3, command: cmdBase.cmdlist[arg] }
@@ -37,12 +37,11 @@ helpcmd.process = function (message, args) {
     let msg = '';
     if (arg.usage === 0) {//"**\nList the modules."
         msg = `List of all modules:\n`
-        console.log(cmdBase.modulelist);
         for (modname in cmdBase.modulelist) {
             let mod = cmdBase.modulelist[modname];
             if (mod.dmOnly && message.channel.type === 'text') continue;
             if (mod.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) continue;
-            if (mod.ownerOnly && message.author.id !== config.ownerid) continue;
+            if (mod.ownerOnly && message.author.id !== client.ownerid) continue;
             msg += `**${mod.name}** - `;
             if (mod.description)
                 msg += `${mod.getDesc()}`
@@ -58,8 +57,6 @@ helpcmd.process = function (message, args) {
         }).sort().join(' ')}**`;
     } else if (arg.usage === 2) {//"[module]**\nget all commands in this module",
         let mod = arg.module;
-        console.log("da mod:");
-        console.log(mod);
         let restriction = mod.checkRestriction(message);
         if (restriction === '') {
             msg = `List of all commands in module **${mod.name}**:`
@@ -88,7 +85,7 @@ cmdModule.addCmd(helpcmd);
 let about = new command(['about']);
 about.usage = ["**\nGet some information about me, MeganeBot :D"];
 about.process = function (message, args) {
-    msg = `Name: ${package.name} \nVersion: ${package.version} \nDescription: ${package.description}\nMaster(owner): <@${config.ownerid}>`;
+    msg = `Name: ${package.name} \nVersion: ${package.version} \nDescription: ${package.description}\nMaster(owner): <@${client.ownerid}>`;
     let uptime = Math.floor(process.uptime());
     let hours = Math.floor(uptime / (60 * 60))
     let minutes = Math.floor((uptime % (60 * 60)) / 60);
@@ -128,7 +125,6 @@ prune.process = function (message, args) {
         }
         message.channel.fetchMessages({ limit: 100, before: message.id })
             .then(messages => {
-                console.log(`messagecount:${messagecount}`);
                 let filteredMessageCollection = messages.filter(m => {
                     if (messagecount > 0 && matchid.includes(m.author.id)) {
                         messagecount--;
@@ -137,7 +133,6 @@ prune.process = function (message, args) {
                     return false
                 });
                 let numOfFilteredMsgs = filteredMessageCollection.size;
-                console.log("size of the collection" + numOfFilteredMsgs);
                 if (numOfFilteredMsgs > 1)
                     message.channel.bulkDelete(filteredMessageCollection).then(() => {
                         return resolve(util.redel(`${numOfFilteredMsgs} messages deleted. `));

@@ -1,6 +1,6 @@
 {
   "name": "MeganeBot",
-  "version": "0.9.5",
+  "version": "0.9.6",
   "description": "a bot made by a glasses fetishtist",
   "main": "bot.js",
   "scripts": {
@@ -13,10 +13,12 @@
   },
   "license": "ISC",
   "dependencies": {
-    "discord.js": "github:hydrabolt/discord.js",
-    "node-opus": "^0.2.6",
+    "discord.js": "^11.2.1",
+    "ffmpeg-binaries": "^3.2.2",
+    "node-opus": "^0.2.7",
+    "request": "^2.83.0",
     "sqlite3": "^3.1.8",
-    "superagent": "^3.5.1",
-    "youtube-dl": "^1.11.1"
+    "uws": "^8.14.1",
+    "youtube-dl": "^1.12.2"
   }
 }

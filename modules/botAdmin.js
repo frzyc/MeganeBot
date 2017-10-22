@@ -196,6 +196,15 @@ pullanddeploycmd.process = function (message, args, client) {
 }
 cmdModule.addCmd(pullanddeploycmd);
 
+let killyourselfcmd = new command(['killyourself']);
+killyourselfcmd.usage = ["** Kill the process. If pm2 is installed, node process will restart."];
+killyourselfcmd.process = function (message, args, client) {
+    util.createMessage({ messageContent: "NANI?" }, message).then(function (sentMsg) {
+        process.exit();
+    });
+}
+cmdModule.addCmd(killyourselfcmd);
+
 let testcmd = new command(['test']);
 testcmd.process = function (message, args, client) {
     let res = {
