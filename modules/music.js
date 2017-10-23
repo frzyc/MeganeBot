@@ -5,7 +5,6 @@ const command = require.main.exports.getRequire('command').command;
 const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
 
 const client = require.main.exports.client;
-const config = require.main.exports.getRequire('config');
 
 let cmdModule = new cmdModuleobj('Music');
 cmdModule.description = `Music commands`

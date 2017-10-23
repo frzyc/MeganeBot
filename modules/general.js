@@ -2,8 +2,6 @@
 const util = require.main.exports.getRequire('util');
 const command = require.main.exports.getRequire('command').command;
 const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
-const client = require.main.exports.client;
-const cmdBase = client.cmdBase;
 const package = require('../package.json');
 
 let cmdModule = new cmdModuleobj('General');
@@ -24,11 +22,11 @@ helpcmd.argsTemplate = [
     }, util.staticArgTypes['none'])],
     [new util.customType(arg => {
         arg = arg.toLowerCase();
-        if (arg.startsWith(client.prefix))
-            arg = arg.slice(client.prefix.length);//incase someone asked !help !command
+        if (arg.startsWith(helpcmd.client.prefix))
+            arg = arg.slice(helpcmd.client.prefix.length);//incase someone asked !help !command
         if (arg === 'all') return { usage: 1 }
-        if (cmdBase.modulelist[arg]) return { usage: 2, module: cmdBase.modulelist[arg] }
-        if (cmdBase.cmdlist[arg]) return { usage: 3, command: cmdBase.cmdlist[arg] }
+        if (helpcmd.client.cmdBase.modulelist[arg]) return { usage: 2, module: helpcmd.client.cmdBase.modulelist[arg] }
+        if (helpcmd.client.cmdBase.cmdlist[arg]) return { usage: 3, command: helpcmd.client.cmdBase.cmdlist[arg] }
         return {usage:-1, arg:arg}
     }, util.staticArgTypes['word'])]
 ]
@@ -37,11 +35,11 @@ helpcmd.process = function (message, args) {
     let msg = '';
     if (arg.usage === 0) {//"**\nList the modules."
         msg = `List of all modules:\n`
-        for (modname in cmdBase.modulelist) {
-            let mod = cmdBase.modulelist[modname];
+        for (modname in this.client.cmdBase.modulelist) {
+            let mod = this.client.cmdBase.modulelist[modname];
             if (mod.dmOnly && message.channel.type === 'text') continue;
             if (mod.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) continue;
-            if (mod.ownerOnly && message.author.id !== client.ownerid) continue;
+            if (mod.ownerOnly && !this.client.isOwner(message.author.id)) continue;
             msg += `**${mod.name}** - `;
             if (mod.description)
                 msg += `${mod.getDesc()}`
@@ -52,8 +50,8 @@ helpcmd.process = function (message, args) {
         msg += `\nUse ${this.getUseage(2)}`;
     } else if (arg.usage === 1) {//"all **\nget all the commands."
         msg = `List of all commands:\n`
-        msg += `**${Object.keys(cmdBase.cmdlist).filter((cmd) => {
-            return cmdBase.cmdlist[cmd].checkRestriction(message) === '';
+        msg += `**${Object.keys(this.client.cmdBase.cmdlist).filter((cmd) => {
+            return this.client.cmdBase.cmdlist[cmd].checkRestriction(message) === '';
         }).sort().join(' ')}**`;
     } else if (arg.usage === 2) {//"[module]**\nget all commands in this module",
         let mod = arg.module;
@@ -61,7 +59,7 @@ helpcmd.process = function (message, args) {
         if (restriction === '') {
             msg = `List of all commands in module **${mod.name}**:`
             let sortedcmdkeys = Object.keys(mod.cmdlist).filter((cmd) => {
-                return cmdBase.cmdlist[cmd].checkRestriction(message) === '';
+                return this.client.cmdBase.cmdlist[cmd].checkRestriction(message) === '';
             }).sort().map(key => mod.cmdlist[key]).forEach((cmd) => {
                 msg += `\n**${cmd.name.join('**, or **')}**`;
             });
@@ -85,7 +83,7 @@ cmdModule.addCmd(helpcmd);
 let about = new command(['about']);
 about.usage = ["**\nGet some information about me, MeganeBot :D"];
 about.process = function (message, args) {
-    msg = `Name: ${package.name} \nVersion: ${package.version} \nDescription: ${package.description}\nMaster(owner): <@${client.ownerid}>`;
+    msg = `Name: ${package.name} \nVersion: ${package.version} \nDescription: ${package.description}\n`;
     let uptime = Math.floor(process.uptime());
     let hours = Math.floor(uptime / (60 * 60))
     let minutes = Math.floor((uptime % (60 * 60)) / 60);
@@ -160,9 +158,9 @@ nick.argsTemplate = [
 ];
 nick.reqUserPerms = ["MANAGE_NICKNAMES"];
 nick.serverOnly = true;
-nick.process = function (message, args, client) {
+nick.process = function (message, args) {
     return util.justOnePromise(
-        message.channel.members.get(client.user.id).setNickname(args[0][0]),
+        message.channel.members.get(this.client.user.id).setNickname(args[0][0]),
         util.redel(`Changed my name to: ${args[0][0]}.`),
         util.redel(`Cannot change nickname.`)
     );

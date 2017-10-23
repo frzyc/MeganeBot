@@ -65,10 +65,8 @@ colorcmd.process = function (message, args) {
             let needtopay = true;
             if (message.member.roles.has(colorrole.id)) needtopay = false;
             let playerwallet = playerData.getOrCreatePlayer(message.author.id).wallet;
-
-            console.log("selected role: " + colorrole.name);
+            
             removeColorRoles().then(() => {
-                console.log("add role: " + colorrole.name);
                 message.member.addRole(colorrole);
                 if (needtopay) {
                     playerwallet.subMoney(10);
@@ -118,12 +116,10 @@ coloraddcmd.process = function (message, args) {
         let colorrole = message.guild.roles.find(val => val.name.toLowerCase() === arg.toLowerCase());
         if (!colorrole) return reject(util.redel("Invalid role"));
         if (colorrole.color === 0) return reject(util.redel("Role does not have a color."));
-        console.log(colorrole);
         colorrole.edit({
             mentionable: true,
             permissions:[]
         }).then(role => {
-            console.log(role.serialize());
             colorList[message.guild.id].push(colorrole.name);
             colorList[message.guild.id] = colorList[message.guild.id].sort();
             fs.writeFile(__dirname + '/' + colorfile, JSON.stringify(colorList), 'utf8', (err) => {

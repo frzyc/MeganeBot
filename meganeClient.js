@@ -1,13 +1,26 @@
 ﻿const discord = require('discord.js');
 class MeganeClient extends discord.Client {
     constructor(options = {}) {
-        //option parsing
         super(options);
         this.globalPrefix = options.prefix ? options.prefix : null;
-        this.ownerid = options.ownerid ? options.ownerid : 0;
+        if (options.ownerid) {
+            if (typeof options.ownerid === "string")
+                options.owner = new Set([options.ownerid]);
+            if (options.ownerid instanceof Array)
+                options.owner = new Set(options.ownerid);
+            this.once('ready', () => {
+                for (const owner of options.owner) {
+                    this.fetchUser(owner).catch(err => {
+                        this.emit('warn', `Unable to fetch owner ${owner}.`);
+                        this.emit('error', err);
+                    });
+                }
+                delete options.ownerid;
+            });
+        }
 
         let cmdBaseobj = require.main.exports.getRequire('command').cmdBaseobj;
-        this.cmdBase = new cmdBaseobj();
+        this.cmdBase = new cmdBaseobj(this);
 
 
         let CommandDispatcher = require.main.exports.getRequire('dispatcher');
@@ -23,14 +36,6 @@ class MeganeClient extends discord.Client {
             console.log(`New User "${member.user.username}" has joined "${member.guild.name}"`);
             member.guild.defaultChannel.send(`"${member.user.username}" has joined this server`);
         });
-        this.on('ready', () => {
-            if (reconnTimer) {
-                clearTimeout(reconnTimer);
-                reconnTimer = null;
-            }
-            console.log(`Ready to serve in ${client.channels.size} channels on ${client.guilds.size} servers, for a total of ${client.users.size} users.`);
-            console.log(client.user);
-        });
     }
     get prefix() {
         return this.globalPrefix;
@@ -40,6 +45,18 @@ class MeganeClient extends discord.Client {
         //globalPrefixChange , guild, prefix
         this.emit('globalPrefixChange', null, this.globalPrefix);
     }
+    get owners() {
+        if (!this.options.owner) return null;
+        return this.options.owner;
+    }
+    isOwner(user) {
+        if(!this.options.owner) return false;
+        user = this.users.get(user);
+        if(!user) throw new RangeError("user unresolvable.");
+        if(this.options.owner instanceof Set) return this.options.owner.has(user.id);
+        throw new RangeError('The client\'s "owner" option is an unknown value.');
+    }
+
 
 }
 module.exports = MeganeClient;

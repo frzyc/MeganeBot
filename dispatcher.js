@@ -8,7 +8,6 @@ class CommandDispatcher {
         //make this read only property
         Object.defineProperty(this, 'client', { value: client });
         this.cmdBase = cmdBase;
-        console.log(this.client);
     }
     
     async handleMessage(message, oldMessage) {//old messgae before the update
@@ -39,7 +38,7 @@ class CommandDispatcher {
                 message.channel.type === 'text' && //commands are only existant in text channels
                 !message.channel.permissionsFor(this.client.user).has(cmdobj.reqBotPerms)) //check if meganeBot has the permissions to do this action
                 return util.createMessage({ messageContent: `I don't have enough permissions to use this command. need:\n${cmdobj.reqBotPerms.join(', and ')}`, deleteTime: 5 * 60 * 1000 });
-            if (cmdobj.reqUserPerms && !message.member.permissions.hasPermissions(cmdobj.reqUserPerms))
+            if (cmdobj.reqUserPerms && !message.member.permissions.hasPermission(cmdobj.reqUserPerms))
                 return util.createMessage({ messageContent: `You have enough permissions to use this command. need:\n${cmdobj.reqUserPerms.join(', and ')}`, deleteTime: 60 * 1000 });
             console.log(`${cmd} args: ${args}`);
             let inCD = cmdobj.inCooldown(message);

@@ -21,7 +21,6 @@ try {//do a config.json check, the bot will not operate without a valid config.
 
 //initiate new client
 const client = new MeganeClient({
-    fetchAllMembers: true,
     prefix: config.prefix,
     ownerid: config.ownerid
 });
@@ -48,6 +47,15 @@ moduledirlist.forEach(mod => {
 // Handle discord.js warnings
 client.on('warn', (m) => console.log('[warn]', m));
 //client.on('debug', (m) => console.log('[debug]', m));
+
+client.on('ready', () => {
+    if (reconnTimer) {
+        clearTimeout(reconnTimer);
+        reconnTimer = null;
+    }
+    console.log(`Ready to serve in ${client.channels.size} channels on ${client.guilds.size} servers, for a total of ${client.users.size} users.`);
+    console.log(client.user);
+});
 
 let reconnTimer = null;
 client.on('disconnect', (m) => {

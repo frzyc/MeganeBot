@@ -1,4 +1,4 @@
-﻿let watchlist = {};
+﻿const watchlist = {};
 exports.messageWatchList = watchlist;
 /*my own function to send messages, should be able to queue messages, check length, segment/shorten messages, and do some parsing stuff
  * rmsg my own resolved message object, should have relavent stuff like the message to edit, emojis, reply  

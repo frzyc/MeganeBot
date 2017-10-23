@@ -1,7 +1,6 @@
 ﻿const util = require.main.exports.getRequire('util');
 const command = require.main.exports.getRequire('command').command;
 const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
-const config = require.main.exports.getRequire('config');
 
 let cmdModule = new cmdModuleobj('BasicResponse');
 cmdModule.description = `Basic scripted responses to stuff... mostly memes`;
@@ -32,7 +31,7 @@ basicResponseCmd.prototype.process = function (message, args) {
         reply: true,
         deleteTime: 2 * 60 * 1000
     }
-    if (this.masterResponse && message.author.id === config.ownerid)
+    if (this.masterResponse && this.client.isOwner(message.author.id))
         res.messageContent = this.masterResponse;
     else if (this.basicResponse)
         res.messageContent = this.basicResponse;

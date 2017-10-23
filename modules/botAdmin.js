@@ -2,7 +2,6 @@
 const util = require.main.exports.getRequire('util');
 const command = require.main.exports.getRequire('command').command;
 const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
-const config = require.main.exports.getRequire('config');
 const cmdBase = require.main.exports.cmdBase
 const package = require('../package.json');
 
@@ -13,7 +12,7 @@ exports.cmdModule = cmdModule;
 
 let glassescmd = new command(['glasses']);
 glassescmd.usage = ['**\nChange my display picture.\nNOTE:Botowner only.'];
-glassescmd.process = function (message, args, client) {
+glassescmd.process = function (message, args) {
     console.log("GLASSES");
     return new Promise((resolve, reject) => {
         let prom1 = util.createMessage({ messageContent: "Changing my glasses..." }, message);
@@ -28,7 +27,7 @@ glassescmd.process = function (message, args, client) {
             });
             let randicon = files[Math.floor(Math.random() * files.length)];
             console.log(`randicon:${randicon}`);
-            let prom2 = client.user.setAvatar(`./glassesicon/${randicon}`);
+            let prom2 = this.client.user.setAvatar(`./glassesicon/${randicon}`);
             console.log(prom1);
             console.log(prom2);
             Promise.all([prom1, prom2]).then(values => {
@@ -53,9 +52,9 @@ setplaying.usage = ["[desired game/message]** Change what im playing."];
 setplaying.argsTemplate = [
     [util.staticArgTypes['string']]
 ];
-setplaying.process = function (message, args, client) {
+setplaying.process = function (message, args) {
     return util.justOnePromise(
-        client.user.setGame(args[0][0]),
+        this.client.user.setGame(args[0][0]),
         util.redel(`Changed my playing to: ${args[0][0]}.`),
         util.redel(`Cannot change playing.`)
     );
@@ -99,11 +98,11 @@ statuscmd.usage = [`[${statuscmd.statuses.join('/')}]** set bot status.`];
 statuscmd.argsTemplate = [
     [new util.customType(s => statuscmd.statuses.includes(s) ? s : null)]
 ];
-statuscmd.process = function (message, args, client) {
+statuscmd.process = function (message, args) {
     return new Promise((resolve, reject) => {
         let status = args[0][0];
-        if (status === client.user.presence.status) return reject(util.redel(`I am currently ${status}!`));
-        client.user.setStatus(status).then(user => {
+        if (status === this.client.user.presence.status) return reject(util.redel(`I am currently ${status}!`));
+        this.client.user.setStatus(status).then(user => {
             resolve(util.redel(`Changed my status to ${status}!`));
         }).catch((err) => {
             console.err(err);
@@ -158,7 +157,7 @@ cmdModule.addCmd(versionscmd);
 
 let pullanddeploycmd = new command(['pullanddeploy']);
 pullanddeploycmd.usage = ["** returns the git commit this bot is running."];
-pullanddeploycmd.process = function (message, args, client) {
+pullanddeploycmd.process = function (message, args) {
     util.createMessage({ messageContent: "fetching updates..." }, message).then(function (sentMsg) {
         console.log("updating...");
         let spawn = require('child_process').spawn;
@@ -184,7 +183,7 @@ pullanddeploycmd.process = function (message, args, client) {
                 npmspawn.on("close", function (code) {
                     console.log("goodbye");
                     sentMsg.edit("brb!").then(function () {
-                        client.destroy().then(function () {
+                        this.client.destroy().then(function () {
                             process.exit();
                         });
                     });
@@ -198,7 +197,7 @@ cmdModule.addCmd(pullanddeploycmd);
 
 let killyourselfcmd = new command(['killyourself']);
 killyourselfcmd.usage = ["** Kill the process. If pm2 is installed, node process will restart."];
-killyourselfcmd.process = function (message, args, client) {
+killyourselfcmd.process = function (message, args) {
     util.createMessage({ messageContent: "NANI?" }, message).then(function (sentMsg) {
         process.exit();
     });
@@ -206,7 +205,7 @@ killyourselfcmd.process = function (message, args, client) {
 cmdModule.addCmd(killyourselfcmd);
 
 let testcmd = new command(['test']);
-testcmd.process = function (message, args, client) {
+testcmd.process = function (message, args) {
     let res = {
         messageContent: 'testing',
         deleteTimeCmdMessage:5 * 1000,
@@ -215,8 +214,8 @@ testcmd.process = function (message, args, client) {
             embed: {
                 color: 3447003,
                     author: {
-                    name: client.user.username,
-                        icon_url: client.user.avatarURL
+                    name: this.client.user.username,
+                        icon_url: this.client.user.avatarURL
                 },
                 title: 'This is an embed',
                 url: 'http://google.com',
@@ -237,7 +236,7 @@ testcmd.process = function (message, args, client) {
                 ],
                 timestamp: new Date(),
                 footer: {
-                    icon_url: client.user.avatarURL,
+                    icon_url: this.client.user.avatarURL,
                     text: '© Example'
                 }
             }

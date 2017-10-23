@@ -1,16 +1,8 @@
 ﻿const util = require.main.exports.getRequire('util');
-const config = require.main.exports.getRequire('config');
-
-//this checkRestriction works both for commands and modules
-let checkRestriction = (message) => {
-    if (this.dmOnly && message.channel.type === 'text') return 'direct message';
-    if (this.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) return 'server';
-    if (this.ownerOnly && message.author.id !== config.ownerid) return 'botowner only';
-    return '';
-} 
 
 //the cmdBaseobj basically stores modules. It does some preliminary checking when adding modules to itself.
-var cmdBaseobj = function () {
+var cmdBaseobj = function (client) {
+    this.client = client;
     this.cmdlist = {};
     this.modulelist = {};
 }
@@ -23,7 +15,7 @@ cmdBaseobj.prototype.addCmd = function (cmdobj) {
     }
     if (!cmdobj.process) return console.log(`cmdBaseobj.addCmd: ERROR: Command ${cmdobj.name[0]} does not have a process.`);
     if (!cmdobj.usage) console.log(`cmdBaseobj.addCmd: WARN: Command ${cmdobj.name[0]} does not have a usage.`);
-
+    cmdobj.client = this.client;
     for (n of cmdobj.name) {
         if (this.cmdlist[n]) {
             console.log(`cmdBaseobj.addCmd: ERROR: Command with name '${n}' already exists.`);
@@ -48,7 +40,9 @@ cmdBaseobj.prototype.addModule = function (moduleobj) {
         console.log(`addModule:ERROR: Module with the same name: ${moduleobj.name}, already exists.`);
         return false;
     }
+    moduleobj.client = this.client;
     this.modulelist[mname] = moduleobj;
+    
     if (!moduleobj.description) console.log(`addModule:WARN: Command ${moduleobj.name} does not have a description.`);
 
     for (cmd in moduleobj.cmdlist) {
@@ -100,7 +94,12 @@ cmdModuleobj.prototype.getDesc = function () {
     if (this.description) return this.description;
     else return '';
 }
-cmdModuleobj.prototype.checkRestriction = checkRestriction;
+cmdModuleobj.prototype.checkRestriction = function (message) {
+    if (this.dmOnly && message.channel.type === 'text') return 'direct message';
+    if (this.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) return 'server';
+    if (this.ownerOnly && !this.client.isOwner(message.author.id)) return 'botowner only';
+    return '';
+}
 
 
 /*
@@ -142,13 +141,13 @@ var command = function (cmdnames) {
 command.prototype.getUseage = function (ind) {
     if (!this.usage) return `This command does not have a usage description.`
     else if (isFinite(ind) && ind < this.usage.length) {
-        return `**${config.prefix}${this.name[0]} ${this.usage[ind]}`;
+        return `**${this.client.prefix}${this.name[0]} ${this.usage[ind]}`;
     } else{
         //console.log(`number of usages: ${this.usage.length}`);
         let usagetxt = `Usage of [${this.name.join(', ')}]: `;
 
         for (let value of this.usage)
-            usagetxt += `\n**${config.prefix}${this.name[0]} ${value}`;
+            usagetxt += `\n**${this.client.prefix}${this.name[0]} ${value}`;
         return usagetxt;
     }
 }
@@ -201,7 +200,12 @@ command.prototype.clearCooldown = function (message) {
 command.prototype.checkArgs = function (args,message) {
     if (this.argsTemplate) return this.argsTemplate.map(tem => util.parseArgs(tem, args.slice(0), message));
 }
-command.prototype.checkRestriction = checkRestriction;
+command.prototype.checkRestriction = function (message) {
+    if (this.dmOnly && message.channel.type === 'text') return 'direct message';
+    if (this.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) return 'server';
+    if (this.ownerOnly && !this.client.isOwner(message.author.id)) return 'botowner only';
+    return '';
+}
 
 let cmdModule = new cmdModuleobj('Commands');
 cmdModule.description = `Contains Command administration commands`;
