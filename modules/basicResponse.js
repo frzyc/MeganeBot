@@ -1,10 +1,10 @@
 ﻿const util = require.main.exports.getRequire('util');
-const command = require.main.exports.getRequire('command').command;
-const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
+const command = require.main.exports.getRequire('command');
+const cmdModuleobj = require.main.exports.getRequire('commandmodule');
 
 let cmdModule = new cmdModuleobj('BasicResponse');
 cmdModule.description = `Basic scripted responses to stuff... mostly memes`;
-exports.cmdModule = cmdModule;
+module.exports = cmdModule;
 
 var basicResponse = {
     'hello': 'Hello.',
@@ -24,7 +24,7 @@ var basicResponseCmd = function (cmdnames) {
     this.name = cmdnames;
 }
 basicResponseCmd.prototype = Object.create(command.prototype);//clone all properties
-basicResponseCmd.prototype.usage = ["** MeganeBot will reply with something personal!"];
+basicResponseCmd.prototype.usage = ["**{0}** MeganeBot will reply with something personal!"];
 basicResponseCmd.prototype.process = function (message, args) {
     let res = {
         typing: true,

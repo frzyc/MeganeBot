@@ -1,16 +1,16 @@
 ﻿const fs = require("fs");
 const util = require.main.exports.getRequire('util');
-const command = require.main.exports.getRequire('command').command;
-const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
+const command = require.main.exports.getRequire('command');
+const cmdModuleobj = require.main.exports.getRequire('commandmodule');
 const cmdBase = require.main.exports.cmdBase
 const package = require('../package.json');
 
 let cmdModule = new cmdModuleobj('BotAdmin');
 cmdModule.description = `Contains bot administration commands`;
 cmdModule.ownerOnly = true;
-exports.cmdModule = cmdModule;
+module.exports = cmdModule;
 
-let glassescmd = new command(['glasses']);
+let glassescmd = new command('glasses');
 glassescmd.usage = ['**\nChange my display picture.\nNOTE:Botowner only.'];
 glassescmd.process = function (message, args) {
     console.log("GLASSES");
@@ -47,7 +47,7 @@ glassescmd.process = function (message, args) {
 }
 cmdModule.addCmd(glassescmd);
 
-let setplaying = new command(['playing']);
+let setplaying = new command('playing');
 setplaying.usage = ["[desired game/message]** Change what im playing."];
 setplaying.argsTemplate = [
     [util.staticArgTypes['string']]
@@ -61,7 +61,7 @@ setplaying.process = function (message, args) {
 }
 cmdModule.addCmd(setplaying);
 
-let evalcmd = new command(['eval']);
+let evalcmd = new command('eval');
 evalcmd.usage = ["[string]** \nNOTE: bot owner only"];
 evalcmd.process = function (message, args) {
 
@@ -92,7 +92,7 @@ evalcmd.process = function (message, args) {
 }
 cmdModule.addCmd(evalcmd);
 
-let statuscmd = new command(['status']);
+let statuscmd = new command('status');
 statuscmd.statuses = [`online`, `idle`, `invisible`, `dnd`];
 statuscmd.usage = [`[${statuscmd.statuses.join('/')}]** set bot status.`];
 statuscmd.argsTemplate = [
@@ -112,7 +112,7 @@ statuscmd.process = function (message, args) {
 }
 cmdModule.addCmd(statuscmd);
 
-let getpermscmd = new command(['getperms']);
+let getpermscmd = new command('getperms');
 getpermscmd.usage = ["[@mentions]** get the users' permissions in this channel."];
 getpermscmd.serverOnly = true;
 getpermscmd.argsTemplate = [
@@ -132,7 +132,7 @@ getpermscmd.process = function (message, args) {
 }
 cmdModule.addCmd(getpermscmd);
 
-let versionscmd = new command(['version']);
+let versionscmd = new command('version');
 versionscmd.usage = ["** returns the git commit this bot is running."];
 versionscmd.process = function (message, args) {
     return new Promise((resolve, reject) => {
@@ -155,7 +155,7 @@ versionscmd.process = function (message, args) {
 }
 cmdModule.addCmd(versionscmd);
 
-let pullanddeploycmd = new command(['pullanddeploy']);
+let pullanddeploycmd = new command('pullanddeploy');
 pullanddeploycmd.usage = ["** returns the git commit this bot is running."];
 pullanddeploycmd.process = function (message, args) {
     util.createMessage({ messageContent: "fetching updates..." }, message).then(function (sentMsg) {
@@ -195,7 +195,7 @@ pullanddeploycmd.process = function (message, args) {
 }
 cmdModule.addCmd(pullanddeploycmd);
 
-let killyourselfcmd = new command(['killyourself']);
+let killyourselfcmd = new command('killyourself');
 killyourselfcmd.usage = ["** Kill the process. If pm2 is installed, node process will restart."];
 killyourselfcmd.process = function (message, args) {
     util.createMessage({ messageContent: "NANI?" }, message).then(function (sentMsg) {
@@ -203,75 +203,3 @@ killyourselfcmd.process = function (message, args) {
     });
 }
 cmdModule.addCmd(killyourselfcmd);
-
-let testcmd = new command(['test']);
-testcmd.process = function (message, args) {
-    let res = {
-        messageContent: 'testing',
-        deleteTimeCmdMessage:5 * 1000,
-            //emojis: ['🇦', '🇧','🇨']
-        messageOptions: {
-            embed: {
-                color: 3447003,
-                    author: {
-                    name: this.client.user.username,
-                        icon_url: this.client.user.avatarURL
-                },
-                title: 'This is an embed',
-                url: 'http://google.com',
-                description: 'This is a test embed to showcase what they look like and what they can do.',
-                fields: [
-                    {
-                        name: 'Fields',
-                        value: 'They can have different fields with small headlines.'
-                    },
-                    {
-                        name: 'Masked links',
-                        value: 'You can put [masked links](http://google.com) inside of rich embeds.'
-                    },
-                    {
-                        name: 'Markdown',
-                        value: 'You can put all the *usual* **__Markdown__** inside of them.'
-                    }
-                ],
-                timestamp: new Date(),
-                footer: {
-                    icon_url: this.client.user.avatarURL,
-                    text: '© Example'
-                }
-            }
-        },
-        emojiButtons: [
-            {
-                emoji: '🇦',
-                process: (messageReaction, user) => {
-                    console.log("PROCESSA");
-                    return Promise.resolve({ message: messageReaction.message, messageContent: '🇦' })
-                }
-            },
-            {
-                emoji: '🇧',
-                process: (messageReaction, user) => {
-                    console.log("PROCESSB");
-                    return Promise.resolve({ message: messageReaction.message, messageContent: '🇧' })
-                }
-            },
-            {
-                emoji: '🇨',
-                process: (messageReaction, user) => {
-                    console.log("PROCESSC");
-                    return Promise.resolve({ message: messageReaction.message, messageContent: '🇨' })
-                }
-            }
-        ],
-    }
-    /*for (var i = 0; i < 100; i++){
-        res.messageOptions.embed.fields.push({
-            name: `${i}`,
-            value: 'You can put [masked links](http://google.com) inside of rich embeds.'
-        })
-    }*/
-    return Promise.resolve(res);
-}
-cmdModule.addCmd(testcmd);
-

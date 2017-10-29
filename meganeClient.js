@@ -19,14 +19,15 @@ class MeganeClient extends discord.Client {
             });
         }
 
-        let cmdBaseobj = require.main.exports.getRequire('command').cmdBaseobj;
-        this.cmdBase = new cmdBaseobj(this);
+        let cmdDepot = require.main.exports.getRequire('cmdDepot');
+        this.cmdDepot = new cmdDepot(this);
 
 
         let CommandDispatcher = require.main.exports.getRequire('dispatcher');
-        this.dispatcher = new CommandDispatcher(this, this.cmdBase);
+        this.dispatcher = new CommandDispatcher(this, this.cmdDepot);
 
         this.on('message', (message) => { this.dispatcher.handleMessage(message); });
+        this.on('messageUpdate', (oldMessage, newMessage) => { this.dispatcher.handleMessage(newMessage, oldMessage); });
         this.on('messageReactionAdd', (messageReaction, user) => { this.dispatcher.handleReaction(messageReaction, user); });
         this.on('messageReactionRemove', (messageReaction, user) => {
             if (user.bot) return; //wont respond to bots
@@ -36,6 +37,19 @@ class MeganeClient extends discord.Client {
             console.log(`New User "${member.user.username}" has joined "${member.guild.name}"`);
             member.guild.defaultChannel.send(`"${member.user.username}" has joined this server`);
         });
+
+        //a helper function to format strings
+        if (!String.prototype.format) {
+            String.prototype.format = function () {
+                var args = arguments;
+                return this.replace(/{(\d+)}/g, function (match, number) {
+                    return typeof args[number] != 'undefined'
+                        ? args[number]
+                        : match
+                        ;
+                });
+            };
+        }
     }
     get prefix() {
         return this.globalPrefix;
@@ -50,10 +64,10 @@ class MeganeClient extends discord.Client {
         return this.options.owner;
     }
     isOwner(user) {
-        if(!this.options.owner) return false;
+        if (!this.options.owner) return false;
         user = this.users.get(user);
-        if(!user) throw new RangeError("user unresolvable.");
-        if(this.options.owner instanceof Set) return this.options.owner.has(user.id);
+        if (!user) throw new RangeError("user unresolvable.");
+        if (this.options.owner instanceof Set) return this.options.owner.has(user.id);
         throw new RangeError('The client\'s "owner" option is an unknown value.');
     }
 

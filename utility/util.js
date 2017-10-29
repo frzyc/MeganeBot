@@ -4,8 +4,6 @@ exports.messageWatchList = watchlist;
  * rmsg my own resolved message object, should have relavent stuff like the message to edit, emojis, reply  
 */
 exports.createMessage = function (rmsg, message, channel) {
-    //console.log(`createMessage:`);
-    //console.log(rmsg);
     return new Promise((resolve, reject) => {
         if (!rmsg) return reject(console.warn('no resolve message obj'));
         if (!rmsg.message && !message && !channel) return reject(console.warn('no message or channel to send to.'));
@@ -47,8 +45,6 @@ exports.createMessage = function (rmsg, message, channel) {
         });
 
         function postSendProcessing(msgtoprocess) {
-            console.log("postSendProcessing");
-            //console.log(rmsg);
             return new Promise((pspResolve) => {
                 if ('deleteTime' in rmsg && msgtoprocess.deletable) msgtoprocess.delete(rmsg.deleteTime).catch(console.error);
                 if (message && message.deletable) {//deleting cmd message
@@ -80,28 +76,20 @@ exports.createMessage = function (rmsg, message, channel) {
 
                     function addemoji(msgtoemojify, li, i) {
                         return new Promise((addEmojiResolve) => {
-                            console.log("reacting:" + li[i]);
                             msgtoemojify.react(li[i]).then(() => {
                                 i++;
-                                if (i < li.length)
-                                    addEmojiResolve(addemoji(msgtoemojify, li, i));
-                                else {
-                                    console.log('DONE ALL EMOJIS')
-                                    addEmojiResolve(msgtoemojify);
-                                }
+                                if (i < li.length) addEmojiResolve(addemoji(msgtoemojify, li, i));
+                                else addEmojiResolve(msgtoemojify);
                             }).catch(() => {
-                                console.log('FAILED REACTION:' + li[i]);
                                 addEmojiResolve(msgtoemojify);
                             });
                         });
                     }
                 }
-                console.log("end of postSendProcessing Promise");
                 pspResolve(msgtoprocess);
             });
         }
         function sendCreatedMessage() {
-            console.log("sendCreatedMessage");
             return new Promise((scresolve, screject) => {
                 let replyOrSend;
                 if (message) //if there is a message object, it might be an reply or just to send a message in that channel
@@ -110,7 +98,6 @@ exports.createMessage = function (rmsg, message, channel) {
                     replyOrSend = channel.send(rmsg.messageContent, rmsg.messageOptions);
 
                 replyOrSend.then(scresolve).catch((err) => {
-                    console.log("createMessage: fail to send message.");
                     console.error(err);
                     return screject(err);
                 });
@@ -159,7 +146,7 @@ exports.redel = function (msgstring) {
 exports.smdel = function (msgstring, time) {
     return {
         messageContent: msgstring,
-        deleteTime: time? time : 10 * 1000,
+        deleteTime: time ? time : 10 * 1000,
     }
 }
 
@@ -206,29 +193,29 @@ exports.getMentionedUsers = function (message) {
             userarr[user.id] = user;
     }));
     //console.log(`user mention added. size: ${Object.keys(userarr).length}`);
-    
-    
+
+
     return userarr;
 }
 
 // Returns a random number between 0 (inclusive) and 1 (exclusive)
-exports.getRandom = function() {
+exports.getRandom = function () {
     return Math.random();
 }
 // Returns a random number between min (inclusive) and max (exclusive)
-exports.getRandomArbitrary = function(min, max) {
+exports.getRandomArbitrary = function (min, max) {
     return Math.random() * (max - min) + min;
 }
 // Returns a random integer between min (included) and max (excluded)
 // Using Math.round() will give you a non-uniform distribution!
-exports.getRandomInt = function(min, max) {
+exports.getRandomInt = function (min, max) {
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min)) + min;
 }
 // Returns a random integer between min (included) and max (included)
 // Using Math.round() will give you a non-uniform distribution!
-exports.getRandomIntInclusive = function(min, max) {
+exports.getRandomIntInclusive = function (min, max) {
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -236,7 +223,7 @@ exports.getRandomIntInclusive = function(min, max) {
 
 
 exports.percentChance = function (percent) {
-    return (Math.random() < (percent/100));
+    return (Math.random() < (percent / 100));
 }
 
 exports.getDigitSymbol = function (digit) {
@@ -283,7 +270,7 @@ exports.otherCharSymbol = function (char) {
     let symarr = {}
     symarr[`!`] = `❕`;
     symarr[`?`] = `❔`;
-    return symarr[char] ? symarr[char] : char; 
+    return symarr[char] ? symarr[char] : char;
 }
 var messageQueue = function (channel) {
     this.id = channel.id;
@@ -291,7 +278,7 @@ var messageQueue = function (channel) {
     this.queueQueue = [];
     this.queueTimeOut = null;
 }
-messageQueue.prototype.queue = function(msg){
+messageQueue.prototype.queue = function (msg) {
     this.queueQueue.push(msg);
     if (this.queueTimeOut) return;//means it already been set
     this.queueTimeOut = setInterval(() => {
@@ -315,7 +302,7 @@ messageQueue.prototype.queue = function(msg){
         }
         if (msgcontent.length === 0) return;
         //console.log(`NEW MESSAGE: msgcontent.length(${msgcontent.length})`);
-        this.tchannel.send(msgcontent).then(msg => {}).catch(console.error);
+        this.tchannel.send(msgcontent).then(msg => { }).catch(console.error);
     }, 3000);
 }
 
@@ -326,7 +313,7 @@ exports.queueMessages = function (channel, queuestring) {
     messageQueues[channel.id].queue(queuestring);
 }
 
-exports.justOnePromise = function(promise,resolveResponse, rejectResponse){
+exports.justOnePromise = function (promise, resolveResponse, rejectResponse) {
     return new Promise((resolve, reject) => {
         promise.then().then((channel) => {
             return resolve(resolveResponse);
@@ -428,7 +415,7 @@ let customType = function (evalfunc, statictype) {
 customType.prototype.process = function (arg, message) {
     //console.log(`process:customType(${arg}:${typeof arg})`);
     if (this.baseprocess) {
-        arg = this.baseprocess(arg,message);
+        arg = this.baseprocess(arg, message);
     }
     if (arg == null) return null;
     return this.evalfunc(arg, message);
@@ -458,7 +445,7 @@ exports.parseArgs = function (template, args, message) {
         /*if (argtype.type === 'none') {
             return '';
         } else*/ if (argtype.type === 'string') {
-            let str = args.join(' ') 
+            let str = args.join(' ')
             if (str.length === 0) return null;
             out.push(str);
             break;

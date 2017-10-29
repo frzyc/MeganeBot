@@ -1,13 +1,13 @@
 ﻿const util = require.main.exports.getRequire('util');
-const command = require.main.exports.getRequire('command').command;
-const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
+const command = require.main.exports.getRequire('command');
+const cmdModuleobj = require.main.exports.getRequire('commandmodule');
 
 const playerData = require.main.exports.getRequire('playerdata').playerData;
 const currency = require.main.exports.getRequire('playerdata').currency;
 
 let cmdModule = new cmdModuleobj('Minesweeper');
 cmdModule.description = `a minesweeper game`;
-exports.cmdModule = cmdModule;
+module.exports = cmdModule;
 
 let bomb = `💣`;//'b'
 let blank = `⏹`;//'o'

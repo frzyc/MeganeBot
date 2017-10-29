@@ -1,10 +1,10 @@
 ﻿const fs = require("fs");
 
 const util = require.main.exports.getRequire('util');
-const command = require.main.exports.getRequire('command').command;
-const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
+const Command = require.main.exports.getRequire('command');
+const CommandModule = require.main.exports.getRequire('commandmodule');
 
-let cmdModule = new cmdModuleobj('PlayerData');
+let cmdModule = new CommandModule('PlayerData');
 cmdModule.description = `Stuff that have to deal with the data stored for each player.`;
 
 var datafile = '../data/playerData.json';
@@ -127,18 +127,11 @@ playerDataObj.prototype.getOrCreatePlayer = function (id) {
 var playerData = new playerDataObj();
 playerData.readData();
 
-module.exports = {
-    cmdModule : cmdModule,
-    playerData: playerData,
-    playerDataObj: playerDataObj,
-    player: player,
-    currency: currency,
-    currencyobj: currencyobj,
-    wallet: wallet,
-}
-let walletcmd = new command(['wallet']);
+module.exports = cmdModule;
+
+let walletcmd = new Command('wallet');
 walletcmd.usage = [
-    `** Get how much ${currency.nameplural} in your wallet.`,
+    `**{0}** Get how much ${currency.nameplural} in your wallet.`,
 ];
 walletcmd.process = function (message, args) {
     let amount = playerData.getOrCreatePlayer(message.author.id).wallet.getAmount();
@@ -151,12 +144,12 @@ walletcmd.process = function (message, args) {
 cmdModule.addCmd(walletcmd);
 
 let amounttype = new util.customType(v => v > 0 ? v : null, util.staticArgTypes['int']);
-let givecmd = new command(['give']);
+let givecmd = new Command('give');
 givecmd.usage = [
-    `[amount] [mention someguy]**\nGive some amount of ${currency.nameplural} from your wallet to some guy.`,
-    `[amount] [mention someguy] [mention anotherguy] [mention more guys]**\nGive some amount of ${currency.nameplural} to each person you mention.`,
-    `[amount] [mention somerole] **\nGive everyone with that role a specified amount of ${currency.nameplural} each.`,
-    `[amount] [mention everyone] **\nGive everyone in the server a specified amount of ${currency.nameplural} each.`,
+    `**{0} [amount] [mention someguy]** Give some amount of ${currency.nameplural} from your wallet to some guy.`,
+    `**{0} [amount] [mention someguy] [mention anotherguy] [mention more guys]** Give some amount of ${currency.nameplural} to each person you mention.`,
+    `**{0} [amount] [mention somerole] ** Give everyone with that role a specified amount of ${currency.nameplural} each.`,
+    `**{0} [amount] [mention everyone] ** Give everyone in the server a specified amount of ${currency.nameplural} each.`,
 ];
 givecmd.argsTemplate = [
     [amounttype, util.staticArgTypes['mentions']]
@@ -191,9 +184,9 @@ givecmd.process = function (message, args) {
 }
 cmdModule.addCmd(givecmd);
 
-let awardcmd = new command(['award']);
+let awardcmd = new Command('award');
 awardcmd.usage = [
-    `[amount] [mention someguy or guys or role or everyone]**\nAward the mentions some money.\nNOTE: botowner only.`,
+    `**{0} [amount] [mention someguy or guys or role or everyone]** Award the mentions some money.\nNOTE: botowner only.`,
 ];
 awardcmd.argsTemplate = [
     [amounttype, util.staticArgTypes['mentions']]
@@ -218,9 +211,9 @@ awardcmd.process = function (message, args) {
 }
 cmdModule.addCmd(awardcmd);
 
-let takecmd = new command(['take']);
+let takecmd = new Command('take');
 takecmd.usage = [
-    `[amount] [mention someguy or guys or role or everyone]**\Take some money from everyone in the mentions.\nNOTE: botowner only.`,
+    `**{0} [amount] [mention someguy or guys or role or everyone]** ake some money from everyone in the mentions.\nNOTE: botowner only.`,
 ];
 takecmd.argsTemplate = [
     [amounttype, util.staticArgTypes['mentions']]

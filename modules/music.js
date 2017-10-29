@@ -1,15 +1,16 @@
 ﻿const request = require('request');
 const YoutubeDL = require('youtube-dl');
+const ytdlc = require('ytdl-core');
 const util = require.main.exports.getRequire('util');
-const command = require.main.exports.getRequire('command').command;
-const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
+const Command = require.main.exports.getRequire('command');
+const CommandModule = require.main.exports.getRequire('commandmodule');
 
 const client = require.main.exports.client;
 
-let cmdModule = new cmdModuleobj('Music');
+let cmdModule = new CommandModule('Music');
 cmdModule.description = `Music commands`
 cmdModule.serverOnly = true;
-exports.cmdModule = cmdModule;
+module.exports = cmdModule;
 
 const MAX_NUM_SONGS_PER_PLAYLIST = 100;
 var queueList = {};//stores queuelists for all servers
@@ -143,7 +144,9 @@ playQueue.prototype.play = function (track) {
         });
         return;
     }
-    const currentStream = YoutubeDL(track.webpage_url, ['--format', 'bestaudio/best']);
+    const currentStream = (track.extractor && track.extractor==="youtube") ?
+    ytdlc(track.webpage_url,{audioonly:true}):
+    YoutubeDL(track.webpage_url, ['--format', 'bestaudio/best']);
     currentStream.on('info', (info) => {
         console.log("YoutubeDL info");
         console.log(info)
@@ -479,8 +482,8 @@ function joinvoice(message) {
     })
 }
 
-let joinvoicecmd = new command(['joinvoice']);
-joinvoicecmd.usage = ["** Meganebot will join the current voice channel you are in. This also binds other music commands to this channel."];
+let joinvoicecmd = new Command('joinvoice');
+joinvoicecmd.usage = ["**{0}** Meganebot will join the current voice channel you are in. This also binds other music commands to this channel."];
 joinvoicecmd.reqBotPerms = ["CONNECT", "SPEAK"];
 joinvoicecmd.serverCooldown = 5;//5 seconds
 joinvoicecmd.process = function (message, args) {
@@ -488,15 +491,15 @@ joinvoicecmd.process = function (message, args) {
 }
 cmdModule.addCmd(joinvoicecmd);
 
-let leavevoice = new command(['leavevoice']);
-leavevoice.usage = ["** Meganebot will leave the current voicechannel."];
+let leavevoice = new Command('leavevoice');
+leavevoice.usage = ["**{0}** Meganebot will leave the current voicechannel."];
 leavevoice.process = function (message, args) {
     leaveVoice(message);
     return Promise.resolve();
 }
 cmdModule.addCmd(leavevoice);
 
-let playingcmd = new command(['musicplaying']);
+let playingcmd = new Command('musicplaying');
 playingcmd.usage = ["** Meganebot will reprint the current playing song."];
 playingcmd.channelCooldown = 3;
 playingcmd.process = function (message, args) {
@@ -508,8 +511,8 @@ playingcmd.process = function (message, args) {
 }
 cmdModule.addCmd(playingcmd);
 
-let pause = new command(['pause']);
-pause.usage = ["** Pause song."];
+let pause = new Command('pause');
+pause.usage = ["**{0}** Pause song."];
 pause.channelCooldown = 3;
 pause.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
@@ -520,8 +523,8 @@ pause.process = function (message, args) {
 }
 cmdModule.addCmd(pause);
 
-let resume = new command(['resume']);
-resume.usage = ["** Resume song."];
+let resume = new Command('resume');
+resume.usage = ["**{0}** Resume song."];
 resume.channelCooldown = 3;
 resume.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
@@ -532,11 +535,12 @@ resume.process = function (message, args) {
 }
 cmdModule.addCmd(resume);
 
-let volumecmd = new command(['volume','vol']);
+let volumecmd = new Command('volume');
+volumecmd.aliases = ['vol'];
 volumecmd.usage = [
-    `** get the current volume`,
-    `[value]** Sets the volume in percentage. Must be < 200`,
-    `[vaule]%** Set the volume in percentage. Must be < 200%`,
+    `**{0}** get the current volume`,
+    `**{0} [value]** Sets the volume in percentage. Must be < 200`,
+    `**{0} [vaule]%** Set the volume in percentage. Must be < 200%`,
     //`[vaule]dB** Set the volume in decibels. limited to [-50dB, 10dB]`,
 ];
 volumecmd.argsTemplate = [
@@ -582,10 +586,10 @@ volumecmd.process = function (message, args) {
 cmdModule.addCmd(volumecmd);
 
 
-let nextcmd = new command(['next']);
+let nextcmd = new Command('next');
 nextcmd.usage = [
-    `** Skip to the next song in the playlist.`,
-    `[number of songs]** Skip a few songs in the playlist.`
+    `**{0}** Skip to the next song in the playlist.`,
+    `**{0} [number of songs]** Skip a few songs in the playlist.`
 ];
 nextcmd.argsTemplate = [
     [util.staticArgTypes['none']],
@@ -608,8 +612,9 @@ nextcmd.process = function (message, args) {
 }
 cmdModule.addCmd(nextcmd);
 
-let clearpl = new command(['plclear', 'plc']);
-clearpl.usage = ["** Remove every song in the playqueue."];
+let clearpl = new Command('plclear');
+clearpl.aliases = ['plc'];
+clearpl.usage = ["**{0}** Remove every song in the playqueue."];
 clearpl.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
@@ -619,8 +624,9 @@ clearpl.process = function (message, args) {
 }
 cmdModule.addCmd(clearpl);
 
-let plpop = new command(['playlistpop', 'plpop']);
-plpop.usage = [`**\nDequeue the last added song from the playlist.`];
+let plpop = new Command('playlistpop');
+plpop.aliases = ['plpop'];
+plpop.usage = [`**{0}** Dequeue the last added song from the playlist.`];
 plpop.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
@@ -632,8 +638,8 @@ plpop.process = function (message, args) {
 }
 cmdModule.addCmd(plpop);
 
-let shufflecmd = new command(['shuffle']);
-shufflecmd.usage = ["** Shuffle the playqueue."];
+let shufflecmd = new Command('shuffle');
+shufflecmd.usage = ["**{0}** Shuffle the playqueue."];
 shufflecmd.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
@@ -644,8 +650,9 @@ shufflecmd.process = function (message, args) {
 cmdModule.addCmd(shufflecmd);
 
 
-let playlistcmd = new command(['playlist', 'pl']);
-playlistcmd.usage = [`**\nDisplay the playlist.`];
+let playlistcmd = new Command('playlist');
+playlistcmd.aliases = ['pl'];
+playlistcmd.usage = [`**{0}** Display the playlist.`];
 playlistcmd.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."));
     let pq = queueList.getPlayQueue(message.guild.id);
@@ -656,9 +663,10 @@ playlistcmd.process = function (message, args) {
 }
 cmdModule.addCmd(playlistcmd);
 
-let queuemusic = new command(['queuemusic', 'qm']);
+let queuemusic = new Command('queuemusic');
+queuemusic.aliases = ['qm'];
 queuemusic.ownerOnly = true;
-queuemusic.usage = [`[link to video/song/playlist or search strings]**\n add a song/video/playlist to the playlist`]
+queuemusic.usage = [`**{0} [link to video/song/playlist or search strings]** add a song/video/playlist to the playlist`]
 queuemusic.argsTemplate = [
     [util.staticArgTypes['string']]
 ];
@@ -666,9 +674,13 @@ queuemusic.process = function (message, args) {
     return new Promise((resolve, reject) => {
         joinvoice(message).then(() => {
             let pq = queueList.getOrCreatePlayQueue(message.guild.id);
-            queueytdl(args[0][0], pq, message).then(() => {
+            queueytdl(args[0][0], pq, message)
+            .then(() => {
+                console.log("return resolve queuemusic");
                 return resolve();
-            }).catch((re) => {
+            })
+            .catch((re) => {
+                console.log("return reject queuemusic");
                 return reject({
                     reply: true,
                     messageContent: re,
@@ -677,7 +689,7 @@ queuemusic.process = function (message, args) {
             });
         }).catch(reject);
     });
-    function queueytdl(searchstring, pq) {
+    function queueytdl(searchstring, pq, message) {
         return new Promise((queueytdlResolve, queueytdlReject) => {
             YoutubeDL.exec(searchstring, ['--quiet', //Activate quiet mode
                 '--extract-audio',
@@ -705,7 +717,7 @@ queuemusic.process = function (message, args) {
                         info.entries.forEach((entry, index) => {
                             setTimeout(() => {
                                 //if entry.ie_key === 'Youtube', the url only have the id...
-                                queueytdl(entry.ie_key === 'Youtube' ? 'https://www.youtube.com/watch?v=' + entry.id : entry.url, pq);
+                                queueytdl(entry.ie_key === 'Youtube' ? 'https://www.youtube.com/watch?v=' + entry.id : entry.url, pq, message);
                             }, index * 3000);
                         });
                     }

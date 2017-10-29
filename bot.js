@@ -1,11 +1,14 @@
 ﻿//little helper function to keep track of the files... for now
 exports.getRequire = function (modulename) {
     if (modulename === 'client') return require('./meganeClient.js');
-    if (modulename === 'dispatcher') return require('./dispatcher.js');
-    if (modulename === 'command') return require('./utility/command.js');
+    if (modulename === 'dispatcher') return require('./CommandDispatcher.js');
     if (modulename === 'util') return require('./utility/util.js');
     if (modulename === 'config') return require('./data/config.json');
     if (modulename === 'playerdata') return require('./modules/playerData.js');
+    if (modulename === 'cmdDepot') return require('./CommandDepot.js');
+    if (modulename === 'commandmodule') return require('./CommandModule.js');
+    if (modulename === 'command') return require('./Command.js');
+    if (modulename === 'commandmessage') return require('./CommandMessage.js');
     throw 'codefile not found!';
 }
 const MeganeClient = require.main.exports.getRequire('client');
@@ -26,62 +29,39 @@ const client = new MeganeClient({
 });
 exports.client = client;
 
-//list of modules to add
-let moduledirlist = [
-    './modules/playerData.js',
-    './modules/general.js',
-    './modules/botAdmin.js',
-    './modules/basicResponse.js',
-    './modules/color.js',
-    './modules/music.js',
-    './modules/gambling.js',
-    //'./modules/minesweeper.js',
-    './modules/rps.js',
-    //'./modules/cleverbot.js',
-];
-moduledirlist.forEach(mod => {
-    client.cmdBase.addModule(require(mod).cmdModule);
-}); 
-
-
-// Handle discord.js warnings
-client.on('warn', (m) => console.log('[warn]', m));
-//client.on('debug', (m) => console.log('[debug]', m));
-
-client.on('ready', () => {
-    if (reconnTimer) {
-        clearTimeout(reconnTimer);
-        reconnTimer = null;
-    }
-    console.log(`Ready to serve in ${client.channels.size} channels on ${client.guilds.size} servers, for a total of ${client.users.size} users.`);
-    console.log(client.user);
-});
-
 let reconnTimer = null;
-client.on('disconnect', (m) => {
-    console.log(`[disconnect]:ReconnTimer:${reconnTimer}`, m)
-    function reconn(time) {
-        if (reconnTimer != null) return;
-        console.log(`Reconnecting after ${time / 1000} seconds`);
-        reconnTimer = setTimeout((m) => {
-            client.login(config.token).then((m) => {
-                reconnTimer = null;
-                console.log(`Reconnected! ${m}`);
-            }).catch((m) => {
-                reconnTimer = null;
-                console.log(`Error with reconnecting: ${m}`);
-                reconn(time * 2);
-            })
-        }, time);
-    }
-    reconn(10000);
-});
+// Handle discord.js warnings
+client
+    .on('error', (m) => console.log('[error]', m))
+    .on('warn', (m) => console.log('[warn]', m))
+    .on('debug', (m) => console.log('[debug]', m))
+    .on('ready', () => {
+        if (reconnTimer) {
+            clearTimeout(reconnTimer);
+            reconnTimer = null;
+        }
+        console.log(`Ready to serve in ${client.channels.size} channels on ${client.guilds.size} servers, for a total of ${client.users.size} users.`);
+        console.log(client);
+    })
+    .on('disconnect', (m) => {
+        console.log(`[disconnect]:ReconnTimer:${reconnTimer}`, m)
+        function reconn(time) {
+            if (reconnTimer != null) return;
+            console.log(`Reconnecting after ${time / 1000} seconds`);
+            reconnTimer = setTimeout((m) => {
+                client.login(config.token).then((m) => {
+                    reconnTimer = null;
+                    console.log(`Reconnected! ${m}`);
+                }).catch((m) => {
+                    reconnTimer = null;
+                    console.log(`Error with reconnecting: ${m}`);
+                    reconn(time * 2);
+                })
+            }, time);
+        }
+        reconn(10000);
+    });
 
-client.login(config.token).then((m) => {
-    console.log(`login success! ${m}`);
-}).catch((m) => {
-    console.log(`Error with login: ${m}`);
-});
 
 process.on("unhandledRejection", err => {
     console.error("Uncaught Promise Error: \n");
@@ -107,6 +87,29 @@ process.on('uncaughtException', function (err) {//technically not a good idea, b
     }
     childProcess.spawn = mySpawn;
 })();
+
+//list of modules to add
+let moduledirlist = [
+    //'./modules/playerData.js',
+    //'./modules/general.js',
+    //'./modules/botAdmin.js',
+    //'./modules/basicResponse.js',
+    //'./modules/color.js',
+    //'./modules/music.js',
+    //'./modules/gambling.js',
+    //'./modules/minesweeper.js',
+    //'./modules/rps.js',
+    //'./modules/cleverbot.js',
+    './modules/TestModule/TestModule.js'
+];
+moduledirlist.forEach(mod => {
+    client.cmdDepot.addModule(require(mod));
+});
+client.login(config.token).then((m) => {
+    console.log(`login success! ${m}`);
+}).catch((m) => {
+    console.log(`Error with login: ${m}`);
+});
 
 /*
 process.stdin.resume();//so the program will not close instantly

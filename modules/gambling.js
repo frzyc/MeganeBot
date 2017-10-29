@@ -1,8 +1,8 @@
 ﻿const fs = require("fs");
 
 const util = require.main.exports.getRequire('util');
-const command = require.main.exports.getRequire('command').command;
-const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
+const command = require.main.exports.getRequire('command');
+const cmdModuleobj = require.main.exports.getRequire('commandmodule');
 
 const playerData = require.main.exports.getRequire('playerdata').playerData;
 const currency = require.main.exports.getRequire('playerdata').currency;
@@ -10,7 +10,7 @@ const currency = require.main.exports.getRequire('playerdata').currency;
 let cmdModule = new cmdModuleobj('Gambling');
 cmdModule.description = `gambling stuff with money`;
 
-exports.cmdModule = cmdModule;
+module.exports = cmdModule;
 
 let eightBallResponse = [
     `It is certain`,
@@ -35,7 +35,7 @@ let eightBallResponse = [
     `Very doubtful`,
 ]
 
-let eightball = new command(['8ball']);
+let eightball = new command('8ball');
 eightball.userCooldown = 5 * 60;//5 minutes
 eightball.cost = 5;
 eightball.usage = [`[Question] **\nPay ${currency.symbol}${eightball.cost} and ask the Magic 8ball a question. Affirmative answers awards you ${currency.nameplural}.`,];
@@ -67,7 +67,7 @@ eightball.process = function (message, args) {
 cmdModule.addCmd(eightball);
 
 
-let dicecmd = new command(['dice']);
+let dicecmd = new command('dice');
 dicecmd.userCooldown = 15;//15 seconds
 dicecmd.usage = [
     `** roll a 6-sided die`,
@@ -156,7 +156,7 @@ dicecmd.process = function (message, args) {
 }
 cmdModule.addCmd(dicecmd);
 
-let slotscmd = new command(['slots']);
+let slotscmd = new command('slots');
 slotscmd.userCooldown = 10;//10 seconds
 slotscmd.cost = 5;
 slotscmd.usage = [
@@ -234,7 +234,7 @@ slotscmd.process = function (message, args) {
 cmdModule.addCmd(slotscmd);
 
 
-let betHundred = new command(['bethundred']);
+let betHundred = new command('bethundred');
 betHundred.userCooldown = 5 * 60;//5 minutes
 betHundred.usage = [`[Amount] **\nBets a certain amount of ${currency.nameplural} and get a number between 1-100. Getting over 66 yields x2 of your currency, over 90 - x3 and 100 x10.`,];
 betHundred.argsTemplate = [

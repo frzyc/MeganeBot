@@ -1,7 +1,7 @@
 ﻿const fs = require("fs");
 const util = require.main.exports.getRequire('util');
-const command = require.main.exports.getRequire('command').command;
-const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
+const command = require.main.exports.getRequire('command');
+const cmdModuleobj = require.main.exports.getRequire('commandmodule');
 
 const playerData = require.main.exports.getRequire('playerdata').playerData;
 const currency = require.main.exports.getRequire('playerdata').currency;
@@ -24,11 +24,11 @@ fs.readFile(__dirname + '/' + colorfile, 'utf8', (err, data) => {
 let cmdModule = new cmdModuleobj('Color');
 cmdModule.description = `Allows the player to change their name color using roles.`;
 cmdModule.serverOnly = true;
-exports.cmdModule = cmdModule;
+module.exports = cmdModule;
 
 //lets user change their own color.
 //the color roles are roles with only a color, they should not grant any permissions.
-let colorcmd = new command(['color']);
+let colorcmd = new command('color');
 colorcmd.cost = 10;
 colorcmd.usage = [`[desired color] pay ${colorcmd.cost} ${currency.nameplural} to change your color.**\nNOTE: choosing "White" will reset current color, but costs nothing.`];
 colorcmd.argsTemplate = [
@@ -92,7 +92,7 @@ colorcmd.process = function (message, args) {
 }
 cmdModule.addCmd(colorcmd);
 
-let colorlistcmd = new command(['colorlist']);
+let colorlistcmd = new command('colorlist');
 colorlistcmd.usage = [`**\nprints out a list of colors on the server`];
 colorlistcmd.process = function (message, args) {
     if (!colorList || !colorList[message.guild.id]) return Promise.reject(util.redel(`There is no color database for this server.`));
@@ -102,7 +102,7 @@ colorlistcmd.process = function (message, args) {
 }
 cmdModule.addCmd(colorlistcmd);
 
-let coloraddcmd = new command(['coloradd']);
+let coloraddcmd = new command('coloradd');
 coloraddcmd.usage = [`[rolename]**\nNOTE: only works if a role with a color is present. All role permissions will be removed. Color "White" cannot be added.`];
 coloraddcmd.argsTemplate = [[util.staticArgTypes['word']]];
 coloraddcmd.reqUserPerms = ["MANAGE_ROLES_OR_PERMISSIONS"]

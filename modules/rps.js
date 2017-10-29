@@ -1,13 +1,13 @@
 ﻿const util = require.main.exports.getRequire('util');
-const command = require.main.exports.getRequire('command').command;
-const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
+const command = require.main.exports.getRequire('command');
+const cmdModuleobj = require.main.exports.getRequire('commandmodule');
 const playerData = require.main.exports.getRequire('playerdata').playerData;
 const currency = require.main.exports.getRequire('playerdata').currency;
 
 let cmdModule = new cmdModuleobj('RockPaperScissors');
 cmdModule.description = `RockPaperScissors, with some more advanced modes.`
 cmdModule.serverOnly = true;
-exports.cmdModule = cmdModule;
+module.exports = cmdModule;
 
 rpslist = ['Rock', 'Paper', 'Scissors'];
 rpslslist = rpslist.concat(['Lizard', 'Spock']);
@@ -94,7 +94,7 @@ parsefromString();
 function addrpsvariation(cmds,list, amount, cooldown) {
     let rpsvariation = new command(cmds);
     rpsvariation.userCooldown = cooldown;
-    rpsvariation.usage = [`[${list.join(', ')}]** choose an option to play`]
+    rpsvariation.usage = [`**{0} [${list.join(', ')}]** choose an option to play`]
     rpsvariation.argsTemplate = [
         [new util.customType(arg => getfromrpslist(list, arg))]
     ];

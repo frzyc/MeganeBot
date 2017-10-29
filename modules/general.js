@@ -1,20 +1,21 @@
 ﻿const fs = require("fs");
 const util = require.main.exports.getRequire('util');
-const command = require.main.exports.getRequire('command').command;
-const cmdModuleobj = require.main.exports.getRequire('command').cmdModuleobj;
+const command = require.main.exports.getRequire('command');
+const cmdModuleobj = require.main.exports.getRequire('commandmodule');
 const package = require('../package.json');
 
 let cmdModule = new cmdModuleobj('General');
 cmdModule.description = `Contains general server commands`;
-exports.cmdModule = cmdModule;
+module.exports = cmdModule;
 
 //general help command. He keeps track of all the commands, and process usages
-let helpcmd = new command(["help", "h"]);
+let helpcmd = new command("help");
+helpcmd.aliases = ["h"]
 helpcmd.usage = [
-    "**\nList the modules.",
-    "all **\nget all the commands.",
-    "[module]**\nget all commands in this module",
-    "[cmd]**\nget help on indvidual cmd usage."
+    "**{0}** List the modules.",
+    "**{0} all** get all the commands.",
+    "**{0} [module]** get all commands in this module",
+    "**{0} [cmd]** get help on indvidual cmd usage."
 ]
 helpcmd.argsTemplate = [
     [new util.customType(arg => {
@@ -80,8 +81,8 @@ helpcmd.process = function (message, args) {
 }
 cmdModule.addCmd(helpcmd);
 
-let about = new command(['about']);
-about.usage = ["**\nGet some information about me, MeganeBot :D"];
+let about = new command('about');
+about.usage = ["**{0}** Get some information about me, MeganeBot :D"];
 about.process = function (message, args) {
     msg = `Name: ${package.name} \nVersion: ${package.version} \nDescription: ${package.description}\n`;
     let uptime = Math.floor(process.uptime());
@@ -95,10 +96,10 @@ cmdModule.addCmd(about);
 
 let prune = new command(['prune']);
 prune.usage = [
-    `[number of messages, max 100]**\nDelete your own messages`,
-    `[number of messages, max 100] [@mentions]**\n`
-    + `Delete messages from @mentions\n`
-    + `NOTE: delete need "manage messages" permission to delete other's messages. `
+    `**{0} [number of messages, max 100]** Delete your own messages`,
+    `**{0} [number of messages, max 100] [@mentions]** `
+    + `Delete messages from @mentions`
+    + `\nNOTE: delete need "manage messages" permission to delete other's messages. `
 ];
 let amounttype = new util.customType(v => v > 0 && v <=100 ? v : null, util.staticArgTypes['int']);
 prune.argsTemplate = [
@@ -151,8 +152,8 @@ prune.process = function (message, args) {
 }
 cmdModule.addCmd(prune);
 
-let nick = new command(['nick']);
-nick.usage = ["[desiredNickname]** Change my server nickname, need the MANAGE_NICKNAMES permission."];
+let nick = new command('nick');
+nick.usage = ["**{0} [desiredNickname]** Change my server nickname, need the MANAGE_NICKNAMES permission."];
 nick.argsTemplate = [
     [util.staticArgTypes['string']]
 ];
@@ -167,8 +168,8 @@ nick.process = function (message, args) {
 }
 cmdModule.addCmd(nick);
 
-let emojify = new command(['emojify']);
-emojify.usage = ["[string]** convert string to emojis"];
+let emojify = new command('emojify');
+emojify.usage = ["**{0} [string]** convert string to emojis"];
 emojify.argsTemplate = [
     [util.staticArgTypes['oristring']]
 ];
@@ -182,8 +183,8 @@ emojify.process = function (message, args) {
 }
 cmdModule.addCmd(emojify);
 
-let myidcmd = new command(['myid']);
-myidcmd.usage = ["** get the sender's id."];
+let myidcmd = new command('myid');
+myidcmd.usage = ["**{0}** get the sender's id."];
 myidcmd.process = function (message, args) {
     return Promise.resolve({
         messageContent: `Your ID: \`\`\`${message.author.id}\`\`\``,
@@ -193,8 +194,8 @@ myidcmd.process = function (message, args) {
 }
 cmdModule.addCmd(myidcmd);
 
-let mypermscmd = new command(['myperms']);
-mypermscmd.usage = ["** get the sender's permissions in this channel."];
+let mypermscmd = new command('myperms');
+mypermscmd.usage = ["**{0}** get the sender's permissions in this channel."];
 mypermscmd.serverOnly = true;
 mypermscmd.process = function (message, args) {
     let perms = message.channel.permissionsFor(message.author).serialize();
@@ -206,8 +207,8 @@ mypermscmd.process = function (message, args) {
 }
 cmdModule.addCmd(mypermscmd);
 
-let saycmd = new command(['say']);
-saycmd.usage = ["[some message to repeat]** repeat what the sender says."];
+let saycmd = new command('say');
+saycmd.usage = ["**{0} [some message to repeat]** repeat what the sender says."];
 saycmd.argsTemplate = [
     [util.staticArgTypes['oristring']]
 ];
@@ -219,8 +220,8 @@ saycmd.process = function (message, args) {
 }
 cmdModule.addCmd(saycmd);
 
-let sayttscmd = new command(['saytts']);
-sayttscmd.usage = ["[some message to repeat]** repeat what the sender says, with tts."];
+let sayttscmd = new command('saytts');
+sayttscmd.usage = ["**{0} [some message to repeat]** repeat what the sender says, with tts."];
 sayttscmd.argsTemplate = [
     [util.staticArgTypes['oristring']]
 ];
@@ -233,8 +234,8 @@ sayttscmd.process = function (message, args) {
 }
 cmdModule.addCmd(sayttscmd);
 
-let topiccmd = new command(['topic']);
-topiccmd.usage = ["[topic]** change channel topic."];
+let topiccmd = new command('topic');
+topiccmd.usage = ["**{0} [topic]** change channel topic."];
 topiccmd.argsTemplate = [
     [util.staticArgTypes['oristring']]
 ];
