@@ -2,6 +2,7 @@
 exports.messageWatchList = watchlist;
 /*my own function to send messages, should be able to queue messages, check length, segment/shorten messages, and do some parsing stuff
  * rmsg my own resolved message object, should have relavent stuff like the message to edit, emojis, reply  
+ * TODO move this to an response message class, and for gods sake throw some errors
 */
 exports.createMessage = function (rmsg, message, channel) {
     return new Promise((resolve, reject) => {
@@ -438,27 +439,10 @@ customTypeRegex.prototype.process = function (arg, message) {
 }
 exports.customTypeRegex = customTypeRegex;
 
-//will return null if args do not match template.
-exports.parseArgs = function (template, args, message) {
-    let out = [];
-    for (argtype of template) {
-        /*if (argtype.type === 'none') {
-            return '';
-        } else*/ if (argtype.type === 'string') {
-            let str = args.join(' ')
-            if (str.length === 0) return null;
-            out.push(str);
-            break;
-        } else {
-            if (!'process' in argtype) return;
-            let arg = args.shift();
-            let parsedarg = argtype.process(arg, message);
-            if (parsedarg != null) out.push(parsedarg);
-            else return null;
-            if (argtype.type === 'oristring') break;//cause it includes everything after
-        }
-    }
-    return out;
+var reOperatorsToEscape = /[|\\{}()[\]^$+*?.]/g;
+exports.escapeRegexString = function(str){
+    if (typeof str !== 'string') throw new TypeError('Expected a string');
+	return str.replace(reOperatorsToEscape, '\\$&');
 }
 /*
 console.log('100% 200%'.match(/(\d{0,3})%/g));

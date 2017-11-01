@@ -6,7 +6,7 @@ const currency = require.main.exports.getRequire('playerdata').currency;
 
 let cmdModule = new cmdModuleobj('RockPaperScissors');
 cmdModule.description = `RockPaperScissors, with some more advanced modes.`
-cmdModule.serverOnly = true;
+cmdModule.guildOnly = true;
 module.exports = cmdModule;
 
 rpslist = ['Rock', 'Paper', 'Scissors'];

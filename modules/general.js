@@ -39,7 +39,7 @@ helpcmd.process = function (message, args) {
         for (modname in this.client.cmdBase.modulelist) {
             let mod = this.client.cmdBase.modulelist[modname];
             if (mod.dmOnly && message.channel.type === 'text') continue;
-            if (mod.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) continue;
+            if (mod.guildOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) continue;
             if (mod.ownerOnly && !this.client.isOwner(message.author.id)) continue;
             msg += `**${mod.name}** - `;
             if (mod.description)
@@ -107,7 +107,7 @@ prune.argsTemplate = [
     [amounttype, util.staticArgTypes['mentions']]
 ];
 
-prune.serverOnly = true;
+prune.guildOnly = true;
 prune.reqBotPerms = ["MANAGE_MESSAGES"];
 prune.process = function (message, args) {
     return new Promise((resolve, reject) => {
@@ -158,7 +158,7 @@ nick.argsTemplate = [
     [util.staticArgTypes['string']]
 ];
 nick.reqUserPerms = ["MANAGE_NICKNAMES"];
-nick.serverOnly = true;
+nick.guildOnly = true;
 nick.process = function (message, args) {
     return util.justOnePromise(
         message.channel.members.get(this.client.user.id).setNickname(args[0][0]),
@@ -196,7 +196,7 @@ cmdModule.addCmd(myidcmd);
 
 let mypermscmd = new command('myperms');
 mypermscmd.usage = ["**{0}** get the sender's permissions in this channel."];
-mypermscmd.serverOnly = true;
+mypermscmd.guildOnly = true;
 mypermscmd.process = function (message, args) {
     let perms = message.channel.permissionsFor(message.author).serialize();
     return Promise.resolve({
@@ -239,7 +239,7 @@ topiccmd.usage = ["**{0} [topic]** change channel topic."];
 topiccmd.argsTemplate = [
     [util.staticArgTypes['oristring']]
 ];
-topiccmd.serverOnly = true;
+topiccmd.guildOnly = true;
 topiccmd.channelCooldown = 5;
 topiccmd.reqUserPerms = ['MANAGE_CHANNELS'];
 topiccmd.reqBotPerms = ['MANAGE_CHANNELS'];

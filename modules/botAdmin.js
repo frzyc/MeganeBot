@@ -114,7 +114,7 @@ cmdModule.addCmd(statuscmd);
 
 let getpermscmd = new command('getperms');
 getpermscmd.usage = ["[@mentions]** get the users' permissions in this channel."];
-getpermscmd.serverOnly = true;
+getpermscmd.guildOnly = true;
 getpermscmd.argsTemplate = [
     [util.staticArgTypes['mentions']]
 ];

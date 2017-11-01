@@ -1,23 +1,23 @@
 ﻿const Command = require.main.exports.getRequire('command');
 
-module.exports = class TestCommand extends Command{
-    constructor(client){
+module.exports = class TestCommand extends Command {
+    constructor(client) {
         super(client, {
-            name : 'test'
+            name: 'test'
         })
-        
+
     }
-    execute(message, args){
-        let res = {
+    execute(message, args) {
+        return Promise.resolve({
             messageContent: 'testing',
-            deleteTimeCmdMessage:5 * 1000,
-                //emojis: ['🇦', '🇧','🇨']
+            deleteTimeCmdMessage: 5 * 1000,
+            //emojis: ['🇦', '🇧','🇨']
             messageOptions: {
                 embed: {
                     color: 3447003,
-                        author: {
+                    author: {
                         name: this.client.user.username,
-                            icon_url: this.client.user.avatarURL
+                        icon_url: this.client.user.avatarURL
                     },
                     title: 'This is an embed',
                     url: 'http://google.com',
@@ -43,7 +43,7 @@ module.exports = class TestCommand extends Command{
                     }
                 }
             },
-            emojiButtons: [
+            emojis: [
                 {
                     emoji: '🇦',
                     process: (messageReaction, user) => {
@@ -66,7 +66,6 @@ module.exports = class TestCommand extends Command{
                     }
                 }
             ],
-        }
-        return Promise.resolve(res);
+        });
     }
 }

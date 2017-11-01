@@ -7,7 +7,9 @@ module.exports = class TestModule extends CommandModule{
             ownerOnly: true
         });
 
-        let testcmd = require('./test');
-        this.addCommand(testcmd);
+        this.addCommands([
+            require('./test'),
+            require('./add')
+        ]);
     }
 }

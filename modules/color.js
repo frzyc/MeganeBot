@@ -23,7 +23,7 @@ fs.readFile(__dirname + '/' + colorfile, 'utf8', (err, data) => {
 
 let cmdModule = new cmdModuleobj('Color');
 cmdModule.description = `Allows the player to change their name color using roles.`;
-cmdModule.serverOnly = true;
+cmdModule.guildOnly = true;
 module.exports = cmdModule;
 
 //lets user change their own color.

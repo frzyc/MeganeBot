@@ -19,12 +19,12 @@ class MeganeClient extends discord.Client {
             });
         }
 
-        let cmdDepot = require.main.exports.getRequire('cmdDepot');
-        this.cmdDepot = new cmdDepot(this);
+        let commandDepot = require.main.exports.getRequire('cmdDepot');
+        this.depot = new commandDepot(this);
 
 
         let CommandDispatcher = require.main.exports.getRequire('dispatcher');
-        this.dispatcher = new CommandDispatcher(this, this.cmdDepot);
+        this.dispatcher = new CommandDispatcher(this, this.depot);
 
         this.on('message', (message) => { this.dispatcher.handleMessage(message); });
         this.on('messageUpdate', (oldMessage, newMessage) => { this.dispatcher.handleMessage(newMessage, oldMessage); });

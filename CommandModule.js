@@ -4,15 +4,15 @@ const Command = require.main.exports.getRequire('command');
 CommandModule //all commands belong in a module
 //restrictions
     .owneronly: bool //true -> only owner can use this command
-    .serverOnly: bool
+    .guildOnly: bool
     .dmOnly: bool
 .cmdlist: {} //store all the commands in this module, based on name
 .description: string //describe this module
 .prototype.getDesc: function()// "" describe the module
 .prototype.addCmd: function()// add cmds to the cmdlist. basic check for name collison
 .prototype.checkRestriction: function(message)//check if a message is restricted in any manner(see restrictions above)
-TODO:
-guild disable
+TODO guild disable
+
 */
 
 /**
@@ -24,9 +24,9 @@ class CommandModule {
      * @property {name} name
      * @property {id} id can be generated from name, as long as it is unique. This value is not outwardly exposed, but its an unique key to reference the module.
      * @property {Array[Command]} commands
-     * @property {boolean} serverOnly this module and all its commands should only be used on a sever, not DM.
-     * @property {boolean} dmOnly this module and all its commands should only be used on DM channels.
-     * @property {boolean} ownerOnly this module and all its commands should only be used for bot owners.
+     * @property {boolean} [ownerOnly=false] - This module and all its commands should only be used for bot owners.
+     * @property {boolean} [guildOnly=false] - This module and all its commands should only be used on a sever, not DM.
+     * @property {boolean} [dmOnly=false] - This module and all its commands should only be used on DM channels.
      */
 
     /**
@@ -43,24 +43,30 @@ class CommandModule {
         this.commands = new discord.Collection();
         if (options.commands) for (const command of options.commands) this.addCommand(command);
         this.description = options.description ? options.description : null;
-        if (options.serverOnly) this.serverOnly = true;
-        if (options.dmOnly) this.dmOnly = true;
-        if (options.ownerOnly) this.ownerOnly = true;
+        this.ownerOnly = options.ownerOnly === undefined ? false : options.ownerOnly;
+        this.ownerOnly = options.guildOnly === undefined ? false : options.guildOnly;
+        this.ownerOnly = options.dmOnly === undefined ? false : options.dmOnly;
     }
     addCommand(command) {
         if (typeof command === 'function') command = new command(this.client);
-        if (!(command instanceof Command))  return this.client.emit('warn', `Attempting to add an invalid command object: ${command}; skipping.`);
-        if(!command.name || typeof command.name !== 'string') throw new TypeError('Command name must be a string.');
+        if (!(command instanceof Command)) return this.client.emit('warn', `Attempting to add an invalid command object: ${command}; skipping.`);
+        if (!command.name || typeof command.name !== 'string') throw new TypeError('Command name must be a string.');
         this.commands.set(command.name, command);
         command.moduleID = this.id;
-        if (this.serverOnly) command.serverOnly = true;
-        if (this.dmOnly) command.dmOnly = true;
-        if (this.ownerOnly) command.ownerOnly = true;
+        command.guildOnly = this.guildOnly;
+        command.dmOnly = this.dmOnly;
+        command.ownerOnly = this.ownerOnly;
+    }
+    addCommands(commands) {
+        if (!Array.isArray(commands)) throw new TypeError('Commands must be an Array.');
+        for (let command of commands)
+            this.addCommand(command);
+        return this;
     }
     /* since this looks to be only really used for help command, should be moved there...
     checkRestriction(message) {
         if (this.dmOnly && message.channel.type === 'text') return 'direct message';
-        if (this.serverOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) return 'server';
+        if (this.guildOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) return 'server';
         if (this.ownerOnly && !this.client.isOwner(message.author.id)) return 'botowner only';
         return '';
     }*/

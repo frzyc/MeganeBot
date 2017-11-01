@@ -13,13 +13,11 @@ class CommandDispatcher {
      * @param {CommandDepot} commandDepot 
      */
     constructor(client, commandDepot) {
-        console.log("commandDispatcher const");
-        //make this read only property
         Object.defineProperty(this, 'client', { value: client });
         this.commandDepot = commandDepot;
         this.preprocesses = new Set();
-        this.restrictions = new Set();
-
+        //this.restrictions = new Set();
+        this.pattern = null;
     }
     /**
      * Parse through a new message / an edited message
@@ -32,7 +30,12 @@ class CommandDispatcher {
 			await message.guild.members.fetch(message.author.id);
 		}
         this.preprocess(message, oldMessage);
-        //TODO parse the command, then restrictions.
+        
+        //TODO add as preprocess in economy module
+        /*//if this has a cost, and the user doesnt have any moneys
+        if (command.cost && playerData.getOrCreatePlayer(message.author.id).wallet.getAmount() < command.cost)
+            return util.createMessage(util.redel(`You don't have enough ${currency.nameplural} to use this command, need ${currency.symbol}${command.cost}.`), message);
+        */
 
         if (oldMessage) Object.defineProperty(message, 'oldMessage', { value: oldMessage });
 
@@ -45,30 +48,10 @@ class CommandDispatcher {
         const cmdMsg = this.parseMessage(message);
         //cmdMsg.command.CmdPreProcess;
         //cmdMsg.command.CmdRestrict;
-        this.restrict(cmdMsg);
+        //this.restrict(cmdMsg);
 
         if (cmdMsg) {
-            //command based restrictions
-            if(cmdMsg.command.checkRestriction(cmdMsg.message)) return;
-
-            //TODO add as postprocess in economy module
-            /*//if this has a cost, and the user doesnt have any moneys
-            if (cmdMsg.command.cost && playerData.getOrCreatePlayer(message.author.id).wallet.getAmount() < cmdMsg.command.cost)
-                return util.createMessage(util.redel(`You don't have enough ${currency.nameplural} to use this command, need ${currency.symbol}${cmdMsg.command.cost}.`), message);
-            */
-            //set the cooldown for now, if rejected, we can clear the cooldown/
-            cmdMsg.command.setCooldown(message);
-            //use Promise.resolve just incase a process doesnt return a promise...
-            Promise.resolve(cmdMsg.command.execute(message, cmdMsg.args, this.client)).then(response => {
-                console.log("cmd resolved");
-                if (response) util.createMessage(response, message).catch(console.error);
-            }).catch(reject => {
-                console.log("cmd rejected");
-                cmdMsg.command.clearCooldown(message);
-                //console.log(reject);
-                if (reject) util.createMessage(reject, message).catch(console.error);;
-            });
-
+            cmdMsg.execute();
         } //else throw new Error('Unable to resolve command.');
     }
     async handleReaction(messageReaction, user) {
@@ -150,28 +133,28 @@ class CommandDispatcher {
      * @param {Restriction} restriction  
      * @returns {boolean} Whether the addition was successful
      */
-    addRestrction(restriction) {
+    /*addRestrction(restriction) {
         if (typeof restriction !== 'function') throw new TypeError("Restriction must be a function.");
         if (this.restrictions.has(restriction)) return false;
         this.restrictions.add(restriction);
         return true;
-    }
+    }*/
     /**
      * Removes a restriction.
      * If it was added as an command-specific restriction, it must be removed for that command.
      * @param {Restriction} restriction 
      */
-    removeRestrction(restriction, command) {
+    /*removeRestrction(restriction, command) {
         if (typeof restriction !== 'function') throw new TypeError('Restriction must be a function.');
         return this.restrictions.delete(restriction);
-    }
+    }*/
     /**
      * Process a parsed CommandMessage through the registered restrictions.
      * @param {CommandMessage} cmdMsg 
      * @returns {String} if CommandMessage is restricted.
      * @private
      */
-    restrict(cmdMsg) {
+    /*restrict(cmdMsg) {
         for (const restriction of this.restrictions) {
             const restrictMsg = restriction(cmdMsg);
             if (restrictMsg) {
@@ -180,7 +163,7 @@ class CommandDispatcher {
             }
         }
         return null;
-    }
+    }*/
     /**
      * this is executed right after receiving the message.
      * Will reject(return false) for messages:
@@ -203,20 +186,26 @@ class CommandDispatcher {
     parseMessage(message){
         let cont = message.content;
         //normal message processing with commands
-        let startprefix = cont.startsWith(this.client.prefix);
-        let startmention = cont.startsWith(`<@!${this.client.user.id}>`) || cont.startsWith(`<@${this.client.user.id}>`);
-        if (!startprefix && !startmention) return null;
 
-        var args = cont.split(' ').filter(a => a.length > 0);//get split and get rid of zero length args
-        var cmdstr = args.shift().slice(this.client.prefix.length).toLowerCase();//commands are not case-sensitive
-        if (startmention)
-            cmdstr = args.shift().toLowerCase();// shift again cause the cmd is the 2nd arg, commands are not case-sensitive
-        console.log(`MESSAGE: cmd(${cmdstr})  args(${args})`);
-        let cmd = this.commandDepot.resolveCommand(cmdstr);
+        if(!this.pattern) this.buildPattern();
+
+        const matches = this.pattern.exec(cont);
+        if(!matches) return null;
+        const cmd = this.client.depot.resolveCommand(matches[2]);
+        const argString = cont.substring(matches[0].length);
         if(!cmd) return null;
-        let cmdMsg = new CommandMessage(message, cmd, args);
-        if(cmdMsg.parseArgs()) return cmdMsg;
-        return null;
+        return new CommandMessage(message, cmd, argString);
+    }
+    buildPattern(){
+        const escapedPrefix = util.escapeRegexString(this.client.prefix);
+        /* matches {prefix}cmd
+         * <@{id}> cmd
+         * <@!{id}> cmd
+         */
+        this.pattern = new RegExp(
+            `^(${escapedPrefix}\\s*|<@!?${this.client.user.id}>\\s+(?:${escapedPrefix})?)([^\\s]+)`, 'i'
+        );
+        return this.pattern;
     }
 
 

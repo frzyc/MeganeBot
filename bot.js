@@ -1,14 +1,17 @@
 ﻿//little helper function to keep track of the files... for now
 exports.getRequire = function (modulename) {
-    if (modulename === 'client') return require('./meganeClient.js');
-    if (modulename === 'dispatcher') return require('./CommandDispatcher.js');
-    if (modulename === 'util') return require('./utility/util.js');
+    if (modulename === 'client') return require('./meganeClient');
+    if (modulename === 'dispatcher') return require('./CommandDispatcher');
+    if (modulename === 'util') return require('./utility/util');
     if (modulename === 'config') return require('./data/config.json');
-    if (modulename === 'playerdata') return require('./modules/playerData.js');
-    if (modulename === 'cmdDepot') return require('./CommandDepot.js');
-    if (modulename === 'commandmodule') return require('./CommandModule.js');
-    if (modulename === 'command') return require('./Command.js');
-    if (modulename === 'commandmessage') return require('./CommandMessage.js');
+    if (modulename === 'playerdata') return require('./modules/playerData');
+    if (modulename === 'cmdDepot') return require('./CommandDepot');
+    if (modulename === 'commandmodule') return require('./CommandModule');
+    if (modulename === 'command') return require('./Command');
+    if (modulename === 'commandmessage') return require('./CommandMessage');
+    if (modulename === 'commandargument') return require('./CommandArgument');
+    if (modulename === 'type') return require('./Types/Type');
+    if (modulename === 'permissions') return require('./utility/permissions.json');
     throw 'codefile not found!';
 }
 const MeganeClient = require.main.exports.getRequire('client');
@@ -87,24 +90,30 @@ process.on('uncaughtException', function (err) {//technically not a good idea, b
     }
     childProcess.spawn = mySpawn;
 })();
+client.depot.addTypes([
+    require('./Types/Boolean'),
+    require('./Types/Integer'),
+    require('./Types/String'),
+    require('./Types/Float')
+])
+.addModules([
+    require('./modules/TestModule/TestModule')
+])
 
-//list of modules to add
-let moduledirlist = [
-    //'./modules/playerData.js',
-    //'./modules/general.js',
-    //'./modules/botAdmin.js',
-    //'./modules/basicResponse.js',
-    //'./modules/color.js',
-    //'./modules/music.js',
-    //'./modules/gambling.js',
-    //'./modules/minesweeper.js',
-    //'./modules/rps.js',
-    //'./modules/cleverbot.js',
-    './modules/TestModule/TestModule.js'
-];
-moduledirlist.forEach(mod => {
-    client.cmdDepot.addModule(require(mod));
+/* A small test client just to test some messages
+const Discord = require('discord.js');
+const client = new Discord.Client();
+
+client.on('ready', () => {
+  console.log('I am ready!');
 });
+
+client.on('message', message => {
+  if (message.content === 'ping') {
+    message.reply('pong');
+  }
+});*/
+
 client.login(config.token).then((m) => {
     console.log(`login success! ${m}`);
 }).catch((m) => {

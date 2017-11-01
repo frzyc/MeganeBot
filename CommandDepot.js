@@ -2,6 +2,7 @@
 const Command = require.main.exports.getRequire('command');
 const CommandMessage = require.main.exports.getRequire('commandmessage');
 const CommandModule = require.main.exports.getRequire('commandmodule');
+const Type = require.main.exports.getRequire('type');
 module.exports = class CommandDepot {
     constructor(client) {
         //read only property for client
@@ -9,9 +10,7 @@ module.exports = class CommandDepot {
         this.commands = new discord.Collection();
         this.modules = new discord.Collection();
         this.messageWatchList = {};
-        //this.types = new discord.Collection();
-        //this.evalObjects = {};
-        //this.commandsPath = null;
+        this.types = new discord.Collection();
     }
     addModules(modules) {
         if (!Array.isArray(modules)) throw new TypeError("Modules must be an array.");
@@ -46,7 +45,7 @@ module.exports = class CommandDepot {
             exact ? moduleFilterExact(lcSearch) : moduleFilterInexact(lcSearch)
         );
         if (exact) return matchedGroups;
-        
+
         for (const mod of matchedGroups) {
             if (mod.name.toLowerCase() === lcSearch || mod.id === lcSearch) return [mod];
         }
@@ -77,7 +76,7 @@ module.exports = class CommandDepot {
     addCommand(command) {
         //convert the command to an Command object for better parsing
         if (typeof command === 'function') command = new command(this.client);
-        if (!(command instanceof Command))  return this.client.emit('warn', `Attempting to add an invalid command object: ${command}; skipping.`);
+        if (!(command instanceof Command)) return this.client.emit('warn', `Attempting to add an invalid command object: ${command}; skipping.`);
         if (this.commands.some(cmd => cmd.name === command.name || cmd.aliases.includes(command.name))) {
             throw new Error(`A command with the name/alias "${command.name}" is already added.`);
         }
@@ -101,7 +100,7 @@ module.exports = class CommandDepot {
         return this;
     }
     findCommands(searchString = null, exact = false, message = null) {
-        if (!searchString) return message ? this.commands.filterArray(cmd => cmd.isUsable(message)) : this.commands;
+        if (!searchString) return message ? this.commands.filterArray(cmd => cmd.hasPermissions(message)) : this.commands;
 
         const lcSearch = searchString.toLowerCase();
         const matchedCommands = this.commands.filterArray(
@@ -140,15 +139,26 @@ module.exports = class CommandDepot {
         this.client.emit('warn', `Unable to resolve command: ${command}`);
         return null;
     }
-    
-    
-    /*TODO
-    *registerModulesIn(directory)
-    *registerCommandsIn(directory)
-    *registerType //when I eventually introduce types....
-    *registerTypes
-    *registerTypesIn(directory)
-    *unregister
-    */
+
+    addType(type) {
+        if (typeof type === 'function') type = new type(this.client);
+        if (!(type instanceof Type)) {
+            this.client.emit('warn', `Attempting to register an invalid argument type object: ${type}; skipping.`);
+            return;
+        }
+        if (this.types.has(type.id)) throw new Error(`An argument type with the ID "${type.id}" is already registered.`);
+        this.types.set(type.id, type);
+        this.client.emit('typeRegistered', type, this);
+        this.client.emit('debug', `Registered argument type ${type.id}.`);
+    }
+    addTypes(types) {
+        if (!Array.isArray(types)) throw new TypeError('Commands must be an Array.');
+        for (let type of types)
+            this.addType(type);
+        return this;
+    }
+
+    //TODO add modules/commands in a directory
+    //TODO add types in a directory
 
 }

@@ -9,7 +9,7 @@ const client = require.main.exports.client;
 
 let cmdModule = new CommandModule('Music');
 cmdModule.description = `Music commands`
-cmdModule.serverOnly = true;
+cmdModule.guildOnly = true;
 module.exports = cmdModule;
 
 const MAX_NUM_SONGS_PER_PLAYLIST = 100;
