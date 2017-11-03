@@ -9,6 +9,7 @@ module.exports = class TestCommand extends Command {
     }
     execute(message, args) {
         return Promise.resolve({
+            destination: message,
             messageContent: 'testing',
             deleteTimeCmdMessage: 5 * 1000,
             //emojis: ['🇦', '🇧','🇨']
@@ -43,26 +44,26 @@ module.exports = class TestCommand extends Command {
                     }
                 }
             },
-            emojis: [
+            reactions: [
                 {
                     emoji: '🇦',
-                    process: (messageReaction, user) => {
+                    execute: (messageReaction, user) => {
                         console.log("PROCESSA");
-                        return Promise.resolve({ message: messageReaction.message, messageContent: '🇦' })
+                        return Promise.resolve({ destination: messageReaction.message, messageContent: '🇦' })
                     }
                 },
                 {
                     emoji: '🇧',
-                    process: (messageReaction, user) => {
+                    execute: (messageReaction, user) => {
                         console.log("PROCESSB");
-                        return Promise.resolve({ message: messageReaction.message, messageContent: '🇧' })
+                        return Promise.resolve({ destination: messageReaction.message, messageContent: '🇧' })
                     }
                 },
                 {
                     emoji: '🇨',
-                    process: (messageReaction, user) => {
+                    execute: (messageReaction, user) => {
                         console.log("PROCESSC");
-                        return Promise.resolve({ message: messageReaction.message, messageContent: '🇨' })
+                        return Promise.resolve({ destination: messageReaction.message, messageContent: '🇨' })
                     }
                 }
             ],

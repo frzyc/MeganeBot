@@ -1,12 +1,14 @@
 const util = require.main.exports.getRequire('util');
+const MessageUtil = require('./MessageUtil');
 module.exports = class CommandMessage {
     /**
-     * 
+     * @param {MeganeClient} client
      * @param {Message} message 
      * @param {Command} command 
      * @param {String} argString basically the whole content except the prefix + command part 
      */
-    constructor(message, command = null, argString = null) {
+    constructor(client, message, command = null, argString = null) {
+        Object.defineProperty(this, 'client', { value: client });
         this.message = message;
         this.command = command;
         this.argString = argString;
@@ -17,10 +19,13 @@ module.exports = class CommandMessage {
         var parsedArgs = null;
         if (this.command.args) {
             parsedArgs = await this.parseAllArgs();
-            if (parsedArgs === null || parsedArgs === undefined ) {
+            if (parsedArgs === null || parsedArgs === undefined) {
                 let usageObj = this.command.getUsageEmbededMessageObject()
                 usageObj.messageContent = 'Bad Arguments.';
-                util.createMessage(usageObj, this.message);
+                usageObj.destination = this.message;
+                let response = new MessageUtil(this.client, usageObj);
+                response.execute();
+                //util.createMessage(usageObj, this.message);
                 return false;
             }
         }
@@ -31,12 +36,14 @@ module.exports = class CommandMessage {
         //use Promise.resolve just incase a process doesnt return a promise...
         Promise.resolve(this.command.execute(this.message, parsedArgs)).then(response => {
             console.log("cmd resolved");
-            if (response) util.createMessage(response, this.message).catch(console.error);
+            this.client.emit("commandsuccess", this, response);
+            if (response) this.client.dispatcher.handleResponse(response);
         }).catch(reject => {
             console.log("cmd rejected");
+            this.client.emit("commandfailed", this, reject);
             this.command.clearCooldown(this.message);
             //console.log(reject);
-            if (reject) util.createMessage(reject, this.message).catch(console.error);
+            if (reject) this.client.dispatcher.handleResponse(reject);
         });
     }
     /**

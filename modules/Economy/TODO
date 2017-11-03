@@ -1,0 +1,24 @@
+to add money by percentage chance per message. client.on('message') and client.on('messageUpdate')
+//TODO this should go into economy module as a preprocess...
+/*if (playerData && util.percentChance(3)) {
+    playerData.getOrCreatePlayer(message.author.id).wallet.addMoney(1);
+    message.react(currency.emoji).catch(console.error);
+}*/
+
+give money by percentage by reaction
+//let msgOwnerAmount = msgOwnerPlayer.wallet.getAmount();
+//let currencyname = msgOwnerAmount > 1 ? currency.nameplural : currency.name
+//console.log(`${messageReaction.message.member.displayName} now has ${msgOwnerAmount} ${currencyname}`);
+//TODO move to economy 
+/*else if (playerData && util.percentChance(5)) {
+    playerData.getOrCreatePlayer(messageReaction.message.author.id).wallet.addMoney(1);
+    messageReaction.message.react(currency.emoji).catch(console.error);//TODO: need to find how emojis work
+}*/
+
+
+to add a cost to commands.... how to do it?
+  //TODO add as preprocess in economy module
+/*//if this has a cost, and the user doesnt have any moneys
+if (command.cost && playerData.getOrCreatePlayer(message.author.id).wallet.getAmount() < command.cost)
+    return util.createMessage(util.redel(`You don't have enough ${currency.nameplural} to use this command, need ${currency.symbol}${command.cost}.`), message);
+*/

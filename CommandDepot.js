@@ -9,7 +9,6 @@ module.exports = class CommandDepot {
         Object.defineProperty(this, 'client', { value: client });
         this.commands = new discord.Collection();
         this.modules = new discord.Collection();
-        this.messageWatchList = {};
         this.types = new discord.Collection();
     }
     addModules(modules) {

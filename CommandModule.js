@@ -1,20 +1,5 @@
 ﻿const discord = require('discord.js');
 const Command = require.main.exports.getRequire('command');
-/*
-CommandModule //all commands belong in a module
-//restrictions
-    .owneronly: bool //true -> only owner can use this command
-    .guildOnly: bool
-    .dmOnly: bool
-.cmdlist: {} //store all the commands in this module, based on name
-.description: string //describe this module
-.prototype.getDesc: function()// "" describe the module
-.prototype.addCmd: function()// add cmds to the cmdlist. basic check for name collison
-.prototype.checkRestriction: function(message)//check if a message is restricted in any manner(see restrictions above)
-TODO guild disable
-
-*/
-
 /**
  * A module to hold commands. All commands belong in a module.
  */

@@ -1,5 +1,5 @@
 ﻿const discord = require('discord.js');
-class MeganeClient extends discord.Client {
+module.exports = class MeganeClient extends discord.Client {
     constructor(options = {}) {
         super(options);
         this.globalPrefix = options.prefix ? options.prefix : null;
@@ -22,7 +22,6 @@ class MeganeClient extends discord.Client {
         let commandDepot = require.main.exports.getRequire('cmdDepot');
         this.depot = new commandDepot(this);
 
-
         let CommandDispatcher = require.main.exports.getRequire('dispatcher');
         this.dispatcher = new CommandDispatcher(this, this.depot);
 
@@ -43,10 +42,7 @@ class MeganeClient extends discord.Client {
             String.prototype.format = function () {
                 var args = arguments;
                 return this.replace(/{(\d+)}/g, function (match, number) {
-                    return typeof args[number] != 'undefined'
-                        ? args[number]
-                        : match
-                        ;
+                    return typeof args[number] != 'undefined' ? args[number] : match;
                 });
             };
         }
@@ -70,7 +66,4 @@ class MeganeClient extends discord.Client {
         if (this.options.owner instanceof Set) return this.options.owner.has(user.id);
         throw new RangeError('The client\'s "owner" option is an unknown value.');
     }
-
-
 }
-module.exports = MeganeClient;

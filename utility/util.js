@@ -1,119 +1,7 @@
-﻿const watchlist = {};
-exports.messageWatchList = watchlist;
-/*my own function to send messages, should be able to queue messages, check length, segment/shorten messages, and do some parsing stuff
- * rmsg my own resolved message object, should have relavent stuff like the message to edit, emojis, reply  
- * TODO move this to an response message class, and for gods sake throw some errors
-*/
-exports.createMessage = function (rmsg, message, channel) {
-    return new Promise((resolve, reject) => {
-        if (!rmsg) return reject(console.warn('no resolve message obj'));
-        if (!rmsg.message && !message && !channel) return reject(console.warn('no message or channel to send to.'));
-        if (rmsg.messageContent) {
-            console.log(`messageSize: ${rmsg.messageContent.length}`);
-            //TODO check 2000 character message limit
-        }
-        let msgPromise = null;
-
-        if (rmsg.message) {//an message obj is attached, so this message needs to be edited
-            if ((rmsg.messageContent || rmsg.messageOptions) && rmsg.message.editable) msgPromise = rmsg.message.edit(rmsg.messageContent, rmsg.messageOptions);
-            else msgPromise = Promise.resolve(rmsg.message); //resolve the message, because some postSendingProcessing might need to be done (e.g. add emoji)
-        } else if (rmsg.messageContent || rmsg.messageOptions) {
-            if (rmsg.typing && rmsg.messageContent) {//a simulated typing msg
-                let channel = message ? message.channel : channel;
-                channel.startTyping();
-                msgPromise = new Promise((replyResolve, replyReject) => {
-                    setTimeout(() => {
-                        channel.stopTyping(true);
-                        return replyResolve(sendCreatedMessage());
-                    }, (rmsg.messageContent.length * 30 + 100))
-                });
-            } else {//a normal msg
-                msgPromise = sendCreatedMessage();
-            }
-        }
-        if (msgPromise == null)
-            return reject(console.warn('Not a resolvable message.'));
-        msgPromise.then((msg) => {
-            //message has been sent/edited, now post process, delay deleting, add emoji, etc...
-            postSendProcessing(msg).then(() => {
-                console.log("RESOLVE postSendProcessing");
-                resolve(msg);
-            }, reject);
-        }).catch((err) => {
-            console.log("createMessage: fail to send/edit message.");
-            console.error(err);
-            return reject();
-        });
-
-        function postSendProcessing(msgtoprocess) {
-            return new Promise((pspResolve) => {
-                if ('deleteTime' in rmsg && msgtoprocess.deletable) msgtoprocess.delete(rmsg.deleteTime).catch(console.error);
-                if (message && message.deletable) {//deleting cmd message
-                    if ('deleteTimeCmdMessage' in rmsg)
-                        message.delete(rmsg.deleteTimeCmdMessage).catch(console.error);
-                    else if ('deleteTime' in rmsg)//since we are going to delete the reply message, we delete the original cmd msg as well.
-                        message.delete(rmsg.deleteTime).catch(console.error);
-                }
-                if ('deleteTime' in rmsg && rmsg.deleteTime === 0) return pspResolve(msgtoprocess);//message is gone
-
-                //handle emoji and emoji buttons.
-                if ('emojis' in rmsg && rmsg.emojis.length > 0) {
-                    //first of all, clear watchlist's emojibuttons
-                    if (msgtoprocess.id in watchlist && 'emojiButtons' in watchlist[msgtoprocess.id])
-                        delete watchlist[msgtoprocess.id].emojis;
-                    let emojibuttondict = {};
-                    for (emojiobj of rmsg.emojis) {
-                        if (emojiobj.process)
-                            emojibuttondict[emojiobj.emoji] = emojiobj.process;
-                    }
-                    watchlist[msgtoprocess.id] = {
-                        msg: msgtoprocess,
-                        emojiButtons: emojibuttondict
-                    };
-                    let emojilist = rmsg.emojis.map(x => x.emoji);
-                    msgtoprocess.clearReactions().then((rem) => {
-                        return pspResolve(addemoji(rem, emojilist, 0));
-                    }).catch(console.error);
-
-                    function addemoji(msgtoemojify, li, i) {
-                        return new Promise((addEmojiResolve) => {
-                            msgtoemojify.react(li[i]).then(() => {
-                                i++;
-                                if (i < li.length) addEmojiResolve(addemoji(msgtoemojify, li, i));
-                                else addEmojiResolve(msgtoemojify);
-                            }).catch(() => {
-                                addEmojiResolve(msgtoemojify);
-                            });
-                        });
-                    }
-                }
-                pspResolve(msgtoprocess);
-            });
-        }
-        function sendCreatedMessage() {
-            return new Promise((scresolve, screject) => {
-                let replyOrSend;
-                if (message) //if there is a message object, it might be an reply or just to send a message in that channel
-                    replyOrSend = rmsg.reply ? message.reply(rmsg.messageContent, rmsg.messageOptions) : message.channel.send(rmsg.messageContent, rmsg.messageOptions);
-                else if (channel) //since only channel, send the message in the channel
-                    replyOrSend = channel.send(rmsg.messageContent, rmsg.messageOptions);
-
-                replyOrSend.then(scresolve).catch((err) => {
-                    console.error(err);
-                    return screject(err);
-                });
-            });
-        }
-    });
-}
-
-
+﻿
 exports.formatTime = function formatTime(seconds) {
     return `${Math.round((seconds - Math.ceil(seconds % 60)) / 60)}:${String('00' + Math.ceil(seconds % 60)).slice(-2)}`;
 };
-
-
-
 
 //if i need to do a = item.pro1.pro2.pro3, i dont have to incrementally check each layer's existence
 exports.getChain = function (obj, key) {
@@ -130,25 +18,6 @@ exports.hasChain = function (obj, key) {
         obj = obj[x];
         return true;
     });
-}
-//since this gets used so much, im creating a shortcut template for this
-exports.redel = function (msgstring) {
-    let smdelobj = exports.smdel(msgstring)
-    smdelobj.reply = true;
-    return smdelobj;
-    /*
-    return {
-        messageContent: msg,
-        deleteTime: 10 * 1000,
-        reply: true
-    }*/
-}
-//since this gets used so much, im creating a shortcut template for this
-exports.smdel = function (msgstring, time) {
-    return {
-        messageContent: msgstring,
-        deleteTime: time ? time : 10 * 1000,
-    }
 }
 
 exports.requireFile = function (filepath) {
