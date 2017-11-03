@@ -1,7 +1,7 @@
 const discord = require('discord.js');
-const util = require.main.exports.getRequire('util');
-const CommandArgument = require.main.exports.getRequire('commandargument');
-const permissions = require.main.exports.getRequire('permissions');
+const util = require('./utility/util');
+const CommandArgument = require('./CommandArgument');
+const permissions = require('./utility/permissions.json');
 const MessageUtil = require('./MessageUtil');
 /**
  * This is the base Command class. All commands should extend this class.

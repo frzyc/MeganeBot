@@ -1,4 +1,13 @@
-﻿
+﻿//a helper function to format strings
+if (!String.prototype.format) {
+    String.prototype.format = function () {
+        var args = arguments;
+        return this.replace(/{(\d+)}/g, function (match, number) {
+            return typeof args[number] != 'undefined' ? args[number] : match;
+        });
+    };
+}
+
 exports.formatTime = function formatTime(seconds) {
     return `${Math.round((seconds - Math.ceil(seconds % 60)) / 60)}:${String('00' + Math.ceil(seconds % 60)).slice(-2)}`;
 };
@@ -309,9 +318,9 @@ customTypeRegex.prototype.process = function (arg, message) {
 exports.customTypeRegex = customTypeRegex;
 
 var reOperatorsToEscape = /[|\\{}()[\]^$+*?.]/g;
-exports.escapeRegexString = function(str){
+exports.escapeRegexString = function (str) {
     if (typeof str !== 'string') throw new TypeError('Expected a string');
-	return str.replace(reOperatorsToEscape, '\\$&');
+    return str.replace(reOperatorsToEscape, '\\$&');
 }
 /*
 console.log('100% 200%'.match(/(\d{0,3})%/g));

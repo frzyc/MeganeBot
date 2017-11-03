@@ -1,4 +1,4 @@
-const util = require.main.exports.getRequire('util');
+const util = require('./utility/util');
 const MessageUtil = require('./MessageUtil');
 module.exports = class CommandMessage {
     /**

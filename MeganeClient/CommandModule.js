@@ -1,5 +1,5 @@
 ﻿const discord = require('discord.js');
-const Command = require.main.exports.getRequire('command');
+const Command = require('./Command');
 /**
  * A module to hold commands. All commands belong in a module.
  */

@@ -1,8 +1,8 @@
 ﻿const discord = require('discord.js');
-const Command = require.main.exports.getRequire('command');
-const CommandMessage = require.main.exports.getRequire('commandmessage');
-const CommandModule = require.main.exports.getRequire('commandmodule');
-const Type = require.main.exports.getRequire('type');
+const Command = require('./Command');
+const CommandMessage = require('./CommandMessage');
+const CommandModule = require('./CommandModule');
+const Type = require('./DefaultTypes/Type');
 module.exports = class CommandDepot {
     constructor(client) {
         //read only property for client

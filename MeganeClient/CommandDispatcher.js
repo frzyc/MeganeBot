@@ -1,6 +1,6 @@
-﻿const Command = require.main.exports.getRequire('command');
-const CommandMessage = require.main.exports.getRequire('commandmessage');
-const util = require.main.exports.getRequire('util');
+﻿const Command = require('./Command');
+const CommandMessage = require('./CommandMessage');
+const util = require('./utility/util');
 const { Collection } = require('discord.js');
 const MessageUtil = require('./MessageUtil');
 /**

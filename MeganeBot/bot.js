@@ -1,21 +1,5 @@
-﻿//little helper function to keep track of the files... for now
-exports.getRequire = function (modulename) {
-    if (modulename === 'client') return require('./meganeClient');
-    if (modulename === 'dispatcher') return require('./CommandDispatcher');
-    if (modulename === 'util') return require('./utility/util');
-    if (modulename === 'config') return require('./data/config.json');
-    if (modulename === 'playerdata') return require('./modules/playerData');
-    if (modulename === 'cmdDepot') return require('./CommandDepot');
-    if (modulename === 'commandmodule') return require('./CommandModule');
-    if (modulename === 'command') return require('./Command');
-    if (modulename === 'commandmessage') return require('./CommandMessage');
-    if (modulename === 'commandargument') return require('./CommandArgument');
-    if (modulename === 'type') return require('./Types/Type');
-    if (modulename === 'permissions') return require('./utility/permissions.json');
-    throw 'codefile not found!';
-}
-const MeganeClient = require.main.exports.getRequire('client');
-console.log(`Starting MeganeBot\nNode version: ${process.version}\nDiscord.js version: ${MeganeClient.version}`);
+﻿const { MeganeClient } = require('../MeganeClient');
+console.log(`Starting MeganeBot\nNode version: ${process.version}`);
 
 var config;
 try {//do a config.json check, the bot will not operate without a valid config.
@@ -90,6 +74,7 @@ process.on('uncaughtException', function (err) {//technically not a good idea, b
     }
     childProcess.spawn = mySpawn;
 })();
+/*
 client.depot.addTypes([
     require('./Types/Boolean'),
     require('./Types/Integer'),
@@ -98,7 +83,7 @@ client.depot.addTypes([
 ])
 .addModules([
     require('./modules/TestModule/TestModule')
-])
+])*/
 
 /* A small test client just to test some messages
 const Discord = require('discord.js');

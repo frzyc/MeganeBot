@@ -1,7 +1,10 @@
 ﻿const discord = require('discord.js');
+const CommandDepot = require('./CommandDepot');
+const CommandDispatcher = require('./CommandDispatcher');
 module.exports = class MeganeClient extends discord.Client {
     constructor(options = {}) {
         super(options);
+        console.log("MeganeClient constructor");
         this.globalPrefix = options.prefix ? options.prefix : null;
         if (options.ownerid) {
             if (typeof options.ownerid === "string")
@@ -19,10 +22,8 @@ module.exports = class MeganeClient extends discord.Client {
             });
         }
 
-        let commandDepot = require.main.exports.getRequire('cmdDepot');
-        this.depot = new commandDepot(this);
+        this.depot = new CommandDepot(this);
 
-        let CommandDispatcher = require.main.exports.getRequire('dispatcher');
         this.dispatcher = new CommandDispatcher(this, this.depot);
 
         this.on('message', (message) => { this.dispatcher.handleMessage(message); });
@@ -36,16 +37,15 @@ module.exports = class MeganeClient extends discord.Client {
             console.log(`New User "${member.user.username}" has joined "${member.guild.name}"`);
             member.guild.defaultChannel.send(`"${member.user.username}" has joined this server`);
         });
-
-        //a helper function to format strings
-        if (!String.prototype.format) {
-            String.prototype.format = function () {
-                var args = arguments;
-                return this.replace(/{(\d+)}/g, function (match, number) {
-                    return typeof args[number] != 'undefined' ? args[number] : match;
-                });
-            };
-        }
+        this.depot.addTypes([
+            require('./DefaultTypes/Boolean'),
+            require('./DefaultTypes/Integer'),
+            require('./DefaultTypes/String'),
+            require('./DefaultTypes/Float')
+        ])
+        .addModules([
+            require('./DefaultModules/TestModule/TestModule')
+        ])
     }
     get prefix() {
         return this.globalPrefix;

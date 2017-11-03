@@ -1,4 +1,4 @@
-const CommandModule = require.main.exports.getRequire('commandmodule');
+const CommandModule = require('../../CommandModule');
 module.exports = class TestModule extends CommandModule{
     constructor(client){
         super(client, {
