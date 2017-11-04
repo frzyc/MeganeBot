@@ -1,6 +1,6 @@
 ﻿const Command = require('./Command');
 const CommandMessage = require('./CommandMessage');
-const util = require('./utility/util');
+const Util = require('./Utility/Util');
 const { Collection } = require('discord.js');
 const MessageUtil = require('./MessageUtil');
 /**
@@ -37,12 +37,14 @@ class CommandDispatcher {
     }
     async handleReaction(messageReaction, user) {
         if (user.bot) return; //wont respond to bots
-        console.log(messageReaction);
-        console.log(`NEW REACTION BOOO YEAH emoji.name:${messageReaction.emoji.name}, emoji.id:${messageReaction.emoji.id}, emoji.identifier:${messageReaction.emoji.identifier}, emoji.toString():${messageReaction.emoji.toString()}`);
+        //console.log(messageReaction);
+        //console.log(`NEW REACTION BOOO YEAH emoji.name:${messageReaction.emoji.name}, emoji.id:${messageReaction.emoji.id}, emoji.identifier:${messageReaction.emoji.identifier}, emoji.toString():${messageReaction.emoji.toString()}`);
         if (this.watchlist.has(messageReaction.message.id)) {
             let emojiCollection = this.watchlist.get(messageReaction.message.id);
-            if (emojiCollection.has(messageReaction.emoji.toString()))
+            if (emojiCollection.has(messageReaction.emoji.toString())){
+                await messageReaction.remove(user.id);
                 this.handleResponse(await emojiCollection.get(messageReaction.emoji.toString()).execute(messageReaction, user));
+            }
         }
     }
     async handleResponse(response) {
@@ -131,7 +133,7 @@ class CommandDispatcher {
         return new CommandMessage(this.client, message, cmd, argString);
     }
     buildPattern() {
-        const escapedPrefix = util.escapeRegexString(this.client.prefix);
+        const escapedPrefix = Util.escapeRegexString(this.client.prefix);
         /* matches {prefix}cmd
          * <{prefix}{cmd}
          * <@{id}> {cmd}

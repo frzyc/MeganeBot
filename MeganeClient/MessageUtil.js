@@ -61,16 +61,19 @@ module.exports = class MessageUtil {
         } else
             msgPromise = this.sendMessage();
         let msgToPostProcess = await msgPromise;
-        if (!msgToPostProcess) msgToPostProcess = this.destMessage;//there is a chance that no presending is needed, and its only updating the emoji/delete
-
-        //since a message is here, we can do the post process on it!
+        if (!msgToPostProcess && this.destMessage) msgToPostProcess = this.destMessage;//there is a chance that no presending is needed, and its only updating the emoji/delete
+        if (!msgToPostProcess) return;// in theory this shouldn't happen...
+        //do the post process on the message
+        //TODO if a message is deleted, remove it from the waitlist
         if (this.deleteTime && msgToPostProcess.deletable) msgToPostProcess.delete(this.deleteTime).catch(console.error);
-        if (this.destinationDeleteTime && this.destMessage && this.destMessage.deletable) message.delete(rmsg.deleteTimeCmdMessage).catch(console.error);
+        if (this.destinationDeleteTime && this.destMessage && this.destMessage.deletable) message.delete(this.destinationDeleteTime).catch(console.error);
 
         if (this.reactions) {
             await msgToPostProcess.clearReactions();
-            for (let reaction of this.reactions) {
+            for (let reaction of this.reactions)
                 await msgToPostProcess.react(reaction.emoji);
+            //add the functions to the waitlist after the reactions are all added.
+            for (let reaction of this.reactions) {
                 if (reaction.execute) {
                     if (!this.client.dispatcher.watchlist.has(msgToPostProcess.id))
                         this.client.dispatcher.watchlist.set(msgToPostProcess.id, new Collection());
@@ -90,7 +93,7 @@ module.exports = class MessageUtil {
             else
                 return this.destMessage.channel.send(this.messageContent, this.messageOptions);
         }
-        return this.destChannel.send(rmsg.messageContent, rmsg.messageOptions);
+        return this.destChannel.send(this.messageContent, this.messageOptions);
     }
 
     static preCheck(client, options) {
@@ -113,10 +116,10 @@ module.exports = class MessageUtil {
         if (options.reactions)
             for (let reaction of options.reactions)
                 if (!reaction.emoji) throw new TypeError('Each element in MessageUtilOptions.reactions must have an emoji property.');
-        if (typeof options.edit !== 'undefined' && options.edit !== 'boolean') throw new TypeError('MessageUtilOptions.edit must be an boolean.');
-        if (typeof options.typing !== 'undefined' && options.typing !== 'boolean') throw new TypeError('MessageUtilOptions.typing must be an boolean.');
+        if (typeof options.edit !== 'undefined' && typeof options.edit !== 'boolean') throw new TypeError('MessageUtilOptions.edit must be an boolean.');
+        if (typeof options.typing !== 'undefined' && typeof options.typing !== 'boolean') throw new TypeError('MessageUtilOptions.typing must be an boolean.');
         if (options.typing && (!options.messageContent && !optoins.messageOptions)) throw new Error('MessageUtilOptions.typing must accompany either MessageUtilOptions.messageContent or MessageUtilOptions.messageOptions');
-        if (typeof options.reply !== 'undefined' && options.reply !== 'boolean') throw new TypeError('MessageUtilOptions.reply must be an boolean.');
+        if (typeof options.reply !== 'undefined' && typeof options.reply !== 'boolean') throw new TypeError('MessageUtilOptions.reply must be an boolean.');
         if (options.deleteTime && (!Number.isInteger(options.deleteTime) || options.deleteTime < 0)) throw new TypeError('MessageUtilOptions.deleteTime must be a positive integer.');
         if (options.destinationDeleteTime && (!Number.isInteger(options.destinationDeleteTime) || options.destinationDeleteTime < 0)) throw new TypeError('MessageUtilOptions.destinationDeleteTime must be a positive integer.');
         if (!destinationTypeofMessage) {

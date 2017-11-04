@@ -1,4 +1,4 @@
-const util = require('./utility/util');
+const Util = require('./Utility/Util');
 const MessageUtil = require('./MessageUtil');
 module.exports = class CommandMessage {
     /**
@@ -15,17 +15,20 @@ module.exports = class CommandMessage {
     }
     async execute() {
         //command based restrictions
-        if (this.command.checkRestriction(this.message)) return;
+        if (this.command.checkRestriction(this.message)) return; //TODO reply with restriction message
+        if (this.command.restriction)
+            if (this.command.restriction(this)) return; //TODO reply with restriction message
+
         var parsedArgs = null;
         if (this.command.args) {
             parsedArgs = await this.parseAllArgs();
-            if (parsedArgs === null || parsedArgs === undefined) {
+            if (parsedArgs === false || parsedArgs === null || parsedArgs === undefined || parsedArgs.length === 0) {
                 let usageObj = this.command.getUsageEmbededMessageObject()
                 usageObj.messageContent = 'Bad Arguments.';
                 usageObj.destination = this.message;
                 let response = new MessageUtil(this.client, usageObj);
                 response.execute();
-                //util.createMessage(usageObj, this.message);
+                //Util.createMessage(usageObj, this.message);
                 return false;
             }
         }
@@ -43,7 +46,8 @@ module.exports = class CommandMessage {
             this.client.emit("commandfailed", this, reject);
             this.command.clearCooldown(this.message);
             //console.log(reject);
-            if (reject) this.client.dispatcher.handleResponse(reject);
+            console.log(reject);
+            //if (reject) this.client.dispatcher.handleResponse(reject);
         });
     }
     /**

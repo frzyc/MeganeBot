@@ -80,10 +80,10 @@ client.depot.addTypes([
     require('./Types/Integer'),
     require('./Types/String'),
     require('./Types/Float')
-])
-.addModules([
-    require('./modules/TestModule/TestModule')
 ])*/
+client.depot.addModules([
+    require('./Modules/Music/MusicModule')
+]);
 
 /* A small test client just to test some messages
 const Discord = require('discord.js');

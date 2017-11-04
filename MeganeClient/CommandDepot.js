@@ -1,4 +1,5 @@
 ﻿const discord = require('discord.js');
+const fs = require('fs');
 const Command = require('./Command');
 const CommandMessage = require('./CommandMessage');
 const CommandModule = require('./CommandModule');
@@ -97,6 +98,17 @@ module.exports = class CommandDepot {
         this.client.emit('commandAdded', command, this);
         this.client.emit('debug', `Added command ${module.id}:${command.id}.`);
         return this;
+    }
+    addCommandsInDir(){
+        fs.readdir('./glassesicon', (err, files) => { 
+            if (err) {
+                console.error(err);
+            }
+            files.forEach(file => {
+                console.log(file);
+            });
+            this.addCommands(files);
+        });
     }
     findCommands(searchString = null, exact = false, message = null) {
         if (!searchString) return message ? this.commands.filterArray(cmd => cmd.hasPermissions(message)) : this.commands;

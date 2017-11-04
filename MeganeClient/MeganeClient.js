@@ -1,16 +1,30 @@
 ﻿const discord = require('discord.js');
 const CommandDepot = require('./CommandDepot');
 const CommandDispatcher = require('./CommandDispatcher');
+/**
+ * The Main client for the MeganeClient. This is the client where the MeganeBot starts to operate.
+ */
 module.exports = class MeganeClient extends discord.Client {
+    /**
+     * In addition to the options of the default discord.js client, some extra ones.
+     * @typedef {object} MeganeClientOptions
+     * @property {string|string[]} ownerids - list of owners by user ids.
+     * @property {string} [prefix] - the global prefix used by the Client. 
+     */
+
+    /**
+     * MeganeClient constructor
+     * @param {MeganeClientOptions} options 
+     */
     constructor(options = {}) {
         super(options);
         console.log("MeganeClient constructor");
         this.globalPrefix = options.prefix ? options.prefix : null;
-        if (options.ownerid) {
-            if (typeof options.ownerid === "string")
-                options.owner = new Set([options.ownerid]);
-            if (options.ownerid instanceof Array)
-                options.owner = new Set(options.ownerid);
+        if (options.ownerids) {
+            if (typeof options.ownerids === "string")
+                options.owner = new Set([options.ownerids]);
+            if (options.ownerids instanceof Array)
+                options.owner = new Set(options.ownerids);
             this.once('ready', () => {
                 for (const owner of options.owner) {
                     this.fetchUser(owner).catch(err => {
@@ -18,7 +32,7 @@ module.exports = class MeganeClient extends discord.Client {
                         this.emit('error', err);
                     });
                 }
-                delete options.ownerid;
+                delete options.ownerids;
             });
         }
 

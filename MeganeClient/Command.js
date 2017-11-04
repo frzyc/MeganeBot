@@ -1,7 +1,7 @@
 const discord = require('discord.js');
-const util = require('./utility/util');
+const Util = require('./Utility/Util');
 const CommandArgument = require('./CommandArgument');
-const permissions = require('./utility/permissions.json');
+const permissions = require('./Utility/permissions.json');
 const MessageUtil = require('./MessageUtil');
 /**
  * This is the base Command class. All commands should extend this class.
@@ -12,7 +12,8 @@ module.exports = class Command {
      * @typedef {Object} CommandOptions
      * @property {String} name - The name of the command. Should be unique to avoid conflicts
      * @property {string[]} [aliases] - Alternative names for the command (all must be lowercase and unique)
-     * @property {String} id - Will only be used internally
+     * @property {String} id - Will only be used internally.
+     * @property {CommandRestrictionFunction} restriction - Restriction function.
      * @property {CommandArgumentOptions[]} args - Arguments for the command.
      * @property {string} module - The ID of the module the command belongs to (must be lowercase)
      * @property {string} [usage] - A short usage description of the command. Usally following the command argument template 
@@ -30,6 +31,13 @@ module.exports = class Command {
      */
 
     /**
+     * @typedef {function} CommandRestrictionFunction
+     * @param {CommandMessage} cmdMsg
+     * @returns {false|string} - return false if command should not be restricted, and return a string for the reason if it does need to be restricted. 
+     * This will be ran after checking command restrictions and before parsing command arguments. 
+     */
+
+    /**
      * Options that sets the throttling options for a command.
      * @typedef {Object} ThrottlingOptions
      * @property {number} userCooldown - time in second required for a user to reuse this command
@@ -43,7 +51,6 @@ module.exports = class Command {
      */
     constructor(client, options) {
         Object.defineProperty(this, 'client', { value: client });
-        if (!options.id) options.id = options.name.toLowerCase();
         this.name = options.name;
         this.id = options.id;
         this.aliases = options.aliases ? options.aliases : [];
@@ -51,6 +58,7 @@ module.exports = class Command {
         this.usage = options.usage ? options.usage : null;
         this.description = options.description ? options.description : null;
         this.examples = options.examples ? options.examples : null;
+        this.restriction = options.restriction === undefined ? false : options.restriction;
         this.ownerOnly = options.ownerOnly === undefined ? false : options.ownerOnly;
         this.ownerOnly = options.guildOnly === undefined ? false : options.guildOnly;
         this.ownerOnly = options.dmOnly === undefined ? false : options.dmOnly;
@@ -88,13 +96,11 @@ module.exports = class Command {
                     title: title,
                     description: desc,
                 }
-
             },
-            emojis: [{
+            reactions: [{
                 emoji: '❌',
                 process: (reactionMessage, user) => {
                     reactionMessage.message.delete();
-                    return Promise.resolve();
                 }
             }],
         };
@@ -117,7 +123,7 @@ module.exports = class Command {
             for (let arg of this.args) {
                 msgobj.messageOptions.embed.fields.push({
                     name: `Argument: ${arg.label}`,
-                    value: `${arg.type.id}`
+                    value: `Type: ${arg.type.id}${arg.description ? '\nDescription: '+arg.description : ''}`
                 })
             }
         }
@@ -160,7 +166,7 @@ module.exports = class Command {
             if (!this[coolDownType]) return 0;
             let now = new Date();
             let nowtime = now.getTime();
-            let cd = util.getChain(this, `${coolDownType}List.${property}`); //this.coolDownTypeList[property]
+            let cd = Util.getChain(this, `${coolDownType}List.${property}`); //this.coolDownTypeList[property]
             if (cd && cd > nowtime) //if current time has not surpassed cd time, means still in cooldown.
                 return cd - nowtime;
             else if (cd && cd <= nowtime)
@@ -178,7 +184,7 @@ module.exports = class Command {
     clearCooldown(message) {
         let clrCD = (coolDownType, property, msg) => {
             if (!this[coolDownType]) return;
-            if (util.hasChain(this, `${coolDownType}List.${property}`)) //this.coolDownTypeList[property]
+            if (Util.hasChain(this, `${coolDownType}List.${property}`)) //this.coolDownTypeList[property]
                 delete this[coolDownType + 'List'][property];//delete this
         }
         clrCD('userCooldown', message.author.id);
@@ -240,44 +246,47 @@ module.exports = class Command {
     }
     static preCheck(client, options) {
         if (!client) throw new Error('A client must be specified.');
-        if (typeof options !== 'object') throw new TypeError('Command options must be an Object.');
-        if (typeof options.name !== 'string') throw new TypeError('Command name must be a string.');
-        if (options.name !== options.name.toLowerCase()) throw new Error('Command name must be lowercase.');
-        if (options.aliases && (!Array.isArray(options.aliases) || options.aliases.some(ali => typeof ali !== 'string'))) throw new TypeError('Command aliases must be an Array of strings.');
-        if (options.aliases && options.aliases.some(ali => ali !== ali.toLowerCase())) throw new Error('Command aliases must be lowercase.');
-        if (options.usage && typeof options.usage !== 'string') throw new TypeError('Command usage must be a string.');
-        if (options.description && typeof options.description !== 'string') throw new TypeError('Command description must be a string.');
-        if (typeof options.module !== 'string') throw new TypeError('Command module must be a string.');
-        if (options.module !== options.module.toLowerCase()) throw new Error('Command module must be lowercase.');
+        if (typeof options !== 'object') throw new TypeError('CommandOptions.options must be an Object.');
+        if (typeof options.name !== 'string') throw new TypeError('CommandOptions.name must be a string.');
+        if (options.name !== options.name.toLowerCase()) throw new Error('CommandOptions.name must be lowercase.');
+        if (options.aliases && (!Array.isArray(options.aliases) || options.aliases.some(ali => typeof ali !== 'string'))) throw new TypeError('CommandOptions.aliases must be an Array of strings.');
+        if (options.aliases && options.aliases.some(ali => ali !== ali.toLowerCase())) throw new Error('CommandOptions.aliases must be lowercase.');
+        if (options.id && typeof options.id !== 'string') throw new TypeError('CommandOptions.id must be a string.');
+        if (!options.id) options.id = options.name.toLowerCase();
+        if (options.usage && typeof options.usage !== 'string') throw new TypeError('CommandOptions.usage must be a string.');
+        if (options.description && typeof options.description !== 'string') throw new TypeError('CommandOptions.description must be a string.');
+        if (options.restriction && typeof options.restriction !== 'function') throw new TypeError('CommandOptions.restriction must be a function.');
+        if (typeof options.module !== 'string') throw new TypeError('CommandOptions.module must be a string.');
+        if (options.module !== options.module.toLowerCase()) throw new Error('CommandOptions.module must be lowercase.');
         if (options.clientPermissions) {
             if (!Array.isArray(options.clientPermissions))
-                throw new TypeError('Command clientPermissions must be an Array of permission key strings.');
+                throw new TypeError('CommandOptions.clientPermissions must be an Array of permission key strings.');
             for (const perm of options.clientPermissions)
-                if (!permissions[perm]) throw new RangeError(`Invalid command clientPermission: ${perm} `);
+                if (!permissions[perm]) throw new RangeError(`CommandOptions.clientPermission has an invalid entry: ${perm} `);
         }
         if (options.userPermissions) {
             if (!Array.isArray(options.userPermissions))
-                throw new TypeError('Command userPermissions must be an Array of permission key strings.');
+                throw new TypeError('CommandOptions.userPermissions must be an Array of permission key strings.');
             for (const perm of options.userPermissions)
-                if (!permissions[perm]) throw new RangeError(`Invalid command userPermission: ${perm} `);
+                if (!permissions[perm]) throw new RangeError(`CommandOptions.userPermission has an invalid entry: ${perm} `);
         }
         if (options.throttling) {
-            if (typeof options.throttling !== 'object') throw new TypeError('Command throttling must be an Object.');
+            if (typeof options.throttling !== 'object') throw new TypeError('CommandOptions.throttling must be an Object.');
             if (
                 typeof options.throttling.userCooldown !== 'number' || isNaN(options.throttling.userCooldown) ||
                 typeof options.throttling.serverCooldown !== 'number' || isNaN(options.throttling.serverCooldown) ||
                 typeof options.throttling.channelCooldown !== 'number' || isNaN(options.throttling.channelCooldown)
             ) {
-                throw new TypeError('Command throttling duration must be a number.');
+                throw new TypeError('CommandOptions.throttling entries duration must be a number.');
             }
             if (
                 options.throttling.userCooldown < 1 ||
                 options.throttling.serverCooldown < 1 ||
                 options.throttling.channelCooldown < 1
-            ) throw new RangeError('Command throttling duration must be at least 1.');
+            ) throw new RangeError('CommandOptions.throttling duration must be at least 1.');
         }
-        if (options.args && options.numArgs) throw new Error('Command args and numArgs are mutually exclusive.');
-        if (options.args && !Array.isArray(options.args)) throw new TypeError('Command args must be an Array.');
+        if (options.args && options.numArgs) throw new Error('CommandOptions.args and CommandOptions.numArgs are mutually exclusive.');
+        if (options.args && !Array.isArray(options.args)) throw new TypeError('CommandOptions.args must be an Array.');
         if (options.args) {
             let isEnd = false;
             let hasOptional = false;
@@ -288,7 +297,7 @@ module.exports = class Command {
                 if (this.args[i].multiple || this.args[i].remaining) isEnd = true;
             }
         }
-        if (options.numArgs && Number.isInteger(options.numArgs)) throw new TypeError('Command numArgs must be an integer.');
-        if (options.numArgs < 0) throw new RangeError('Command numArgs must be a positive integer');
+        if (options.numArgs && Number.isInteger(options.numArgs)) throw new TypeError('CommandOptions.numArgs must be an integer.');
+        if (options.numArgs < 0) throw new RangeError('CommandOptions.numArgs must be a positive integer');
     }
 }
