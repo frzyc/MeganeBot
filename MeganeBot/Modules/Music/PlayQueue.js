@@ -3,6 +3,7 @@ const YoutubeDL = require('youtube-dl');
 const ytdlc = require('ytdl-core');
 const { MessageUtil, Util } = require('../../../MeganeClient');
 const VoiceController = require('./VoiceController');
+const Track = require('./Track');
 //TODO read through the messages, and make stuff more logical?
 module.exports = class PlayQueue {
     constructor(client, guildID) {
@@ -11,19 +12,19 @@ module.exports = class PlayQueue {
         this.list = [];
         this.guildID = guildID;
         this.current = null;
-        this.lastAdded = null;
         this.tchannel = null;
         this.voiceController = new VoiceController(client, this, guildID);
         this.trackId = 0;
         this.MAX_NUM_SONGS_PER_PLAYLIST = 100;
         this.playlistMessage = null;
+        this.queue = [];
+        this.queuing = false;
     }
-    async addtoQueue(track) {
+    async addToList(track) {
         if (this.list.length >= this.MAX_NUM_SONGS_PER_PLAYLIST)
             return (new MessageUtil(client, { destination: message, messageContent: `The Playlist size has been maxed: ${pq.MAX_NUM_SONGS_PER_PLAYLIST}`, deleteTime: 30 })).execute();
         track.trackId = this.getTrackId();//generates a unique trackID for each queued song, even if it has been requeued
         this.list.push(track);
-        this.lastAdded = track;
         if (this.list.length === 1) this.updatePlayingMessage();//update the next playing part of playing message
         this.updatePlaylistMessage();
         if (!this.tchannel) return;
@@ -32,6 +33,18 @@ module.exports = class PlayQueue {
         track.message = msg;
         if (!this.current)
             this.playNextInQueue();
+    }
+    addToQueue(track) {
+        if (!this.queuing) {
+            this.queuing = true;
+            this.addToList(track);
+            setTimeout(() => {
+                this.queuing = false;
+                if (this.queue.length >= 1)
+                    this.addToQueue(this.queue.shift());
+            }, 3000);
+        } else
+            this.queue.push(track);
     }
     removefromQueue(trackId) {
         //console.log(`removefromQueue:${trackId}`)
@@ -65,13 +78,10 @@ module.exports = class PlayQueue {
             let voiceConn = this.voiceController.getVoiceConnection();// just in case the player left the channel...
             if (!voiceConn) await this.voiceController.vchannel.join()
             this.play(this.list.shift());
-        } else {
+        } else {//no song, so queue the bot to leave voice
             setTimeout(() => {
                 if (this.list.length > 0 || this.current) return;
-                const voiceConnection = this.voiceController.getVoiceConnection();
-                if (voiceConnection && voiceConnection.player.dispatcher)
-                    voiceConnection.player.dispatcher.end();
-                voiceConnection.channel.leave();
+                this.voiceController.leaveVoice();
             }, 60 * 1000);
         }
     }
@@ -103,7 +113,7 @@ module.exports = class PlayQueue {
             console.log("YoutubeDL Error");
             console.error(err)
         });
-        currentStream.on('complete', function complete(info) {
+        currentStream.on('complete', (info) => {
             console.log('YoutubeDL completed:');
             console.log(info);
         });
@@ -134,6 +144,7 @@ module.exports = class PlayQueue {
             track.message.delete();
             track.message = null;
         }
+        this.updatePlaylistMessage();
         this.sendPlayingmessage();
     }
     /**
@@ -190,7 +201,8 @@ module.exports = class PlayQueue {
         this.playlistMessage = await (new MessageUtil(this.client, playlistmsgres)).execute();
     }
     updatePlaylistMessage() {//edit the original playlist message
-        if (this.playlistMessage) (new MessageUtil(this.client, this.getPlaylistmessageResolvable(this.playlistMessage))).execute();
+        if (!this.playlistMessage) return;
+        (new MessageUtil(this.client, this.getPlaylistmessageResolvable(this.playlistMessage))).execute();
     }
     async playStopped() {
         //console.log(`playQueue.playStopped in vchannel:${this.voiceController.vchannel}`);
@@ -201,5 +213,55 @@ module.exports = class PlayQueue {
     }
     getTrackId() {
         return ++this.trackId;
+    }
+    queryYTDL(searchString, message) {
+        YoutubeDL.exec(searchString, ['--quiet', //Activate quiet mode
+            '--extract-audio',
+            '--dump-single-json', //Simulate, quiet but print JSON information.
+            '--flat-playlist', //Do not extract the videos of a playlist, only list them.
+            '--ignore-errors', //Continue on download errors, for example to skip unavailable videos in a playlist
+            '--format', //FORMAT
+            'bestaudio/best',
+            '--default-search',
+            'gvsearch1:'
+        ], {}, (queryErr, queryInfo) => {
+            console.log(queryInfo);
+            let errMsg = new MessageUtil(this.client, {
+                destination: message,
+                reply: true,
+                messageContent: `Query **"${searchString}"** returned no valid results.`,
+                deleteTime: 30,
+                destinationDeleteTime: 30
+            });
+
+            if (queryErr) {
+                errMsg.messageContent = `ERROR with query:${queryErr}`;
+                errMsg.execute();
+            }
+            if (!queryInfo) //in theory this shouldn't happen...
+                return errMsg.execute();
+            else if (Array.isArray(queryInfo)) {//will return an array[0] of JSONstrings
+                console.log(typeof queryInfo);
+                queryInfo = queryInfo.map(v => JSON.parse(v))[0];
+                if (!queryInfo)
+                    return errMsg.execute();
+                if (queryInfo.url) {//single track
+                    let track = new Track(this, queryInfo, message ? message.author : null);
+                    this.addToQueue(track);
+                } else if (queryInfo._type === 'playlist') {
+                    if (queryInfo.entries.length === 0) //no valid search results
+                        return errMsg.execute();
+                    if (this.list.length + queryInfo.entries.length >= this.MAX_NUM_SONGS_PER_PLAYLIST) {
+                        errMsg.messageContent = `Adding this playlist will breach Max Playlist size.(${this.MAX_NUM_SONGS_PER_PLAYLIST})`;
+                        errMsg.execute();
+                    }
+                    if (message && message.deletable) message.delete(30 * 1000);
+                    queryInfo.entries.forEach((entry, index) => {
+                        //if entry.ie_key === 'Youtube', the url only have the id... this is just a walkaround for now, if API changes, this needs to be changed
+                        this.queryYTDL(entry.ie_key === 'Youtube' ? 'https://www.youtube.com/watch?v=' + entry.id : entry.url, message);
+                    });
+                }
+            }
+        });
     }
 }

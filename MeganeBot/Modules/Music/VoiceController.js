@@ -84,12 +84,10 @@ module.exports = class VoiceController {
         if (voiceChannelArray.length == 0) return null;
         else return voiceChannelArray[0];
     }
-    leaveVoice(message) {
-        let pq = queueList.getPlayQueue(message.guild.id);
-        if (pq.tchannel.id !== message.channel.id) return;//wrong chat bro
+    async leaveVoice() {
         const voiceConnection = this.getVoiceConnection();
         if (voiceConnection && voiceConnection.player.dispatcher)
-            voiceConnection.player.dispatcher.end();
+            await voiceConnection.player.dispatcher.end();
         voiceConnection.channel.leave();
     }
     async joinvoice(message) {

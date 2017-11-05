@@ -27,49 +27,6 @@ module.exports = class QueuMusic extends Command {
         let pq = this.module.playQueueManager.getPlayQueue(message.guild.id);
         if (!pq.voiceController.getVoiceConnection())
             await pq.voiceController.joinvoice(message);
-        try {
-            queueytdl(args['query'], pq, message)
-        } catch (err) {
-            return (new MessageUtil(this.client, {
-                destination: message,
-                reply: true,
-                messageContent: err,
-                deleteTime: 30
-            }))
-        }
-        function queueytdl(searchstring, pq, message) {
-            YoutubeDL.exec(searchstring, ['--quiet', //Activate quiet mode
-                '--extract-audio',
-                '--dump-single-json', //Simulate, quiet but print JSON information.
-                '--flat-playlist', //Do not extract the videos of a playlist, only list them.
-                '--ignore-errors', //Continue on download errors, for example to skip unavailable videos in a playlist
-                '--format', //FORMAT
-                'bestaudio/best',
-                '--default-search',
-                'gvsearch1:'
-            ], {}, function (err, info) {
-                if (err) throw Error(`ERROR with query:${err}`);
-                if (info || info.isArray || info instanceof Array) {
-                    info = info.map(v => JSON.parse(v))[0];
-                    if (info.url) {//single track
-                        let track = new Track(pq, info);
-                        if (message) track.userID = message.author.id;
-                        pq.addtoQueue(track);
-                    } else if (info._type === 'playlist') {
-                        if (info.entries.length === 0) //no valid search results
-                            throw Error(`Query **"${searchstring}"** returns no valid results.`);
-                        if (pq.list.length + info.entries.length >= pq.MAX_NUM_SONGS_PER_PLAYLIST)
-                            throw Error(`Adding this playlist will breach Max Playlist size.(${pq.MAX_NUM_SONGS_PER_PLAYLIST})`);
-                        info.entries.forEach((entry, index) => {
-                            setTimeout(() => {
-                                //if entry.ie_key === 'Youtube', the url only have the id...
-                                queueytdl(entry.ie_key === 'Youtube' ? 'https://www.youtube.com/watch?v=' + entry.id : entry.url, pq, message);
-                            }, index * 3000);
-                        });
-                    }
-                }
-            });
-
-        }
+        pq.queryYTDL(args['query'], message);
     }
 }

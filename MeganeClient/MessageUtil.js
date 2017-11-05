@@ -88,7 +88,7 @@ module.exports = class MessageUtil {
         if (this.destMessage) {
             if (this.reply)
                 return this.destMessage.reply(this.messageContent, this.messageOptions);
-            else if (this.edit)
+            else if (this.edit && this.destMessage.editable)
                 return this.destMessage.edit(this.messageContent, this.messageOptions);
             else
                 return this.destMessage.channel.send(this.messageContent, this.messageOptions);
