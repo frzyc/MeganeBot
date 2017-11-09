@@ -1,3 +1,4 @@
+const {Guild} = require('discord.js');
 module.exports = {
     MeganeClient: require('./MeganeClient'),
     Command: require('./Command'),
@@ -8,7 +9,9 @@ module.exports = {
     CommandModule: require('./CommandModule'),
     MessageUtil: require('./MessageUtil'),
     Util: require('./Utility/Util'),
-    permission: require('./Utility/permissions.json'),
+    permissions: require('./Utility/permissions.json'),
     
     Type: require('./DefaultTypes/Type'),
 };
+
+require('./Extensions/GuildExtension').doExtension(Guild);

@@ -1,4 +1,6 @@
 ﻿const { MeganeClient } = require('../MeganeClient');
+const sqlite = require('sqlite');
+const path = require('path');
 console.log(`Starting MeganeBot\nNode version: ${process.version}`);
 
 var config;
@@ -12,7 +14,7 @@ try {//do a config.json check, the bot will not operate without a valid config.
 //initiate new client
 const client = new MeganeClient({
     prefix: config.prefix,
-    ownerid: config.ownerid
+    ownerids: config.ownerids
 });
 exports.client = client;
 
@@ -49,7 +51,7 @@ client
         reconn(10000);
     });
 
-
+/*
 process.on("unhandledRejection", err => {
     console.error("Uncaught Promise Error: \n");
     console.log(err);
@@ -60,7 +62,7 @@ process.on('uncaughtException', function (err) {//technically not a good idea, b
     console.log("UNCAUGHTEXCEPTION!");
     console.log(err);
     console.log(err.stack);
-});
+});*/
 
 //something to deal with spawn errors
 (function () {
@@ -74,16 +76,13 @@ process.on('uncaughtException', function (err) {//technically not a good idea, b
     }
     childProcess.spawn = mySpawn;
 })();
-/*
-client.depot.addTypes([
-    require('./Types/Boolean'),
-    require('./Types/Integer'),
-    require('./Types/String'),
-    require('./Types/Float')
-])*/
 client.depot.addModules([
-    require('./Modules/Music/MusicModule')
-]);
+    require('./Modules/Music/MusicModule'),
+    require('./Modules/Conversation/ConversationModule'),
+])
+client.addDB(
+    sqlite.open(path.join(__dirname, 'data', 'db.sqlite3')).then((db)=>db)
+).catch(console.error);
 
 /* A small test client just to test some messages
 const Discord = require('discord.js');

@@ -4,7 +4,6 @@ const ytdlc = require('ytdl-core');
 const { MessageUtil, Util } = require('../../../MeganeClient');
 const VoiceController = require('./VoiceController');
 const Track = require('./Track');
-//TODO read through the messages, and make stuff more logical?
 module.exports = class PlayQueue {
     constructor(client, guildID) {
         if (!client) throw Error('PlayQueueManager needs a client.');

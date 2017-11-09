@@ -1,4 +1,4 @@
-const { MessageUtil } = require('../../../MeganeClient');
+const { MessageUtil, permissions } = require('../../../MeganeClient');
 module.exports = class VoiceController {
     constructor(client, playQueue, guildID) {
         if (!client) throw Error('PlayQueueManager needs a client.');
@@ -102,7 +102,19 @@ module.exports = class VoiceController {
             (new MessageUtil(this.client, { destination: message, messageContent: "BAKA... I'm already here! " })).execute();
             return true;//return true because connection success    
         }
-
+        //check required permissions
+        const missing = usrVoiceChannel.permissionsFor(this.client.user).missing([
+            'CONNECT',
+            'SPEAK'
+        ]);
+        if (missing.length > 0) {
+            (new MessageUtil(this.client, { destination: message, messageContent: `I don't have enough permissions to use this command. missing:\n${missing.map(p => permissions[p]).join(', and ')}`, deleteTime: 5 * 60 })).execute();
+            return false;
+        }
+        if (usrVoiceChannel && !usrVoiceChannel.joinable) {
+            await (new MessageUtil(this.client, { destination: message, messageContent: "Cannot join the voice channel. " })).execute();
+            return false
+        }
         let re = await (new MessageUtil(this.client, { destination: message, messageContent: "Connecting..." })).execute();
         let conn = await (usrVoiceChannel.join());
         this.playQueue.tchannel = message.channel;

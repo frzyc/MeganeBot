@@ -15,7 +15,7 @@ module.exports = class CommandMessage {
     }
     async execute() {
         //command based restrictions
-        if (this.command.checkRestriction(this.message)) return; //TODO reply with restriction message
+        if (this.command.checkRestriction(this.message)) return;
         if (this.command.restriction)
             if (this.command.restriction(this)) return; //TODO reply with restriction message
 
@@ -23,7 +23,7 @@ module.exports = class CommandMessage {
         if (this.command.args) {
             parsedArgs = await this.parseAllArgs();
             if (parsedArgs === false || parsedArgs === null || parsedArgs === undefined || parsedArgs.length === 0) {
-                let usageObj = this.command.getUsageEmbededMessageObject()
+                let usageObj = this.command.getUsageEmbededMessageObject(this.message);
                 usageObj.messageContent = 'Bad Arguments.';
                 usageObj.destination = this.message;
                 let response = new MessageUtil(this.client, usageObj);
@@ -37,18 +37,16 @@ module.exports = class CommandMessage {
         this.command.setCooldown(this.message);
 
         //use Promise.resolve just incase a process doesnt return a promise...
-        Promise.resolve(this.command.execute(this.message, parsedArgs)).then(response => {
+        try {
+            let response = await this.command.execute(this.message, parsedArgs);
             console.log("cmd resolved");
             this.client.emit("commandsuccess", this, response);
             if (response) this.client.dispatcher.handleResponse(response);
-        }).catch(reject => {
-            console.log("cmd rejected");
-            this.client.emit("commandfailed", this, reject);
+        } catch (err) {
+            this.client.emit("commandfailed", this, err);
             this.command.clearCooldown(this.message);
-            //console.log(reject);
             console.log(reject);
-            //if (reject) this.client.dispatcher.handleResponse(reject);
-        });
+        }
     }
     /**
      * 
@@ -78,7 +76,13 @@ module.exports = class CommandMessage {
         let argString = this.argString.trim();
         let result = {};
         for (const arg of this.command.args) {
-            if (!argString) return false;//means we ran out of the argument string to parse, but an argument still havent been parsed.
+            if (!argString) {//means we ran out of the argument string to parse, but an argument still havent been parsed.
+                if (typeof arg.default !== 'undefined') {//allow for "" and null and 0 and such falsy values
+                    result[arg.label] = arg.default;
+                    continue;
+                } else
+                    return false;
+            }
             if (arg.multiple) {//multiple -> keep parsing until the string is over
                 console.log("arg.multiple parse");
                 result[arg.label] = [];
@@ -108,12 +112,13 @@ module.exports = class CommandMessage {
                 break;
             } else if (arg.quantity) {//quantitiy -> get a fixed number of arguments
                 console.log("arg.quantity parse");
+                result[arg.label] = [];
                 let sep = this.constructor.separateArgs(argString, arg.quantity);
                 for (let i = 0; i < arg.quantity; i++) {
                     let valid = await arg.validate(sep[i], this.message, arg);
                     if (!valid)
                         return false;
-                    result[arg.label] = arg.parse(sep[i]);
+                    result[arg.label].push(arg.parse(sep[i]));
                 }
                 if (sep.length > arg.quantity)
                     argString = sep[arg.quantity];
@@ -125,7 +130,7 @@ module.exports = class CommandMessage {
                     continue;
                 }
                 if (sep && sep.length > 0 && await arg.validate(sep[0], this.message, arg))
-                    result[arg.label].push(sep[0]);
+                    result[arg.label] = sep[0];
                 else
                     return;
                 if (sep.length > 1)

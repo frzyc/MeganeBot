@@ -172,7 +172,7 @@ module.exports = class Track {
             edit: this.message ? true : false,
             messageOptions: {
                 embed: {
-                    color: 3447003,//TODO DARK RED
+                    color: 3447003,//DARK RED
                     title: `Dequeued: ${this.title}`,
                     url: this.webpage_url,
                     thumbnail: {

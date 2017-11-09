@@ -17,7 +17,7 @@
     "ffmpeg-binaries": "^3.2.2",
     "node-opus": "^0.2.7",
     "request": "^2.83.0",
-    "sqlite3": "^3.1.8",
+    "sqlite": "^2.8.0",
     "uws": "^8.14.1",
     "youtube-dl": "^1.12.2",
     "ytdl-core": "^0.18.1"

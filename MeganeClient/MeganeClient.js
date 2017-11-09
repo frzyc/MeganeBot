@@ -1,6 +1,7 @@
 ﻿const discord = require('discord.js');
 const CommandDepot = require('./CommandDepot');
 const CommandDispatcher = require('./CommandDispatcher');
+const GuildData = require('./Provider/GuildData');
 /**
  * The Main client for the MeganeClient. This is the client where the MeganeBot starts to operate.
  */
@@ -16,26 +17,29 @@ module.exports = class MeganeClient extends discord.Client {
      * MeganeClient constructor
      * @param {MeganeClientOptions} options 
      */
-    constructor(options = {}) {
+    constructor(options) {
+        //preCheck options
+        if (typeof options !== 'object') throw new TypeError('MeganeClientOptions must be an object.');
+        if (!options.ownerids) throw new TypeError('MeganeClientOptions must be have ownerids.');
+        if (typeof options.ownerids !== 'string' && !Array.isArray(options.ownerids)) throw new TypeError('MeganeClientOptions.ownerids must be a string or an array of strings');
+        if (Array.isArray(options.ownerids))
+            for (ownerid of options.ownerids)
+                if (typeof ownerid !== 'string') throw new TypeError('MeganeClientOptions.ownerids must be a string or an array of strings');
+        if (typeof options.ownerids === 'string')
+            options.ownerids = [options.ownerids];
         super(options);
         console.log("MeganeClient constructor");
         this.globalPrefix = options.prefix ? options.prefix : null;
-        if (options.ownerids) {
-            if (typeof options.ownerids === "string")
-                options.owner = new Set([options.ownerids]);
-            if (options.ownerids instanceof Array)
-                options.owner = new Set(options.ownerids);
-            this.once('ready', () => {
-                for (const owner of options.owner) {
-                    this.fetchUser(owner).catch(err => {
-                        this.emit('warn', `Unable to fetch owner ${owner}.`);
-                        this.emit('error', err);
-                    });
-                }
-                delete options.ownerids;
-            });
-        }
-
+        options.owner = new Set(options.ownerids);
+        this.once('ready', () => {
+            for (const owner of options.owner) {
+                this.fetchUser(owner).catch(err => {
+                    this.emit('warn', `Unable to fetch owner ${owner}.`);
+                    this.emit('error', err);
+                });
+            }
+            delete options.ownerids;
+        });
         this.depot = new CommandDepot(this);
 
         this.dispatcher = new CommandDispatcher(this, this.depot);
@@ -51,15 +55,17 @@ module.exports = class MeganeClient extends discord.Client {
             console.log(`New User "${member.user.username}" has joined "${member.guild.name}"`);
             member.guild.defaultChannel.send(`"${member.user.username}" has joined this server`);
         });
-        this.depot.addTypes([
-            require('./DefaultTypes/Boolean'),
-            require('./DefaultTypes/Integer'),
-            require('./DefaultTypes/String'),
-            require('./DefaultTypes/Float')
-        ])
-        .addModules([
-            require('./DefaultModules/TestModule/TestModule')
-        ])
+        this.depot
+            .addTypes([
+                require('./DefaultTypes/Boolean'),
+                require('./DefaultTypes/Integer'),
+                require('./DefaultTypes/String'),
+                require('./DefaultTypes/Float')
+            ])
+            .addModules([
+                require('./DefaultModules/TestModule/TestModule'),
+                require('./DefaultModules/CommandCommandModule/CommandCommandModule')
+            ])
     }
     get prefix() {
         return this.globalPrefix;
@@ -69,15 +75,32 @@ module.exports = class MeganeClient extends discord.Client {
         //globalPrefixChange , guild, prefix
         this.emit('globalPrefixChange', null, this.globalPrefix);
     }
-    get owners() {
-        if (!this.options.owner) return null;
-        return this.options.owner;
-    }
+    get owners() { return this.options.owner; }
     isOwner(user) {
         if (!this.options.owner) return false;
         user = this.users.get(user);
         if (!user) throw new RangeError("user unresolvable.");
         if (this.options.owner instanceof Set) return this.options.owner.has(user.id);
         throw new RangeError('The client\'s "owner" option is an unknown value.');
+    }
+    async addDB(db){
+        db = await db;
+        this.guildData = new GuildData(db);
+        if(this.readyTimestamp){
+            this.initDB();
+        }
+        this.once('ready',() => {
+            this.initDB();
+        });
+    }
+    async initDB(){
+        if(this.guildData){
+            this.guildData.init(this);
+        }
+    }
+    async destroy(){
+        await super.destroy();
+        if(this.guildData)
+            this.guildData.destroy()
     }
 }

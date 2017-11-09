@@ -11,11 +11,11 @@ module.exports = class Command {
      * Options that sets the format and property of the a command.
      * @typedef {Object} CommandOptions
      * @property {String} name - The name of the command. Should be unique to avoid conflicts
-     * @property {string[]} [aliases] - Alternative names for the command (all must be lowercase and unique)
-     * @property {String} id - Will only be used internally.
-     * @property {CommandRestrictionFunction} restriction - Restriction function.
-     * @property {CommandArgumentOptions[]} args - Arguments for the command.
-     * @property {string} module - The ID of the module the command belongs to (must be lowercase)
+     * @property {string[]} [aliases] - Alternative names for the command (all must be unique)
+     * @property {String} [id] - Will only be used internally.
+     * @property {CommandRestrictionFunction} [restriction] - Restriction function.
+     * @property {CommandArgumentOptions[]} [args] - Arguments for the command.
+     * @property {string} [module] - The ID of the module the command belongs to (must be lowercase)
      * @property {string} [usage] - A short usage description of the command. Usally following the command argument template 
      * @property {string} [description] - A detailed description of the command
      * @property {string[]} [examples] - Usage examples of the command
@@ -25,7 +25,7 @@ module.exports = class Command {
 	 * @property {PermissionResolvable[]} [clientPermissions] - Permissions required by the client to use the command.
 	 * @property {PermissionResolvable[]} [userPermissions] - Permissions required by the user to use the command.
 	 * @property {ThrottlingOptions} [throttling] - Options for throttling usages of the command.
-     * @property {number} numArgs - The number of arguments to parse. The arguments are separated by white space. 
+     * @property {number} [numArgs] - The number of arguments to parse. The arguments are separated by white space. 
      * The last argument will have the remaining command string, white space and all. 
      * Mutually exclusive to CommandOptions#args
      */
@@ -50,6 +50,7 @@ module.exports = class Command {
      * @param {CommandOptions} options
      */
     constructor(client, options) {
+        this.constructor.preCheck(client, options);
         Object.defineProperty(this, 'client', { value: client });
         this.name = options.name;
         this.id = options.id;
@@ -84,10 +85,13 @@ module.exports = class Command {
         throw new Error(`${this.constructor.name} doesn't have a execute() method.`);
     }
 
-    getUsageEmbededMessageObject() {
+    getUsageEmbededMessageObject(message) {
+        let prefix = message.guild ? message.guild.prefix : this.client.prefix;
+        if (!prefix)
+            prefix = "<@mentionme> ";
         //TODO getUsageEmbededMessageObject
         let title = `Usage of **${this.name}${this.aliases.length > 0 ? ", " + this.aliases.join(", ") : ""}**`;
-        let desc = `**${this.client.prefix}${this.name} ${this.getTemplateArguments()}** \n${this.usage}`;
+        let desc = `**${prefix}${this.name} ${this.getTemplateArguments()}** \n${this.usage}`;
         let msgobj = {
             deleteTimeCmdMessage: 5 * 60 * 1000,
             messageOptions: {
@@ -114,16 +118,16 @@ module.exports = class Command {
         if (this.examples) {
             for (let exampleindex = 0; exampleindex < this.examples.length; exampleindex++) {
                 msgobj.messageOptions.embed.fields.push({
-                    name: `Example${exampleindex + 1}:`,
-                    value: `${this.examples[exampleindex]}`
+                    name: `Example ${exampleindex + 1}:`,
+                    value: `${prefix}${this.examples[exampleindex]}`
                 })
             }
         }
         if (this.args) {
             for (let arg of this.args) {
                 msgobj.messageOptions.embed.fields.push({
-                    name: `Argument: ${arg.label}`,
-                    value: `Type: ${arg.type.id}${arg.description ? '\nDescription: '+arg.description : ''}`
+                    name: `Argument: ${arg.label}`,//TODO put a description for default, multiple, remaining -> `Optional Argument:` ...
+                    value: `Type: ${arg.type.id}${arg.description ? '\nDescription: ' + arg.description : ''}`
                 })
             }
         }
@@ -198,18 +202,16 @@ module.exports = class Command {
         ) {
             const missing = message.channel.permissionsFor(message.author).missing(this.userPermissions);
             if (missing.length > 0) {
-                let msgResponse = new MessageUtil(this.client, { messageContent: `You don't have enough permissions to use ${this.name}. missing:\n${missing.map(p => permissions[p]).join(', and ')}`, deleteTime: 5 * 60 });
-                msgResponse.execute();
+                (new MessageUtil(this.client, { messageContent: `You don't have enough permissions to use ${this.name}. missing:\n${missing.map(p => permissions[p]).join(', and ')}`, deleteTime: 5 * 60 })).execute();
                 return false;
             }
         }
         if (this.clientPermissions &&
             message.channel.type === 'text' //commands are only existant in text channels
         ) { //!message.channel.permissionsFor(this.client.user).has(this.clientPermissions)
-            const missing = message.channel.permissionsFor(this.clientPermissions.user).missing(this.userPermissions);
+            const missing = message.channel.permissionsFor(this.client.user).missing(this.userPermissions);
             if (missing.length > 0) {
-                let msgResponse = new MessageUtil(this.client, { destination: message, messageContent: `I don't have enough permissions to use this command. missing:\n${missing.map(p => permissions[p]).join(', and ')}`, deleteTime: 5 * 60 });
-                msgResponse.execute();
+                (new MessageUtil(this.client, { destination: message, messageContent: `I don't have enough permissions to use this command. missing:\n${missing.map(p => permissions[p]).join(', and ')}`, deleteTime: 5 * 60 })).execute();
                 return false;
             }
         }
@@ -246,9 +248,10 @@ module.exports = class Command {
     }
     static preCheck(client, options) {
         if (!client) throw new Error('A client must be specified.');
+        if (typeof options !== 'object') throw new TypeError('CommandOptions must be an object.');
         if (typeof options !== 'object') throw new TypeError('CommandOptions.options must be an Object.');
         if (typeof options.name !== 'string') throw new TypeError('CommandOptions.name must be a string.');
-        if (options.name !== options.name.toLowerCase()) throw new Error('CommandOptions.name must be lowercase.');
+        //if (options.name !== options.name.toLowerCase()) throw new Error('CommandOptions.name must be lowercase.');
         if (options.aliases && (!Array.isArray(options.aliases) || options.aliases.some(ali => typeof ali !== 'string'))) throw new TypeError('CommandOptions.aliases must be an Array of strings.');
         if (options.aliases && options.aliases.some(ali => ali !== ali.toLowerCase())) throw new Error('CommandOptions.aliases must be lowercase.');
         if (options.id && typeof options.id !== 'string') throw new TypeError('CommandOptions.id must be a string.');
@@ -256,8 +259,8 @@ module.exports = class Command {
         if (options.usage && typeof options.usage !== 'string') throw new TypeError('CommandOptions.usage must be a string.');
         if (options.description && typeof options.description !== 'string') throw new TypeError('CommandOptions.description must be a string.');
         if (options.restriction && typeof options.restriction !== 'function') throw new TypeError('CommandOptions.restriction must be a function.');
-        if (typeof options.module !== 'string') throw new TypeError('CommandOptions.module must be a string.');
-        if (options.module !== options.module.toLowerCase()) throw new Error('CommandOptions.module must be lowercase.');
+        if (options.module && typeof options.module !== 'string') throw new TypeError('CommandOptions.module must be a string.');
+        if (options.module && options.module !== options.module.toLowerCase()) throw new Error('CommandOptions.module must be lowercase.');
         if (options.clientPermissions) {
             if (!Array.isArray(options.clientPermissions))
                 throw new TypeError('CommandOptions.clientPermissions must be an Array of permission key strings.');
@@ -291,10 +294,10 @@ module.exports = class Command {
             let isEnd = false;
             let hasOptional = false;
             for (let i = 0; i < options.args.length; i++) {
-                if (hasInfinite) throw new Error('No other argument may come after an multiple/remaining argument.');
+                if (isEnd) throw new Error('No other argument may come after an multiple/remaining argument.');
                 if (options.args[i].default !== null) hasOptional = true;
                 else if (hasOptional) throw new Error('Required arguments may not come after optional arguments.');
-                if (this.args[i].multiple || this.args[i].remaining) isEnd = true;
+                if (options.args[i].multiple || options.args[i].remaining) isEnd = true;
             }
         }
         if (options.numArgs && Number.isInteger(options.numArgs)) throw new TypeError('CommandOptions.numArgs must be an integer.');

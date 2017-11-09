@@ -85,13 +85,14 @@ module.exports = class CommandDepot {
                 throw new Error(`A command with the name/alias "${alias}" is already added.`);
             }
         }
+        if(!command.moduleID) throw new Error('A command must have a moduleID to attach to a module.');//TODO create a internal module to store all the cmds without a module.
         const module = this.modules.find(mod => mod.id === command.moduleID);
         if (!module) throw new Error(`Group "${command.moduleID}" is not added.`);
         if (module.commands.some(cmd => cmd.id === command.id)) {
             this.client.emit('debug', `A command with the id "${command.id}" is already added in ${module.id}`);
         }
-        if (!command.execute) throw new Error(`cmdBaseobj.addCmd: ERROR: Command ${command.name[0]} does not have a process.`);
-        if (!command.usage) this.client.emit('warn', `cmdBaseobj.addCmd: WARN: Command ${command.name[0]} does not have a usage.`);
+        if (!command.execute) throw new Error(`Command ${command.id} does not have a execute function.`);
+        if (!command.usage) this.client.emit('warn', `Command ${command.id} does not have a usage.`);
         command.module = module;
         module.commands.set(command.name, command);
         this.commands.set(command.name, command);
@@ -100,6 +101,7 @@ module.exports = class CommandDepot {
         return this;
     }
     addCommandsInDir(){
+        /* TODO add all commands in a directory
         fs.readdir('./glassesicon', (err, files) => { 
             if (err) {
                 console.error(err);
@@ -109,6 +111,7 @@ module.exports = class CommandDepot {
             });
             this.addCommands(files);
         });
+        return this;*/
     }
     findCommands(searchString = null, exact = false, message = null) {
         if (!searchString) return message ? this.commands.filterArray(cmd => cmd.hasPermissions(message)) : this.commands;
@@ -161,6 +164,7 @@ module.exports = class CommandDepot {
         this.types.set(type.id, type);
         this.client.emit('typeRegistered', type, this);
         this.client.emit('debug', `Registered argument type ${type.id}.`);
+        return this;
     }
     addTypes(types) {
         if (!Array.isArray(types)) throw new TypeError('Commands must be an Array.');

@@ -26,7 +26,7 @@ module.exports = class QueuMusic extends Command {
     async execute(message, args) {
         let pq = this.module.playQueueManager.getPlayQueue(message.guild.id);
         if (!pq.voiceController.getVoiceConnection())
-            await pq.voiceController.joinvoice(message);
+        if(!(await pq.voiceController.joinvoice(message))) return;
         pq.queryYTDL(args['query'], message);
     }
 }

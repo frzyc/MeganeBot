@@ -15,7 +15,6 @@ class CommandDispatcher {
         Object.defineProperty(this, 'client', { value: client });
         this.commandDepot = commandDepot;
         this.preprocesses = new Set();
-        this.pattern = null;
         this.watchlist = new Collection();
     }
     /**
@@ -25,8 +24,8 @@ class CommandDispatcher {
      */
     async handleMessage(message, oldMessage) {//old messgae before the update
         if (!this.preCheckMessage(message, oldMessage)) return;
-        if (!message.guild.members.has(message.author.id)) 
-            await message.guild.members.fetch(message.author.id);  
+        if (!message.guild.members.has(message.author.id))
+            await message.guild.members.fetch(message.author.id);
         let reasons = this.preprocess(message, oldMessage);
         if (reasons) return;
         if (oldMessage) Object.defineProperty(message, 'oldMessage', { value: oldMessage });
@@ -41,7 +40,7 @@ class CommandDispatcher {
         //console.log(`NEW REACTION BOOO YEAH emoji.name:${messageReaction.emoji.name}, emoji.id:${messageReaction.emoji.id}, emoji.identifier:${messageReaction.emoji.identifier}, emoji.toString():${messageReaction.emoji.toString()}`);
         if (this.watchlist.has(messageReaction.message.id)) {
             let emojiCollection = this.watchlist.get(messageReaction.message.id);
-            if (emojiCollection.has(messageReaction.emoji.toString())){
+            if (emojiCollection.has(messageReaction.emoji.toString())) {
                 await messageReaction.remove(user.id);
                 this.handleResponse(await emojiCollection.get(messageReaction.emoji.toString()).execute(messageReaction, user));
             }
@@ -124,25 +123,29 @@ class CommandDispatcher {
      */
     parseMessage(message) {
         let cont = message.content;
-        if (!this.pattern) this.buildPattern();
-        const matches = this.pattern.exec(cont);
+        const pattern = this.buildPattern(message);
+        const matches = pattern.exec(cont);
         if (!matches) return null;
         const cmd = this.client.depot.resolveCommand(matches[2]);
         const argString = cont.substring(matches[0].length);
         if (!cmd) return null;
         return new CommandMessage(this.client, message, cmd, argString);
     }
-    buildPattern() {
-        const escapedPrefix = Util.escapeRegexString(this.client.prefix);
+    buildPattern(message) {
+        //when a message is from a guild, must use the prefix from the guild, if the guild has the prefix unset, then only mentions will work.
+        //else, for a dm message, both the client's global prefix and mentions will work.
+        let prefix = message.guild ? message.guild.prefix : this.client.prefix;
+
         /* matches {prefix}cmd
          * <{prefix}{cmd}
          * <@{id}> {cmd}
          * <@!{id}> {cmd}
          */
-        this.pattern = new RegExp(
-            `^(${escapedPrefix}\\s*|<@!?${this.client.user.id}>\\s+(?:${escapedPrefix})?)([^\\s]+)`, 'i'
-        );
-        return this.pattern;
+        if (!prefix) {
+            return new RegExp(`(^<@!?${this.client.user.id}>\\s+)([^\\s]+)`, 'i');
+        }
+        let escapedPrefix = Util.escapeRegexString(prefix);
+        return new RegExp(`^(${escapedPrefix}\\s*|<@!?${this.client.user.id}>\\s+(?:${escapedPrefix})?)([^\\s]+)`, 'i');
     }
 }
 module.exports = CommandDispatcher;
