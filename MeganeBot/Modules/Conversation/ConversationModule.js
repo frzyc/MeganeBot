@@ -7,7 +7,7 @@ module.exports = class ConversationModule extends CommandModule{
             guildOnly: true
         });
         this.addCommands([
-            require('./Commands/basicResponse'),
+            require('./Commands/BasicResponse'),
         ]);
     }
 }
