@@ -251,13 +251,17 @@ module.exports = class PlayQueue {
                     if (queryInfo.entries.length === 0) //no valid search results
                         return errMsg.execute();
                     if (this.list.length + queryInfo.entries.length >= this.MAX_NUM_SONGS_PER_PLAYLIST) {
-                        errMsg.messageContent = `Adding this playlist will breach Max Playlist size.(${this.MAX_NUM_SONGS_PER_PLAYLIST})`;
+                        errMsg.messageContent = `Adding this playlist will breach Max Playlist size(${this.MAX_NUM_SONGS_PER_PLAYLIST}). 
+                        As many songs as possible from this playlist will be added.`;
                         errMsg.execute();
                     }
                     if (message && message.deletable) message.delete(30 * 1000);
                     queryInfo.entries.forEach((entry, index) => {
-                        //if entry.ie_key === 'Youtube', the url only have the id... this is just a walkaround for now, if API changes, this needs to be changed
-                        this.queryYTDL(entry.ie_key === 'Youtube' ? 'https://www.youtube.com/watch?v=' + entry.id : entry.url, message);
+                        setTimeout(() => {
+                            if ((this.list.length + this.queue.length) >= this.MAX_NUM_SONGS_PER_PLAYLIST) return;
+                            //if entry.ie_key === 'Youtube', the url only have the id...
+                            this.queryYTDL(entry.ie_key === 'Youtube' ? 'https://www.youtube.com/watch?v=' + entry.id : entry.url, message);
+                        }, index * 2000);
                     });
                 }
             }

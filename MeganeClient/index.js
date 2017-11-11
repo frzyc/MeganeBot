@@ -1,4 +1,5 @@
-const {Guild} = require('discord.js');
+const { Guild } = require('discord.js');
+const provider = 'Provider';
 module.exports = {
     MeganeClient: require('./MeganeClient'),
     Command: require('./Command'),
@@ -10,8 +11,13 @@ module.exports = {
     MessageUtil: require('./MessageUtil'),
     Util: require('./Utility/Util'),
     permissions: require('./Utility/permissions.json'),
-    
+
     Type: require('./DefaultTypes/Type'),
+
+    Table: require(`./${provider}/Table`),
+    Columnbase: require(`./${provider}/Columnbase`),
+    GeneralDataColumn: require(`./${provider}/GeneralDataColumn`),
+    GuildData: require(`./${provider}/GuildData`),
 };
 
 require('./Extensions/GuildExtension').doExtension(Guild);

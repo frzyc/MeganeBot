@@ -28,9 +28,6 @@ module.exports = class MessageUtil {
      * @param {MessageUtilOptions} options 
      */
     constructor(client, options) {
-        console.log('new MessageUtils');
-        console.log(client);
-        console.log(options);
         this.constructor.preCheck(client, options);
         Object.defineProperty(this, 'client', { value: client });
         this.constructor.preCheck(client, options);

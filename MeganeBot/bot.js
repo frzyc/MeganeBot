@@ -1,5 +1,4 @@
 ﻿const { MeganeClient } = require('../MeganeClient');
-const sqlite = require('sqlite');
 const path = require('path');
 console.log(`Starting MeganeBot\nNode version: ${process.version}`);
 
@@ -81,7 +80,7 @@ client.depot.addModules([
     require('./Modules/Conversation/ConversationModule'),
 ])
 client.addDB(
-    sqlite.open(path.join(__dirname, 'data', 'db.sqlite3')).then((db)=>db)
+    path.join(__dirname, 'data', 'db.sqlite3')
 ).catch(console.error);
 
 /* A small test client just to test some messages

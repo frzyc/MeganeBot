@@ -1,105 +1,68 @@
 const { Guild } = require('discord.js');
-const ProviderBase = require('./ProviderBase');
+const GeneralDataColumn = require('./GeneralDataColumn');
 /**
- * A class to deal general guild data: data that is not updated very often, and can be grouped into a general object. 
- * It will be converted into a JSON and stored as a string in a single column in a table.
- * setting is expensive, but getting is relatively cheap, since the object is cached here.
- * For values that are updated often, use GuildSpecificData.
+ * A class to deal general guild data.
  */
-module.exports = class GuildData extends ProviderBase {
-    /**
-     * @param {SqliteDatabase} db
-     */
-    constructor(db) {
-        super();
-        this.db = db;
-        Object.defineProperty(this, 'client', { value: null, writable: true });
-        this.data = new Map();
+module.exports = class GuildData extends GeneralDataColumn {
+    constructor(table,columnName) {
+        super(table,columnName);
         this.listeners = new Map();
-        this.changeStatement = null;
     }
-    async init(client) {
-        this.client = client;
-
-        //init a table
-        await this.db.run('CREATE TABLE IF NOT EXISTS guild (guildid INTEGER PRIMARY KEY, data TEXT)');
+    async init() {
+        super.init();
 
         // Load all data
-        const rows = await this.db.all('SELECT CAST(guildid as TEXT) as guildid, data FROM guild');
+        const rows = await this.db.all(`SELECT CAST(${this.table.primaryKey} as TEXT) as ${this.table.primaryKey}, ${this.columnName} FROM ${this.table.tableName}`);
         for (const row of rows) {
             let data;
             try {
+                if(!row.data ||row.data ==='null' || row.data ==='undefined') continue;
                 data = JSON.parse(row.data);
             } catch (err) {
-                client.emit('warn', `SQLiteProvider couldn't parse the data stored for guild ${row.guildid}.`);
+                this.client.emit('warn', `GuildData couldn't parse the data stored for guild ${row.guildid}.`);
                 continue;
             }
             //use the id 0 as the global setting
-            const guildid = row.guildid !== '0' ? row.guildid : 'global';
+            const guildid = row[this.table.primaryKey] !== '0' ? row[this.table.primaryKey] : 'global';
             this.data.set(guildid, data);
-            if (guildid !== 'global' && !client.guilds.has(row.guildid)) continue;
+            if (guildid !== 'global' && !this.client.guilds.has(guildid)) continue;
             this.setupGuild(guildid, data);
         }
 
-        // Prepare statements
-        const statements = await Promise.all([
-            this.db.prepare('INSERT OR REPLACE INTO guild(guildid,data) VALUES(?, ?)')
-        ]);
-        this.changeStatement = statements[0];
-
         this.listeners
             .set('guildPrefixChange', (guild, prefix) => this.set(guild, 'prefix', prefix ? prefix : null))
-        for (const [event, listener] of this.listeners) client.on(event, listener);
+        for (const [event, listener] of this.listeners) this.client.on(event, listener);
     }
     async destroy() {
-        // Finalise prepared statements
-        await Promise.all([
-            this.changeStatement.finalize()
-        ]);
-
+        super.destroy();
         // Remove all listeners from the client
         for (const [event, listener] of this.listeners) this.client.removeListener(event, listener);
         this.listeners.clear();
     }
-    get(guild, key, defVal) {
-        const data = this.data.get(this.constructor.getGuildID(guild));
-        return data ? (typeof data[key] !== 'undefined' ? data[key] : defVal) : defVal;
-    }
-    async set(guild, key, val) {
+    get(guild, dataKey, defVal) {
         let guildid = this.constructor.getGuildID(guild);
-        let data = this.data.get(guildid);
-        if (!data) {
-            this.data.set(guildid, {});
-            data = this.data.get(guildid);
-        }
-
-        data[key] = val;
-        await this.changeStatement.run(guildid !== 'global' ? guildid : 0, JSON.stringify(data));
+        return super.get(guildid, dataKey, defVal);
+    }
+    async set(guild, dataKey, val) {
+        let guildid = this.constructor.getGuildID(guild);
+        super.set(guildid, dataKey, val);
     }
     /**
      * 
      * @param {Guild} guild 
      * @param {string} key 
      */
-    async remove(guild, key) {
+    async remove(guild, dataKey) {
         let guildid = this.constructor.getGuildID(guild);
-        const data = this.data.get(guildid);
-        if (!data || typeof data[key] === 'undefined') return undefined;
-
-        const val = data[key];
-        data[key] = undefined;
-        await this.changeStatement.run(guildid !== 'global' ? guildid : 0, JSON.stringify(data));
-        return val;
+        return super.remove(guildid, dataKey);
     }
     /**
      * 
      * @param {Guild} guild 
      */
     async clear(guild) {
-        guild = this.constructor.getGuildID(guild);
-        if (!this.data.has(guild)) return;
-        this.data.delete(guild);
-        await this.changeStatement.run(guildid !== 'global' ? guildid : 0, JSON.stringify(null));
+        let guildid = this.constructor.getGuildID(guild);
+        super.clear(guildid);
     }
     /**
 	 * Obtains the ID of the provided guild, or throws an error if it isn't valid
@@ -114,7 +77,7 @@ module.exports = class GuildData extends ProviderBase {
     }
     setupGuild(guildid, data) {
         let guild = this.client.guilds.get(guildid) || null;
-        guild.prefix = data.prefix;
+        guild.prefix = data.prefix;//set the prefix for the guild from the data created from db. Even if it is null/undefined
     }
 
 }

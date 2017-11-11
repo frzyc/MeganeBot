@@ -33,8 +33,8 @@ module.exports = class Command {
     /**
      * @typedef {function} CommandRestrictionFunction
      * @param {CommandMessage} cmdMsg
-     * @returns {false|string} - return false if command should not be restricted, and return a string for the reason if it does need to be restricted. 
-     * This will be ran after checking command restrictions and before parsing command arguments. 
+     * @returns {false|string} - return false if command should not be restricted, and return true, or a string for the reason if it does need to be restricted. 
+     * This will be ran after checking command restrictions and parsing the specific command, but before parsing command arguments. 
      */
 
     /**

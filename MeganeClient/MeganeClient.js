@@ -1,6 +1,8 @@
 ﻿const discord = require('discord.js');
+const sqlite = require('sqlite');
 const CommandDepot = require('./CommandDepot');
 const CommandDispatcher = require('./CommandDispatcher');
+const Table = require('./Provider/Table');
 const GuildData = require('./Provider/GuildData');
 /**
  * The Main client for the MeganeClient. This is the client where the MeganeBot starts to operate.
@@ -55,6 +57,7 @@ module.exports = class MeganeClient extends discord.Client {
             console.log(`New User "${member.user.username}" has joined "${member.guild.name}"`);
             member.guild.defaultChannel.send(`"${member.user.username}" has joined this server`);
         });
+        //add the default types and modules
         this.depot
             .addTypes([
                 require('./DefaultTypes/Boolean'),
@@ -65,7 +68,8 @@ module.exports = class MeganeClient extends discord.Client {
             .addModules([
                 require('./DefaultModules/TestModule/TestModule'),
                 require('./DefaultModules/CommandCommandModule/CommandCommandModule')
-            ])
+            ]);
+
     }
     get prefix() {
         return this.globalPrefix;
@@ -83,24 +87,24 @@ module.exports = class MeganeClient extends discord.Client {
         if (this.options.owner instanceof Set) return this.options.owner.has(user.id);
         throw new RangeError('The client\'s "owner" option is an unknown value.');
     }
-    async addDB(db){
-        db = await db;
-        this.guildData = new GuildData(db);
-        if(this.readyTimestamp){
+    async addDB(pathToDB) {
+        this.db = await sqlite.open(pathToDB);
+        if (this.readyTimestamp) {
             this.initDB();
         }
-        this.once('ready',() => {
+        this.once('ready', () => {
             this.initDB();
         });
     }
-    async initDB(){
-        if(this.guildData){
-            this.guildData.init(this);
-        }
+    async initDB() {
+        this.guildTable = new Table(this, this.db, 'guild', 'guildid', 'INTEGER');
+        await this.guildTable.init();
+        this.guildTable.guildData = new GuildData(this.guildTable, 'guilddata');
+        await this.guildTable.guildData.init();
     }
-    async destroy(){
+    async destroyDB() {
         await super.destroy();
-        if(this.guildData)
-            this.guildData.destroy()
+        if (this.guildTable)
+            this.guildTable.destroy()
     }
 }
