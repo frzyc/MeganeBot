@@ -16,9 +16,18 @@ module.exports = class CommandMessage {
     async execute() {
         //command based restrictions
         if (this.command.checkRestriction(this.message)) return;
-        if (this.command.restriction)
-            if (this.command.restriction(this)) return; //TODO reply with restriction message
-
+        if (this.command.restriction) {
+            let restiction = await this.command.restriction(this);
+            if (restiction) {
+                (new MessageUtil(this.client, {
+                    destination: this.message,
+                    messageContent: restiction,
+                    deleteTime: 30,
+                    destinationDeleteTime: 30
+                })).execute();
+                return;
+            }
+        }
         var parsedArgs = null;
         if (this.command.args) {
             parsedArgs = await this.parseAllArgs();
@@ -26,9 +35,7 @@ module.exports = class CommandMessage {
                 let usageObj = this.command.getUsageEmbededMessageObject(this.message);
                 usageObj.messageContent = 'Bad Arguments.';
                 usageObj.destination = this.message;
-                let response = new MessageUtil(this.client, usageObj);
-                response.execute();
-                //Util.createMessage(usageObj, this.message);
+                (new MessageUtil(this.client, usageObj)).execute();
                 return false;
             }
         }
@@ -45,7 +52,7 @@ module.exports = class CommandMessage {
         } catch (err) {
             this.client.emit("commandfailed", this, err);
             this.command.clearCooldown(this.message);
-            console.log(reject);
+            console.log(err);
         }
     }
     /**

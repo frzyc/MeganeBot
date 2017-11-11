@@ -24,7 +24,7 @@ class CommandDispatcher {
      */
     async handleMessage(message, oldMessage) {//old messgae before the update
         if (!this.preCheckMessage(message, oldMessage)) return;
-        if (!message.guild.members.has(message.author.id))
+        if (message.guild && !message.guild.members.has(message.author.id))
             await message.guild.members.fetch(message.author.id);
         let reasons = this.preprocess(message, oldMessage);
         if (reasons) return;

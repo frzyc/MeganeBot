@@ -22,7 +22,7 @@ module.exports = class CommandArgument {
     constructor(client, options) {
         this.constructor.preCheck(client, options);
         this.label = options.label;
-        this.type = options.type ? client.depot.types.get(options.type) : null;
+        this.type = options.type ? client.depot.types.get(options.type) : {id:'custom'};//if type is not defined, is is a custom type.
         this.description = options.description !== undefined ? options.description : null;
         this.min = options.min !== undefined ? options.min : null;
         this.max = options.max !== undefined ? options.max : null;

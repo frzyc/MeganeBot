@@ -13,17 +13,25 @@ module.exports = class Command {
      * @property {String} name - The name of the command. Should be unique to avoid conflicts
      * @property {string[]} [aliases] - Alternative names for the command (all must be unique)
      * @property {String} [id] - Will only be used internally.
-     * @property {CommandRestrictionFunction} [restriction] - Restriction function.
-     * @property {CommandArgumentOptions[]} [args] - Arguments for the command.
      * @property {string} [module] - The ID of the module the command belongs to (must be lowercase)
      * @property {string} [usage] - A short usage description of the command. Usally following the command argument template 
      * @property {string} [description] - A detailed description of the command
      * @property {string[]} [examples] - Usage examples of the command
+     * @property {CommandRestrictionFunction} [restriction] - Restriction function.
+     * @property {CommandArgumentOptions[]} [args] - Arguments for the command.
      * @property {boolean} [ownerOnly=false] - Whether or not the command should only function for the bot owner
+     * Will override the property passed down from module.
      * @property {boolean} [guildOnly=false] - Whether or not the command should only function in a guild channel
+     * Will override any property passed down from module.
      * @property {boolean} [dmOnly=false] - Whether or not the command should only function in a direct message channel
+     * Will override any property passed down from module.
+     * @property {boolean} [defaultDisable=false] - Determines whether if this command is disabled by default. 
+     * Will override any property passed down from module.
 	 * @property {PermissionResolvable[]} [clientPermissions] - Permissions required by the client to use the command.
+     * Will override any Permissions passed down from module.
 	 * @property {PermissionResolvable[]} [userPermissions] - Permissions required by the user to use the command.
+     * Will override any Permissions passed down from module.
+     * TODO defaultDisable - 
 	 * @property {ThrottlingOptions} [throttling] - Options for throttling usages of the command.
      * @property {number} [numArgs] - The number of arguments to parse. The arguments are separated by white space. 
      * The last argument will have the remaining command string, white space and all. 
@@ -33,8 +41,8 @@ module.exports = class Command {
     /**
      * @typedef {function} CommandRestrictionFunction
      * @param {CommandMessage} cmdMsg
-     * @returns {false|string} - return false if command should not be restricted, and return a string for the reason if it does need to be restricted. 
-     * This will be ran after checking command restrictions and before parsing command arguments. 
+     * @returns {false|string} - return false if command should not be restricted, and return true, or a string for the reason if it does need to be restricted. 
+     * This will be ran after checking command restrictions and parsing the specific command, but before parsing command arguments. 
      */
 
     /**
@@ -60,9 +68,11 @@ module.exports = class Command {
         this.description = options.description ? options.description : null;
         this.examples = options.examples ? options.examples : null;
         this.restriction = options.restriction === undefined ? false : options.restriction;
-        this.ownerOnly = options.ownerOnly === undefined ? false : options.ownerOnly;
-        this.ownerOnly = options.guildOnly === undefined ? false : options.guildOnly;
-        this.ownerOnly = options.dmOnly === undefined ? false : options.dmOnly;
+        this.ownerOnly = options.ownerOnly;
+        this.ownerOnly = options.guildOnly;
+        this.ownerOnly = options.dmOnly;
+        this.defaultDisable = options.defaultDisable;
+        this.enabledInGuild = new Map();
         if (options.throttling) {
             this.userCooldown = options.throttling.userCooldown === undefined ? false : options.throttling.userCooldown;
             this.serverCooldown = options.throttling.serverCooldown === undefined ? false : options.throttling.serverCooldown;
@@ -246,6 +256,24 @@ module.exports = class Command {
         }
 
     }
+    getEnabledInGuild(guild) {
+        let guildid = guild.id;
+        if (this.enabledInGuild.has(guildid)) {
+            return this.enabledInGuild.get(guildid);
+        } else if (this.defaultDisable)
+            return false;
+        return true
+    }
+    setEnabledInGuild(guild, enabled) {
+        let guildid = guild.id;
+        let old;
+        if(this.enabledInGuild.has(guildid))
+            old = this.enabledInGuild.get(guildid);
+        if(enabled!==old){
+            this.enabledInGuild.set(guildid, enabled);
+            this.client.emit('CommandEnabledChange', guild, this, enabled);
+        }
+    }
     static preCheck(client, options) {
         if (!client) throw new Error('A client must be specified.');
         if (typeof options !== 'object') throw new TypeError('CommandOptions must be an object.');
@@ -273,6 +301,15 @@ module.exports = class Command {
             for (const perm of options.userPermissions)
                 if (!permissions[perm]) throw new RangeError(`CommandOptions.userPermission has an invalid entry: ${perm} `);
         }
+        if (typeof options.guildOnly !== 'undefined' && typeof options.guildOnly !== 'boolean')
+            throw new TypeError('CommandOptions.guildOnly must be a boolean.');
+        if (typeof options.dmOnly !== 'undefined' && typeof options.dmOnly !== 'boolean')
+            throw new TypeError('CommandOptions.dmOnly must be a boolean.');
+        if (typeof options.ownerOnly !== 'undefined' && typeof options.ownerOnly !== 'boolean')
+            throw new TypeError('CommandOptions.ownerOnly must be a boolean.');
+        if (typeof options.defaultDisable !== 'undefined' && typeof options.defaultDisable !== 'boolean')
+            throw new TypeError('CommandOptions.defaultDisable must be a boolean.');
+        if (options.guildOnly && options.dmOnly) throw new Error('CommandOptions guildOnly and dmOnly are mutually exclusive.');
         if (options.throttling) {
             if (typeof options.throttling !== 'object') throw new TypeError('CommandOptions.throttling must be an Object.');
             if (

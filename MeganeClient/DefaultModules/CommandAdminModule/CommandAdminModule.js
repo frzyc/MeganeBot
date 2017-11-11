@@ -1,8 +1,8 @@
 const CommandModule = require('../../CommandModule');
-module.exports = class CommandCommandModule extends CommandModule {
+module.exports = class CommandAdminModule extends CommandModule {
     constructor(client) {
         super(client, {
-            name: "CommandCommandModule",
+            name: "CommandAdminModule",
             description: "A module for managing commands and modules",
         });
 

@@ -1,4 +1,4 @@
-module.exports = class ProviderBase{
+module.exports = class ColumnBase{
     constructor(){
     }
     init(client){

@@ -4,7 +4,7 @@ module.exports = class GuildExtension {
     }
     set prefix(newPrefix) {
         this.prefixForCommands = newPrefix;
-        this.client.emit("guildPrefixChange", this, this.prefixForCommands);
+        this.client.emit("CommandPrefixChange", this, this.prefixForCommands);
     }
     static doExtension(baseClass) {
         for (const prop of [

@@ -28,9 +28,6 @@ module.exports = class MessageUtil {
      * @param {MessageUtilOptions} options 
      */
     constructor(client, options) {
-        console.log('new MessageUtils');
-        console.log(client);
-        console.log(options);
         this.constructor.preCheck(client, options);
         Object.defineProperty(this, 'client', { value: client });
         this.constructor.preCheck(client, options);
@@ -67,14 +64,15 @@ module.exports = class MessageUtil {
         //TODO if a message is deleted, remove it from the waitlist
         if (this.deleteTime && msgToPostProcess.deletable) msgToPostProcess.delete(this.deleteTime).catch(console.error);
         if (this.destinationDeleteTime && this.destMessage && this.destMessage.deletable) message.delete(this.destinationDeleteTime).catch(console.error);
-
+        let dmChannel = msgToPostProcess.channel.type === "dm";//reactions and such interactions does not work for a DM channel.
         if (this.reactions) {
-            await msgToPostProcess.clearReactions();
+            if (!dmChannel)
+                await msgToPostProcess.clearReactions();
             for (let reaction of this.reactions)
                 await msgToPostProcess.react(reaction.emoji);
             //add the functions to the waitlist after the reactions are all added.
             for (let reaction of this.reactions) {
-                if (reaction.execute) {
+                if (reaction.execute && !dmChannel) {
                     if (!this.client.dispatcher.watchlist.has(msgToPostProcess.id))
                         this.client.dispatcher.watchlist.set(msgToPostProcess.id, new Collection());
                     this.client.dispatcher.watchlist.get(msgToPostProcess.id).set(reaction.emoji, reaction);
