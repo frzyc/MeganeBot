@@ -15,11 +15,7 @@ module.exports = {
     Type: require('./DefaultTypes/Type'),
 
     Table: require(`./${provider}/Table`),
-<<<<<<< HEAD
     ColumnBase: require(`./${provider}/ColumnBase`),
-=======
-    Columnbase: require(`./${provider}/Columnbase`),
->>>>>>> origin/master
     GeneralDataColumn: require(`./${provider}/GeneralDataColumn`),
     GuildData: require(`./${provider}/GuildData`),
 };
