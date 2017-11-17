@@ -15,7 +15,7 @@ module.exports = {
     Type: require('./DefaultTypes/Type'),
 
     Table: require(`./${provider}/Table`),
-    Columnbase: require(`./${provider}/Columnbase`),
+    ColumnBase: require(`./${provider}/ColumnBase`),
     GeneralDataColumn: require(`./${provider}/GeneralDataColumn`),
     GuildData: require(`./${provider}/GuildData`),
 };
