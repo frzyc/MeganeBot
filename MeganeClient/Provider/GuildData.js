@@ -4,8 +4,13 @@ const GeneralDataColumn = require('./GeneralDataColumn');
  * A class to deal general guild data.
  */
 module.exports = class GuildData extends GeneralDataColumn {
+<<<<<<< HEAD
     constructor(table, columnName) {
         super(table, columnName);
+=======
+    constructor(table,columnName) {
+        super(table,columnName);
+>>>>>>> origin/master
         this.listeners = new Map();
     }
     async init() {
@@ -16,7 +21,11 @@ module.exports = class GuildData extends GeneralDataColumn {
         for (const row of rows) {
             let data;
             try {
+<<<<<<< HEAD
                 if (!row.data || row.data === 'null' || row.data === 'undefined') continue;
+=======
+                if(!row.data ||row.data ==='null' || row.data ==='undefined') continue;
+>>>>>>> origin/master
                 data = JSON.parse(row.data);
             } catch (err) {
                 this.client.emit('warn', `GuildData couldn't parse the data stored for guild ${row.guildid}.`);
@@ -26,15 +35,22 @@ module.exports = class GuildData extends GeneralDataColumn {
             const guildid = row[this.table.primaryKey] !== '0' ? row[this.table.primaryKey] : 'global';
             this.data.set(guildid, data);
             if (guildid !== 'global' && !this.client.guilds.has(guildid)) continue;
+<<<<<<< HEAD
             else if(guildid === 'global'){
                 this.client.prefix = data.prefix;
             }
+=======
+>>>>>>> origin/master
             this.setupGuild(guildid, data);
         }
 
         this.listeners
+<<<<<<< HEAD
             .set('CommandPrefixChange', (guild, prefix) => this.set(guild, 'prefix', prefix ? prefix : null))
             .set('CommandEnabledChange', (command, enabled) => this.set(guild, `cmd-enabled-${command.id}`, enabled))
+=======
+            .set('guildPrefixChange', (guild, prefix) => this.set(guild, 'prefix', prefix ? prefix : null))
+>>>>>>> origin/master
         for (const [event, listener] of this.listeners) this.client.on(event, listener);
     }
     async destroy() {
