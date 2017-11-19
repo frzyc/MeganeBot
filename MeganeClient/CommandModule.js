@@ -75,7 +75,7 @@ class CommandModule extends CommandAndModule{
             },
             reactions: [{
                 emoji: '❌',
-                process: (reactionMessage, user) => {
+                execute: (reactionMessage, user) => {
                     reactionMessage.message.delete();
                 }
             }],

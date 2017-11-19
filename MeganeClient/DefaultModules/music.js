@@ -67,7 +67,7 @@ playQueue.prototype.addtoQueue = function (trackObj,message) {
         messageContent: `Queued ${trackObj.prettyPrint()}`,
         emojis: [{
             emoji: '❌',
-            process: (reactionMessage, user) => {
+            execute: (reactionMessage, user) => {
                 if (user.id !== trackObj.userId) return;
                 reactionMessage.remove();
                 this.removefromQueue(trackObj.trackId);
@@ -221,7 +221,7 @@ playQueue.prototype.getPlayingmessageResolvable = function (editmsg) {
         playmsgresolvable.emojis = [
             {
                 emoji: '⏯',
-                process: (messageReaction, user) => {
+                execute: (messageReaction, user) => {
                     if (this.paused) this.resume();
                     else this.pause();
                     return Promise.resolve();
@@ -229,42 +229,42 @@ playQueue.prototype.getPlayingmessageResolvable = function (editmsg) {
             },
             {
                 emoji: '⏭',
-                process: (messageReaction, user) => {
+                execute: (messageReaction, user) => {
                     this.stop();
                     return Promise.resolve();
                 }
             },
             {
                 emoji: '🔀',
-                process: (messageReaction, user) => {
+                execute: (messageReaction, user) => {
                     this.shuffleQueue();
                     return Promise.resolve();
                 }
             },
             {
                 emoji: '🔉',
-                process: (messageReaction, user) => {
+                execute: (messageReaction, user) => {
                     this.volDec();
                     return Promise.resolve();
                 }
             },
             {
                 emoji: '🔊',
-                process: (messageReaction, user) => {
+                execute: (messageReaction, user) => {
                     this.volInc();
                     return Promise.resolve();
                 }
             },
             {
                 emoji: '🔠',
-                process: (messageReaction, user) => {
+                execute: (messageReaction, user) => {
                     this.sendPlaylistMessage();
                     return Promise.resolve();
                 }
             },
             {
                 emoji: '⬇',
-                process: (messageReaction, user) => {
+                execute: (messageReaction, user) => {
                     this.sendPlayingmessage();
                     return Promise.resolve();
                 }
@@ -342,7 +342,7 @@ playQueue.prototype.playStopped = function () {
             },
             emojis: [{
                 emoji: '↪',
-                process: (messageReaction, user) => {
+                execute: (messageReaction, user) => {
                     this.addtoQueue(curTrack, curTrack.playingMessage);
                     return Promise.resolve()
                 }

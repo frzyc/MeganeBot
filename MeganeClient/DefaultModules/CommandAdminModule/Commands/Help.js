@@ -96,7 +96,7 @@ module.exports = class Help extends Command {
             },
             reactions: [{
                 emoji: '❌',
-                process: (reactionMessage, user) => {
+                execute: (reactionMessage, user) => {
                     reactionMessage.message.delete();
                 }
             }],

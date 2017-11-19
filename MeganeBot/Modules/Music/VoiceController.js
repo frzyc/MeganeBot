@@ -88,7 +88,7 @@ module.exports = class VoiceController {
         const voiceConnection = this.getVoiceConnection();
         if (voiceConnection && voiceConnection.player.dispatcher)
             await voiceConnection.player.dispatcher.end();
-        voiceConnection.channel.leave();
+        if (voiceConnection && voiceConnection.channel) voiceConnection.channel.leave();
     }
     async joinvoice(message) {
         let usrVoiceChannel = this.getAuthorVoiceChannel(message);

@@ -103,7 +103,7 @@ module.exports = class Command extends CommandAndModule{
             },
             reactions: [{
                 emoji: '❌',
-                process: (reactionMessage, user) => {
+                execute: (reactionMessage, user) => {
                     reactionMessage.message.delete();
                 }
             }],
