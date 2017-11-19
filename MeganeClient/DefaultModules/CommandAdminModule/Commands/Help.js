@@ -91,7 +91,7 @@ module.exports = class Help extends Command {
                 embed: {
                     color: 3447003,
                     title: `List of results`,
-                    description: `${modules ? modules.length + " Modules and " : ""}${commands ? commands.length + " Commands" : ""} found.`,
+                    description: `${modules ? modules.length + " Modules" : ""}${commands ? "and "+commands.length + " Commands" : ""} found.`,
                 }
             },
             reactions: [{

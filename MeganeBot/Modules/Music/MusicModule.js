@@ -4,7 +4,7 @@ module.exports = class MusicModule extends CommandModule{
     constructor(client){
         super(client, {
             name: "musicmodule",
-            description: "A module to play music.",
+            usage: "A module to play music.",
             guildOnly: true
         });
         this.playQueueManager = new PlayQueueManager(client);

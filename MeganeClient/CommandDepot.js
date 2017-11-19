@@ -39,7 +39,7 @@ module.exports = class CommandDepot {
         return this;
     }
     findModules(searchString = null, exact = false, message = null) {
-        if (!searchString) return message ? this.modules.filterArray(mod => mod.passContextRestriction(message) && mod.passPermissions(message)) : this.modules;
+        if (!searchString) return message ? this.modules.filterArray(mod => mod.passContextRestriction(message) && mod.passPermissions(message)) : Array.from(this.modules.values());
         const lcSearch = searchString.toLowerCase();
         const matchedModules = this.modules.filterArray(
             mod => {
@@ -110,7 +110,7 @@ module.exports = class CommandDepot {
     return this;*/
     //}
     findCommands(searchString = null, exact = false, message = null) {
-        if (!searchString) return message ? this.commands.filterArray(cmd => cmd.passContextRestriction(message) && cmd.passPermissions(message)) : this.commands;
+        if (!searchString) return message ? this.commands.filterArray(cmd => cmd.passContextRestriction(message) && cmd.passPermissions(message)) : Array.from(this.commands.values());
 
         const lcSearch = searchString.toLowerCase();
         const matchedCommands = this.commands.filterArray(
