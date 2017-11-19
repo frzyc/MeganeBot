@@ -46,9 +46,10 @@ module.exports = class GeneralDataColumn extends ColumnBase {
             this.data.set(dbPrimaryKey, {});
             data = this.data.get(dbPrimaryKey);
         }
-
+        let prev = data[dataKey]
         data[dataKey] = val;
-        await this.changeStatement.run(dbPrimaryKey, JSON.stringify(data));
+        if (prev !== val)
+            await this.changeStatement.run(dbPrimaryKey, JSON.stringify(data));
     }
     async remove(dbPrimaryKey, dataKey) {
         const data = this.data.get(dbPrimaryKey);

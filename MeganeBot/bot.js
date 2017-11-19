@@ -30,8 +30,8 @@ client
         }
         console.log(`Ready to serve in ${client.channels.size} channels on ${client.guilds.size} servers, for a total of ${client.users.size} users.`);
         console.log(client);
-    })
-    .on('disconnect', (m) => {
+    });
+    /*.on('disconnect', (m) => {
         console.log(`[disconnect]:ReconnTimer:${reconnTimer}`, m)
         function reconn(time) {
             if (reconnTimer != null) return;
@@ -48,7 +48,7 @@ client
             }, time);
         }
         reconn(10000);
-    });
+    });*/
 
 /*
 process.on("unhandledRejection", err => {

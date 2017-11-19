@@ -1,12 +1,12 @@
 const discord = require('discord.js');
 const Util = require('./Utility/Util');
 const CommandArgument = require('./CommandArgument');
-const permissions = require('./Utility/permissions.json');
 const MessageUtil = require('./MessageUtil');
+const CommandAndModule = require('./CommandAndModule');
 /**
  * This is the base Command class. All commands should extend this class.
 */
-module.exports = class Command {
+module.exports = class Command extends CommandAndModule{
     /**
      * Options that sets the format and property of the a command.
      * @typedef {Object} CommandOptions
@@ -58,28 +58,18 @@ module.exports = class Command {
      * @param {CommandOptions} options
      */
     constructor(client, options) {
-        this.constructor.preCheck(client, options);
-        Object.defineProperty(this, 'client', { value: client });
-        this.name = options.name;
-        this.id = options.id;
+        super(client,options);
+        this.constructor.CommandPreCheck(client, options);
         this.aliases = options.aliases ? options.aliases : [];
         this.moduleID = options.module;
-        this.usage = options.usage ? options.usage : null;
-        this.description = options.description ? options.description : null;
         this.examples = options.examples ? options.examples : null;
         this.restriction = options.restriction === undefined ? false : options.restriction;
-        this.ownerOnly = options.ownerOnly;
-        this.ownerOnly = options.guildOnly;
-        this.ownerOnly = options.dmOnly;
-        this.defaultDisable = options.defaultDisable;
         this.enabledInGuild = new Map();
         if (options.throttling) {
             this.userCooldown = options.throttling.userCooldown === undefined ? false : options.throttling.userCooldown;
             this.serverCooldown = options.throttling.serverCooldown === undefined ? false : options.throttling.serverCooldown;
             this.channelCooldown = options.throttling.channelCooldown === undefined ? false : options.throttling.channelCooldown;
         }
-        this.clientPermissions = options.clientPermissions || null;
-        this.userPermissions = options.userPermissions || null;
         if (options.args) {
             this.args = new Array(options.args.length);
             for (let i = 0; i < options.args.length; i++) this.args[i] = new CommandArgument(this.client, options.args[i]);
@@ -101,7 +91,7 @@ module.exports = class Command {
             prefix = "<@mentionme> ";
         //TODO getUsageEmbededMessageObject
         let title = `Usage of **${this.name}${this.aliases.length > 0 ? ", " + this.aliases.join(", ") : ""}**`;
-        let desc = `**${prefix}${this.name} ${this.getTemplateArguments()}** \n${this.usage}`;
+        let desc = `**${prefix}${this.name} ${this.getTemplateArguments()}**\n${this.usage}`;
         let msgobj = {
             deleteTimeCmdMessage: 5 * 60 * 1000,
             messageOptions: {
@@ -119,7 +109,7 @@ module.exports = class Command {
             }],
         };
         msgobj.messageOptions.embed.fields = [];
-        if (this.description) {
+        if (this.hasDescription()) {
             msgobj.messageOptions.embed.fields.push({
                 name: `Description`,
                 value: `${this.description}`
@@ -137,7 +127,7 @@ module.exports = class Command {
             for (let arg of this.args) {
                 msgobj.messageOptions.embed.fields.push({
                     name: `Argument: ${arg.label}`,//TODO put a description for default, multiple, remaining -> `Optional Argument:` ...
-                    value: `Type: ${arg.type.id}${arg.description ? '\nDescription: ' + arg.description : ''}`
+                    value: `Type: **${arg.type.id}**\nDescription:\n${arg.description}`
                 })
             }
         }
@@ -147,8 +137,8 @@ module.exports = class Command {
      * creates a template for the arguments, based on the args of this command
      */
     getTemplateArguments() {
-        if (!this.args) return " [input...]";
-        return this.args.map(arg => `[${arg.label}]`).join(" ");
+        if (!this.args) return "";
+        return this.args.map(arg => typeof arg.default === 'undefined' ? `[${arg.label}]` : `<${arg.label}>`).join(" ");
     }
     /**
      * Start the cooldown peroid of the command
@@ -206,42 +196,8 @@ module.exports = class Command {
             clrCD('serverCooldown', message.guild.id);
         clrCD('channelCooldown', message.channel.id);
     }
-    hasPermissions(message) {
-        if (this.userPermissions &&
-            message.channel.type === 'text' // && !message.member.permissions.hasPermission(this.userPermissions)
-        ) {
-            const missing = message.channel.permissionsFor(message.author).missing(this.userPermissions);
-            if (missing.length > 0) {
-                (new MessageUtil(this.client, { messageContent: `You don't have enough permissions to use ${this.name}. missing:\n${missing.map(p => permissions[p]).join(', and ')}`, deleteTime: 5 * 60 })).execute();
-                return false;
-            }
-        }
-        if (this.clientPermissions &&
-            message.channel.type === 'text' //commands are only existant in text channels
-        ) { //!message.channel.permissionsFor(this.client.user).has(this.clientPermissions)
-            const missing = message.channel.permissionsFor(this.client.user).missing(this.userPermissions);
-            if (missing.length > 0) {
-                (new MessageUtil(this.client, { destination: message, messageContent: `I don't have enough permissions to use this command. missing:\n${missing.map(p => permissions[p]).join(', and ')}`, deleteTime: 5 * 60 })).execute();
-                return false;
-            }
-        }
-
-    }
-    checkRestriction(message) {
-        //check Location restriction
-        let returnMsg = null;
-        if (this.dmOnly && message.channel.type === 'text') returnMsg = 'direct message';
-        else if (this.guildOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) returnMsg = 'server';
-        else if (this.ownerOnly && !this.client.isOwner(message.author.id)) returnMsg = 'botowner only';
-        if (returnMsg) {
-            let msgResponse = new MessageUtil(this.client, { destination: message, messageContent: `This command is restricted to ${returnMsg} only.`, deleteTime: 10 });
-            msgResponse.execute();
-        }
-        return false;
-
-        //check permission restriction
-        hasPermissions(message);
-
+    
+    passCooldown(message, reply = false) {
         //check cooldown restriction
         let inCD = this.inCooldown(message);
         if (inCD) {
@@ -250,11 +206,11 @@ module.exports = class Command {
             if (inCD.userCooldown) msg += `This command is time- restricted per user.Cooldown: ${inCD.userCooldown / 1000} seconds.\n`
             if (inCD.serverCooldown) msg += `This command is time- restricted per server.Cooldown: ${inCD.serverCooldown / 1000} seconds.\n`
             if (inCD.channelCooldown) msg += `This command is time- restricted per channel.Cooldown: ${inCD.channelCooldown / 1000} seconds.\n`
-            let msgResponse = new MessageUtil(this.client, { destination: message, messageContent: msg, deleteTime: 10 });
-            msgResponse.execute();
-            return msgResponse;
+            if (reply)
+                (new MessageUtil(this.client, { destination: message, messageContent: msg, deleteTime: 10 })).execute();
+            return false;
         }
-
+        return true;
     }
     getEnabledInGuild(guild) {
         let guildid = guild.id;
@@ -267,49 +223,20 @@ module.exports = class Command {
     setEnabledInGuild(guild, enabled) {
         let guildid = guild.id;
         let old;
-        if(this.enabledInGuild.has(guildid))
+        if (this.enabledInGuild.has(guildid))
             old = this.enabledInGuild.get(guildid);
-        if(enabled!==old){
+        if (enabled !== old) {
             this.enabledInGuild.set(guildid, enabled);
             this.client.emit('CommandEnabledChange', guild, this, enabled);
         }
     }
-    static preCheck(client, options) {
-        if (!client) throw new Error('A client must be specified.');
-        if (typeof options !== 'object') throw new TypeError('CommandOptions must be an object.');
-        if (typeof options !== 'object') throw new TypeError('CommandOptions.options must be an Object.');
-        if (typeof options.name !== 'string') throw new TypeError('CommandOptions.name must be a string.');
+    static CommandPreCheck(client, options) {
         //if (options.name !== options.name.toLowerCase()) throw new Error('CommandOptions.name must be lowercase.');
         if (options.aliases && (!Array.isArray(options.aliases) || options.aliases.some(ali => typeof ali !== 'string'))) throw new TypeError('CommandOptions.aliases must be an Array of strings.');
         if (options.aliases && options.aliases.some(ali => ali !== ali.toLowerCase())) throw new Error('CommandOptions.aliases must be lowercase.');
-        if (options.id && typeof options.id !== 'string') throw new TypeError('CommandOptions.id must be a string.');
-        if (!options.id) options.id = options.name.toLowerCase();
-        if (options.usage && typeof options.usage !== 'string') throw new TypeError('CommandOptions.usage must be a string.');
-        if (options.description && typeof options.description !== 'string') throw new TypeError('CommandOptions.description must be a string.');
         if (options.restriction && typeof options.restriction !== 'function') throw new TypeError('CommandOptions.restriction must be a function.');
         if (options.module && typeof options.module !== 'string') throw new TypeError('CommandOptions.module must be a string.');
         if (options.module && options.module !== options.module.toLowerCase()) throw new Error('CommandOptions.module must be lowercase.');
-        if (options.clientPermissions) {
-            if (!Array.isArray(options.clientPermissions))
-                throw new TypeError('CommandOptions.clientPermissions must be an Array of permission key strings.');
-            for (const perm of options.clientPermissions)
-                if (!permissions[perm]) throw new RangeError(`CommandOptions.clientPermission has an invalid entry: ${perm} `);
-        }
-        if (options.userPermissions) {
-            if (!Array.isArray(options.userPermissions))
-                throw new TypeError('CommandOptions.userPermissions must be an Array of permission key strings.');
-            for (const perm of options.userPermissions)
-                if (!permissions[perm]) throw new RangeError(`CommandOptions.userPermission has an invalid entry: ${perm} `);
-        }
-        if (typeof options.guildOnly !== 'undefined' && typeof options.guildOnly !== 'boolean')
-            throw new TypeError('CommandOptions.guildOnly must be a boolean.');
-        if (typeof options.dmOnly !== 'undefined' && typeof options.dmOnly !== 'boolean')
-            throw new TypeError('CommandOptions.dmOnly must be a boolean.');
-        if (typeof options.ownerOnly !== 'undefined' && typeof options.ownerOnly !== 'boolean')
-            throw new TypeError('CommandOptions.ownerOnly must be a boolean.');
-        if (typeof options.defaultDisable !== 'undefined' && typeof options.defaultDisable !== 'boolean')
-            throw new TypeError('CommandOptions.defaultDisable must be a boolean.');
-        if (options.guildOnly && options.dmOnly) throw new Error('CommandOptions guildOnly and dmOnly are mutually exclusive.');
         if (options.throttling) {
             if (typeof options.throttling !== 'object') throw new TypeError('CommandOptions.throttling must be an Object.');
             if (

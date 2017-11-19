@@ -38,33 +38,29 @@ module.exports = class CommandDepot {
         }
         return this;
     }
-    findModules(searchString = null, exact = false) {
-        if (!searchString) return this.modules;
+    findModules(searchString = null, exact = false, message = null) {
+        if (!searchString) return message ? this.modules.filterArray(mod => mod.passContextRestriction(message) && mod.passPermissions(message)) : this.modules;
         const lcSearch = searchString.toLowerCase();
         const matchedModules = this.modules.filterArray(
-            exact ? moduleFilterExact(lcSearch) : moduleFilterInexact(lcSearch)
+            mod => {
+                if (exact) return mod.id === lcSearch || mod.name.toLowerCase() === lcSearch;
+                else return mod.id.includes(lcSearch) || mod.name.toLowerCase().includes(lcSearch);
+            }
         );
-        if (exact) return matchedGroups;
+        if (exact) return matchedModules;
 
-        for (const mod of matchedGroups) {
+        for (const mod of matchedModules) {
             if (mod.name.toLowerCase() === lcSearch || mod.id === lcSearch) return [mod];
         }
-        return matchedGroups;
-        function ModuleFilterExact(search) {//has to match the id exactly
-            return mod => mod.id === search || mod.name.toLowerCase() === search;
-        }
-
-        function ModuleFilterInexact(search) {//can partially match the id
-            return mod => mod.id.includes(search) || mod.name.toLowerCase().includes(search);
-        }
+        return matchedModules;
     }
     getModule(module) {
         if (module instanceof CommandModule) return module;
         if (typeof module === 'string') {
-            const modules = this.findGroups(module, true);
+            const modules = this.findModules(module, true);
             if (modules.length === 1) return modules[0];
         }
-        throw new Error('Unable to resolve group.');
+        throw new Error('Unable to resolve module.');
     }
 
     addCommands(commands) {
@@ -85,9 +81,9 @@ module.exports = class CommandDepot {
                 throw new Error(`A command with the name/alias "${alias}" is already added.`);
             }
         }
-        if(!command.moduleID) throw new Error('A command must have a moduleID to attach to a module.');//TODO create a internal module to store all the cmds without a module.
+        if (!command.moduleID) throw new Error('A command must have a moduleID to attach to a module.');//TODO create a internal module to store all the cmds without a module.
         const module = this.modules.find(mod => mod.id === command.moduleID);
-        if (!module) throw new Error(`Group "${command.moduleID}" is not added.`);
+        if (!module) throw new Error(`Module "${command.moduleID}" is not added.`);
         if (module.commands.some(cmd => cmd.id === command.id)) {
             this.client.emit('debug', `A command with the id "${command.id}" is already added in ${module.id}`);
         }
@@ -100,47 +96,37 @@ module.exports = class CommandDepot {
         this.client.emit('debug', `Added command ${module.id}:${command.id}.`);
         return this;
     }
-    addCommandsInDir(){
-        /* TODO add all commands in a directory
-        fs.readdir('./glassesicon', (err, files) => { 
-            if (err) {
-                console.error(err);
-            }
-            files.forEach(file => {
-                console.log(file);
-            });
-            this.addCommands(files);
+    //addCommandsInDir(){
+    /* TODO add all commands in a directory
+    fs.readdir('./glassesicon', (err, files) => { 
+        if (err) {
+            console.error(err);
+        }
+        files.forEach(file => {
+            console.log(file);
         });
-        return this;*/
-    }
+        this.addCommands(files);
+    });
+    return this;*/
+    //}
     findCommands(searchString = null, exact = false, message = null) {
-        if (!searchString) return message ? this.commands.filterArray(cmd => cmd.hasPermissions(message)) : this.commands;
+        if (!searchString) return message ? this.commands.filterArray(cmd => cmd.passContextRestriction(message) && cmd.passPermissions(message)) : this.commands;
 
         const lcSearch = searchString.toLowerCase();
         const matchedCommands = this.commands.filterArray(
-            exact ? commandFilterExact(lcSearch) : commandFilterInexact(lcSearch)
+            cmd => {
+                if (exact) return cmd.name === lcSearch || (cmd.aliases && cmd.aliases.some(ali => ali === lcSearch)) || `${cmd.moduleID}:${cmd.memberName}` === lcSearch;
+                else return cmd.name.includes(lcSearch) || `${cmd.moduleID}:${cmd.memberName}` === lcSearch || (cmd.aliases && cmd.aliases.some(ali => ali.includes(lcSearch)));
+            }
         );
         if (exact) return matchedCommands;
-
         // See if there's an exact match
         for (const command of matchedCommands) {
             if (command.name === lcSearch || (command.aliases && command.aliases.some(ali => ali === lcSearch))) {
                 return [command];
             }
         }
-
         return matchedCommands;
-        function commandFilterExact(search) {
-            return cmd => cmd.name === search ||
-                (cmd.aliases && cmd.aliases.some(ali => ali === search)) ||
-                `${cmd.moduleID}:${cmd.memberName}` === search;
-        }
-
-        function commandFilterInexact(search) {
-            return cmd => cmd.name.includes(search) ||
-                `${cmd.moduleID}:${cmd.memberName}` === search ||
-                (cmd.aliases && cmd.aliases.some(ali => ali.includes(search)));
-        }
     }
 
     resolveCommand(command) {

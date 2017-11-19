@@ -15,7 +15,9 @@ module.exports = class CommandMessage {
     }
     async execute() {
         //command based restrictions
-        if (this.command.checkRestriction(this.message)) return;
+        if (!this.command.passContextRestriction(this.message, true)) return;
+        if (!this.command.passCooldown(this.message, true)) return;//check CD first, since if it is already on cooldown, it probably means it passed permissions
+        if (!this.command.passPermissions(this.message, true)) return;
         if (this.command.restriction) {
             let restiction = await this.command.restriction(this);
             if (restiction) {
@@ -101,7 +103,7 @@ module.exports = class CommandMessage {
                         continue;
                     }
                     if (sep && sep.length > 0 && await arg.validate(sep[0], this.message, arg))
-                        result[arg.label].push(sep[0]);
+                        result[arg.label].push(arg.parse(sep[0], this.message, arg));
                     else
                         return;
                     if (sep.length > 1)
@@ -137,7 +139,7 @@ module.exports = class CommandMessage {
                     continue;
                 }
                 if (sep && sep.length > 0 && await arg.validate(sep[0], this.message, arg))
-                    result[arg.label] = sep[0];
+                    result[arg.label] = arg.parse(sep[0], this.message, arg);
                 else
                     return;
                 if (sep.length > 1)

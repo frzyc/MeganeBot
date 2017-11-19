@@ -6,15 +6,15 @@ module.exports = class SetPrefix extends Command {
             name: 'set-prefix',
             aliases: ['setprefix'],
             examples: ['set-prefix !', 'setprefix command?'],
-            usage: `Change the command prefix for the guild.`,
-            description: `Use this command to change the command prefix for the guild. It must contain no whitespacecharacter. If nothing is put in, Then the prefix is removed, and only mentions can be used for commands.`,
+            usage: `Change the command prefix for the guild. Or change it for DM.`,
+            description: `Use this command to change the command prefix for the guild. It can also be used to change the DM prefix for botowners. \nIt must contain no whitespacecharacter. If nothing is put in, Then the prefix is removed, and only mentions can be used for commands.`,
             userPermissions: ['ADMINISTRATOR'],
             args: [
                 {
                     label: 'newprefix',
                     type: 'string',
                     default: "",
-                    description: "The new value to set a prefix for the commands in this guild. Can be anything without a whitespacecharacter. "
+                    description: "The new value to set a prefix for the commands. Can be anything without a whitespacecharacter. "
                 }
             ]
         });

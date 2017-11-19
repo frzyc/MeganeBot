@@ -11,13 +11,13 @@ module.exports = class GuildData extends GeneralDataColumn {
     async init() {
         super.init();
 
-        // Load all data
+        // Load all data TODO load only global, and load guild data as megane join more guilds?
         const rows = await this.db.all(`SELECT CAST(${this.table.primaryKey} as TEXT) as ${this.table.primaryKey}, ${this.columnName} FROM ${this.table.tableName}`);
         for (const row of rows) {
-            let data;
+            let data = row[this.columnName];
             try {
-                if (!row.data || row.data === 'null' || row.data === 'undefined') continue;
-                data = JSON.parse(row.data);
+                if (!data || data === 'null' || data === 'undefined') continue;
+                data = JSON.parse(data);
             } catch (err) {
                 this.client.emit('warn', `GuildData couldn't parse the data stored for guild ${row.guildid}.`);
                 continue;
@@ -25,15 +25,15 @@ module.exports = class GuildData extends GeneralDataColumn {
             //use the id 0 as the global setting
             const guildid = row[this.table.primaryKey] !== '0' ? row[this.table.primaryKey] : 'global';
             this.data.set(guildid, data);
-            if (guildid !== 'global' && !this.client.guilds.has(guildid)) continue;
-            else if(guildid === 'global'){
+            if (guildid !== 'global')
+                this.setupGuild(guildid, data);
+            else if (guildid === 'global') {
                 this.client.prefix = data.prefix;
             }
-            this.setupGuild(guildid, data);
         }
 
         this.listeners
-            .set('guildPrefixChange', (guild, prefix) => this.set(guild, 'prefix', prefix ? prefix : null))
+            .set('CommandPrefixChange', (guild, prefix) => this.set(guild, 'prefix', prefix ? prefix : null))
         for (const [event, listener] of this.listeners) this.client.on(event, listener);
     }
     async destroy() {
@@ -79,7 +79,11 @@ module.exports = class GuildData extends GeneralDataColumn {
         throw new TypeError('Invalid guild specified. Must be a Guild instance, guild ID, "global", or null.');
     }
     setupGuild(guildid, data) {
-        let guild = this.client.guilds.get(guildid) || null;
+        let guild = this.client.guilds.get(guildid);
+        if (!guild) {
+            this.client.emit("warn", `Cannot find the guild from database: ${guildid}`);
+            return;
+        }
         guild.prefix = data.prefix;//set the prefix for the guild from the data created from db. Even if it is null/undefined
     }
 

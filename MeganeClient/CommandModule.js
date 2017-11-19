@@ -1,14 +1,16 @@
 ﻿const discord = require('discord.js');
 const Command = require('./Command');
+const CommandAndModule = require('./CommandAndModule');
 /**
  * A module to hold commands. All commands belong in a module.
  */
-class CommandModule {
+class CommandModule extends CommandAndModule{
     /**
      * @typedef {Object} CommandModuleOptions
      * @property {name} name
      * @property {id} id can be generated from name, as long as it is unique. This value is not outwardly exposed, but its an unique key to reference the module.
-     * @property {string} [description] - A description of the module
+     * @property {string} [usage] - A short usage description of the module. U
+     * @property {string} [description] - A detailed description of the module
      * @property {Array[Command]} commands
      * @property {boolean} [ownerOnly=false] - This module and all its commands should only be used for bot owners. 
      * @property {boolean} [guildOnly=false] - This module and all its commands should only be used on a sever, not DM.
@@ -23,20 +25,10 @@ class CommandModule {
      * @param {CommandModuleOptions} options
      */
     constructor(client, options) {
-        this.constructor.preCheck(client, options);
-        Object.defineProperty(this, 'client', { value: client });
-        this.id = options.id;
-        this.name = options.name;
-        this.description = options.description;
+        super(client,options);
+        this.constructor.CommandModulePreCheck(client, options);
         this.commands = new discord.Collection();
         if (options.commands) for (const command of options.commands) this.addCommand(command);
-        this.description = options.description ? options.description : null;
-        this.ownerOnly = options.ownerOnly;
-        this.ownerOnly = options.guildOnly;
-        this.ownerOnly = options.dmOnly;
-        this.defaultDisable = options.defaultDisable;
-        this.clientPermissions = options.clientPermissions || null;
-        this.userPermissions = options.userPermissions || null;
         this.enabledInGuild = new Map();
     }
     addCommand(command) {
@@ -67,46 +59,45 @@ class CommandModule {
             this.addCommand(command);
         return this;
     }
-    /* TODO since this looks to be only really used for help command, should be moved there...
-    checkRestriction(message) {
-        if (this.dmOnly && message.channel.type === 'text') return 'direct message';
-        if (this.guildOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) return 'server';
-        if (this.ownerOnly && !this.client.isOwner(message.author.id)) return 'botowner only';
-        return '';
-    }*/
-    static preCheck(client, options) {
-        if (!client) throw new Error('A client must be specified.');
-        if (typeof options !== 'object') throw new TypeError('CommandModuleOptions must be an object.');
-        if (typeof options !== 'object') throw new TypeError('CommandModuleOptions.options must be an Object.');
-        if (typeof options.name !== 'string') throw new TypeError('CommandModuleOptions.name must be a string.');
-        if (!options.name || typeof options.name !== 'string') throw new TypeError('CommandModuleOptions.name must be a string.');
 
-        //if (options.name !== options.name.toLowerCase()) throw new Error('CommandModuleOptions.name must be lowercase.');
-        if (options.id && typeof options.id !== 'string') throw new TypeError('CommandModuleOptions.id must be a string.');
-        if (!options.id) options.id = options.name.toLowerCase();
+    getUsageEmbededMessageObject(message) {
+        //TODO getUsageEmbededMessageObject
+        let title = `Module: ${this.name}`;
+        let desc = `${this.usage}`;
+        let msgobj = {
+            deleteTimeCmdMessage: 5 * 60 * 1000,
+            messageOptions: {
+                embed: {
+                    color: 3447003,
+                    title: title,
+                    description: desc,
+                }
+            },
+            reactions: [{
+                emoji: '❌',
+                process: (reactionMessage, user) => {
+                    reactionMessage.message.delete();
+                }
+            }],
+        };
+        msgobj.messageOptions.embed.fields = [];
+        if (this.hasDescription()) {
+            msgobj.messageOptions.embed.fields.push({
+                name: `Description`,
+                value: `${this.description}`
+            })
+        }
+        for (let [key, cmd] of this.commands) {
+            msgobj.messageOptions.embed.fields.push({
+                name: `Command: ${cmd.name}${cmd.aliases && cmd.aliases.length > 0 ? ", " + cmd.aliases.join(", ") : ""}`,
+                value: `Usage: ${cmd.usage}`
+            })
+        }
+        return msgobj;
+    }
+
+    static CommandModulePreCheck(client, options) {
         if (options.commands && !Array.isArray(options.commands)) throw new TypeError('CommandModuleOptions.commands must be an Array of Commands.');
-        if (options.description && typeof options.description !== 'string') throw new TypeError('CommandModuleOptions.description must be a string.');
-        if (options.clientPermissions) {
-            if (!Array.isArray(options.clientPermissions))
-                throw new TypeError('CommandModuleOptions.clientPermissions must be an Array of permission key strings.');
-            for (const perm of options.clientPermissions)
-                if (!permissions[perm]) throw new RangeError(`CommandModuleOptions.clientPermission has an invalid entry: ${perm} `);
-        }
-        if (options.userPermissions) {
-            if (!Array.isArray(options.userPermissions))
-                throw new TypeError('CommandModuleOptions.userPermissions must be an Array of permission key strings.');
-            for (const perm of options.userPermissions)
-                if (!permissions[perm]) throw new RangeError(`CommandModuleOptions.userPermission has an invalid entry: ${perm} `);
-        }
-        if (typeof options.guildOnly !== 'undefined' && typeof options.guildOnly !== 'boolean')
-            throw new TypeError('CommandOptions.guildOnly must be a boolean.');
-        if (typeof options.dmOnly !== 'undefined' && typeof options.dmOnly !== 'boolean')
-            throw new TypeError('CommandOptions.dmOnly must be a boolean.');
-        if (typeof options.ownerOnly !== 'undefined' && typeof options.ownerOnly !== 'boolean')
-            throw new TypeError('CommandOptions.ownerOnly must be a boolean.');
-        if (typeof options.defaultDisable !== 'undefined' && typeof options.defaultDisable !== 'boolean')
-            throw new TypeError('CommandOptions.defaultDisable must be a boolean.');
-        if (options.guildOnly && options.dmOnly) throw new Error('CommandModuleOptions guildOnly and dmOnly are mutually exclusive.');
     }
 }
 module.exports = CommandModule;

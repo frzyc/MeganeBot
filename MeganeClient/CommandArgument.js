@@ -23,7 +23,7 @@ module.exports = class CommandArgument {
         this.constructor.preCheck(client, options);
         this.label = options.label;
         this.type = options.type ? client.depot.types.get(options.type) : {id:'custom'};//if type is not defined, is is a custom type.
-        this.description = options.description !== undefined ? options.description : null;
+        this.descriptionString =  options.description | null;
         this.min = options.min !== undefined ? options.min : null;
         this.max = options.max !== undefined ? options.max : null;
         this.default = options.default;
@@ -40,6 +40,15 @@ module.exports = class CommandArgument {
     parse(value, msg) {
         if (this.customParser) return this.customParser(value, msg, this);
         return this.type.parse(value, msg, this);
+    }
+
+    get description(){
+        if(!this.descriptionString) return "No description specified.";
+        return this.descriptionString;
+    }
+    hasDescription(){
+        if(this.descriptionString) return true;
+        return false;
     }
 
     /**
