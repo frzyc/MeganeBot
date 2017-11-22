@@ -13,7 +13,8 @@ try {//do a config.json check, the bot will not operate without a valid config.
 //initiate new client
 const client = new MeganeClient({
     prefix: config.prefix,
-    ownerids: config.ownerids
+    ownerids: config.ownerids,
+    profilePictureDirectory: "./MeganeBot/glassesicon"
 });
 exports.client = client;
 
@@ -82,7 +83,6 @@ client.depot.addModules([
 client.addDB(
     path.join(__dirname, 'data', 'db.sqlite3')
 ).catch(console.error);
-
 /* A small test client just to test some messages
 const Discord = require('discord.js');
 const client = new Discord.Client();

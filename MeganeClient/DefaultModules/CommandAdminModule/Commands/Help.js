@@ -1,4 +1,3 @@
-const MessageUtil = require('../../../MessageUtil');
 const Command = require('../../../Command');
 
 module.exports = class Help extends Command {
@@ -74,14 +73,14 @@ module.exports = class Help extends Command {
             let command = commands[0];
             let usageObj = command.getUsageEmbededMessageObject(message);
             usageObj.destination = message;
-            (new MessageUtil(this.client, usageObj)).execute();
+            this.client.autoMessageFactory(usageObj);
             return;
         }
         if (modules && modules.length === 1) {
             let mod = modules[0];
             let usageObj = mod.getUsageEmbededMessageObject(message);
             usageObj.destination = message;
-            (new MessageUtil(this.client, usageObj)).execute();
+            this.client.autoMessageFactory(usageObj);
             return;
         }
         //TODO add commands' modules to modules, and then print out the modules along with commands
@@ -119,6 +118,6 @@ module.exports = class Help extends Command {
             }
         }
         usageObj.destination = message;
-        (new MessageUtil(this.client, usageObj)).execute();
+        this.client.autoMessageFactory(usageObj);
     }
 }

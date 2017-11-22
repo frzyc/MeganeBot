@@ -2,7 +2,6 @@
 const CommandMessage = require('./CommandMessage');
 const Util = require('./Utility/Util');
 const { Collection } = require('discord.js');
-const MessageUtil = require('./MessageUtil');
 /**
  * Interface to handle commands from a CommandDepot
  */
@@ -51,10 +50,9 @@ class CommandDispatcher {
         if (typeof response === 'string') {
             this.message.reply(response);
         } else if (typeof response === 'object') {
-            let msgUtil = new MessageUtil(this.client, response);
-            msgUtil.execute();
+            this.client.autoMessageFactory(response);
         } else {
-            throw new TypeError("Response must be typeof [null|string|MessageUtilOptions].");
+            throw new TypeError("Response must be typeof [null|string|MessageFactoryOptions].");
         }
     }
 

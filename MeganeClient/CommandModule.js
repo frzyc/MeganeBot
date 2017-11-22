@@ -1,17 +1,19 @@
-﻿const discord = require('discord.js');
+﻿const fs = require('fs');
+const path = require('path');
+const discord = require('discord.js');
 const Command = require('./Command');
 const CommandAndModule = require('./CommandAndModule');
 /**
  * A module to hold commands. All commands belong in a module.
  */
-class CommandModule extends CommandAndModule{
+class CommandModule extends CommandAndModule {
     /**
      * @typedef {Object} CommandModuleOptions
      * @property {name} name
      * @property {id} id can be generated from name, as long as it is unique. This value is not outwardly exposed, but its an unique key to reference the module.
      * @property {string} [usage] - A short usage description of the module. U
      * @property {string} [description] - A detailed description of the module
-     * @property {Array[Command]} commands
+     * @property {Array[Command]} commands - A array of commands.
      * @property {boolean} [ownerOnly=false] - This module and all its commands should only be used for bot owners. 
      * @property {boolean} [guildOnly=false] - This module and all its commands should only be used on a sever, not DM.
      * @property {boolean} [dmOnly=false] - This module and all its commands should only be used on DM channels.
@@ -25,7 +27,7 @@ class CommandModule extends CommandAndModule{
      * @param {CommandModuleOptions} options
      */
     constructor(client, options) {
-        super(client,options);
+        super(client, options);
         this.constructor.CommandModulePreCheck(client, options);
         this.commands = new discord.Collection();
         if (options.commands) for (const command of options.commands) this.addCommand(command);
@@ -59,7 +61,16 @@ class CommandModule extends CommandAndModule{
             this.addCommand(command);
         return this;
     }
-
+    addCommandsIn(directory) {
+        if (!fs.existsSync(directory)) throw new Error(`"${directory}" is not an valid directory.`);
+        let files = fs.readdirSync(directory);
+        let cmdfile = [];
+        for (let file of files) {
+            if (path.extname(file) != '.js') continue;
+            cmdfile.push(file);
+        }
+        this.addCommands(cmdfile.map(file => require(path.join(directory, file))));
+    }
     getUsageEmbededMessageObject(message) {
         //TODO getUsageEmbededMessageObject
         let title = `Module: ${this.name}`;

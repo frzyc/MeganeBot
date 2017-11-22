@@ -4,7 +4,6 @@ const permissions = require('./Utility/permissions.json');
  */
 module.exports = class CommandAndModule {
     constructor(client, options) {
-        //TODO check context restrction and permissions in here bitch
         this.constructor.CommandAndModulePreCheck(client, options);
         Object.defineProperty(this, 'client', { value: client });
         this.name = options.name;
@@ -12,26 +11,26 @@ module.exports = class CommandAndModule {
         this.usageString = options.usage ? options.usage : null;
         this.descriptionString = options.description ? options.description : null;
         this.ownerOnly = options.ownerOnly;
-        this.ownerOnly = options.guildOnly;
-        this.ownerOnly = options.dmOnly;
+        this.guildOnly = options.guildOnly;
+        this.dmOnly = options.dmOnly;
         this.defaultDisable = options.defaultDisable;
         this.clientPermissions = options.clientPermissions || null;
         this.userPermissions = options.userPermissions || null;
     }
-    get usage(){
-        if(!this.usageString) return "No usage specified.";
+    get usage() {
+        if (!this.usageString) return "No usage specified.";
         return this.usageString;
     }
-    hasUsage(){
-        if(this.usageString) return true;
+    hasUsage() {
+        if (this.usageString) return true;
         return false;
     }
-    get description(){
-        if(!this.descriptionString) return "No description specified.";
+    get description() {
+        if (!this.descriptionString) return "No description specified.";
         return this.descriptionString;
     }
-    hasDescription(){
-        if(this.descriptionString) return true;
+    hasDescription() {
+        if (this.descriptionString) return true;
         return false;
     }
     passContextRestriction(message) {
@@ -39,10 +38,9 @@ module.exports = class CommandAndModule {
         let returnMsg = null;
         if (this.dmOnly && message.channel.type === 'text') returnMsg = 'direct message';
         else if (this.guildOnly && (message.channel.type === 'dm' || message.channel.type === 'group')) returnMsg = 'server';
-        else if (this.ownerOnly && !this.client.isOwner(message.author.id)) returnMsg = 'botowner only';
+        else if (this.ownerOnly && !this.client.isOwner(message.author.id)) returnMsg = 'botowner';
         if (returnMsg) {
-            let msgResponse = new MessageUtil(this.client, { destination: message, messageContent: `This is restricted to ${returnMsg} only.`, deleteTime: 10 });
-            msgResponse.execute();
+            this.client.autoMessageFactory({ destination: message, messageContent: `This is restricted to ${returnMsg} only.`, deleteTime: 10 });
             return false;
         }
         return true;
@@ -54,7 +52,11 @@ module.exports = class CommandAndModule {
             const missing = message.channel.permissionsFor(message.author).missing(this.userPermissions);
             if (missing.length > 0) {
                 if (reply)
-                    (new MessageUtil(this.client, { messageContent: `You don't have enough permissions to use ${this.name}. missing:\n${missing.map(p => permissions[p]).join(', and ')}`, deleteTime: 5 * 60 })).execute();
+                    this.client.autoMessageFactory({
+                        destination: message,
+                        messageContent: `You don't have enough permissions to use ${this.name}. missing:\n${missing.map(p => permissions[p]).join(', and ')}`,
+                        deleteTime: 5 * 60
+                    });
                 return false;
             }
         }
@@ -64,7 +66,11 @@ module.exports = class CommandAndModule {
             const missing = message.channel.permissionsFor(this.client.user).missing(this.userPermissions);
             if (missing.length > 0) {
                 if (reply)
-                    (new MessageUtil(this.client, { destination: message, messageContent: `I don't have enough permissions to use this command. missing:\n${missing.map(p => permissions[p]).join(', and ')}`, deleteTime: 5 * 60 })).execute();
+                    this.client.autoMessageFactory({
+                        destination: message,
+                        messageContent: `I don't have enough permissions to use this command. missing:\n${missing.map(p => permissions[p]).join(', and ')}`,
+                        deleteTime: 5 * 60
+                    });
                 return false;
             }
         }
@@ -93,13 +99,13 @@ module.exports = class CommandAndModule {
                 if (!permissions[perm]) throw new RangeError(`${optionName}.userPermission has an invalid entry: ${perm} `);
         }
         if (typeof options.guildOnly !== 'undefined' && typeof options.guildOnly !== 'boolean')
-            throw new TypeError('${optionName}.guildOnly must be a boolean.');
+            throw new TypeError(`${optionName}.guildOnly must be a boolean.`);
         if (typeof options.dmOnly !== 'undefined' && typeof options.dmOnly !== 'boolean')
-            throw new TypeError('${optionName}.dmOnly must be a boolean.');
+            throw new TypeError(`${optionName}.dmOnly must be a boolean.`);
         if (typeof options.ownerOnly !== 'undefined' && typeof options.ownerOnly !== 'boolean')
-            throw new TypeError('${optionName}.ownerOnly must be a boolean.');
+            throw new TypeError(`${optionName}.ownerOnly must be a boolean.`);
         if (typeof options.defaultDisable !== 'undefined' && typeof options.defaultDisable !== 'boolean')
-            throw new TypeError('${optionName}.defaultDisable must be a boolean.');
+            throw new TypeError(`${optionName}.defaultDisable must be a boolean.`);
         if (options.guildOnly && options.dmOnly) throw new Error(`${optionName} guildOnly and dmOnly are mutually exclusive.`);
     }
 }

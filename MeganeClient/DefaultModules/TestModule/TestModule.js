@@ -6,10 +6,6 @@ module.exports = class TestModule extends CommandModule{
             description: "A module for some test commands. Should be owner only.",
             ownerOnly: true
         });
-
-        this.addCommands([
-            require('./test'),
-            require('./add')
-        ]);
+        this.addCommandsIn(require('path').join(__dirname, "Commands"));
     }
 }

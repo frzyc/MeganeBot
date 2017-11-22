@@ -1,9 +1,9 @@
-﻿const Command = require('../../Command');
+﻿const Command = require('../../../Command');
 
-module.exports = class TestCommand extends Command {
+module.exports = class TestEmbed extends Command {
     constructor(client) {
         super(client, {
-            name: 'test'
+            name: 'testembed'
         })
 
     }

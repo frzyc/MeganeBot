@@ -1,5 +1,4 @@
 const Util = require('./Utility/Util');
-const MessageUtil = require('./MessageUtil');
 module.exports = class CommandMessage {
     /**
      * @param {MeganeClient} client
@@ -21,12 +20,12 @@ module.exports = class CommandMessage {
         if (this.command.restriction) {
             let restiction = await this.command.restriction(this);
             if (restiction) {
-                (new MessageUtil(this.client, {
+                this.client.autoMessageFactory({
                     destination: this.message,
                     messageContent: restiction,
                     deleteTime: 30,
                     destinationDeleteTime: 30
-                })).execute();
+                });
                 return;
             }
         }
@@ -37,7 +36,7 @@ module.exports = class CommandMessage {
                 let usageObj = this.command.getUsageEmbededMessageObject(this.message);
                 usageObj.messageContent = 'Bad Arguments.';
                 usageObj.destination = this.message;
-                (new MessageUtil(this.client, usageObj)).execute();
+                this.client.autoMessageFactory(usageObj);
                 return false;
             }
         }

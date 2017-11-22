@@ -1,4 +1,4 @@
-const { MessageUtil, permissions } = require('../../../MeganeClient');
+const { permissions } = require('../../../MeganeClient');
 module.exports = class VoiceController {
     constructor(client, playQueue, guildID) {
         if (!client) throw Error('PlayQueueManager needs a client.');
@@ -93,13 +93,13 @@ module.exports = class VoiceController {
     async joinvoice(message) {
         let usrVoiceChannel = this.getAuthorVoiceChannel(message);
         if (usrVoiceChannel == null) {
-            (new MessageUtil(this.client, { destination: message, messageContent: 'BAKA... You are not in a voice channel.', deleteTime: 30 })).execute();
+            this.client.autoMessageFactory({ destination: message, messageContent: 'BAKA... You are not in a voice channel.', deleteTime: 30 });
             return false;
         }
         const voiceConnection = this.client.voiceConnections.get(message.guild.id);
 
         if (voiceConnection != null && voiceConnection.channel.id === usrVoiceChannel.id) {
-            (new MessageUtil(this.client, { destination: message, messageContent: "BAKA... I'm already here! " })).execute();
+            this.client.autoMessageFactory({ destination: message, messageContent: "BAKA... I'm already here! " });
             return true;//return true because connection success    
         }
         //check required permissions
@@ -108,24 +108,28 @@ module.exports = class VoiceController {
             'SPEAK'
         ]);
         if (missing.length > 0) {
-            (new MessageUtil(this.client, { destination: message, messageContent: `I don't have enough permissions to use this command. missing:\n${missing.map(p => permissions[p]).join(', and ')}`, deleteTime: 5 * 60 })).execute();
+            this.client.autoMessageFactory({
+                destination: message,
+                messageContent: `I don't have enough permissions to use this command. missing:\n${missing.map(p => permissions[p]).join(', and ')}`,
+                deleteTime: 5 * 60
+            });
             return false;
         }
         if (usrVoiceChannel && !usrVoiceChannel.joinable) {
-            await (new MessageUtil(this.client, { destination: message, messageContent: "Cannot join the voice channel. " })).execute();
+            this.client.autoMessageFactory({ destination: message, messageContent: "Cannot join the voice channel. " });
             return false
         }
-        let re = await (new MessageUtil(this.client, { destination: message, messageContent: "Connecting..." })).execute();
+        let re = await this.client.autoMessageFactory({ destination: message, messageContent: "Connecting..." });
         let conn = await (usrVoiceChannel.join());
         this.playQueue.tchannel = message.channel;
         this.vchannel = usrVoiceChannel;
         this.playQueue.guildID = message.guild.id;
         console.log(`joinvoice: server:${message.guild.name}, vchannel: ${this.playQueue.voiceController.vchannel.name}, tchannel: ${this.playQueue.tchannel.name}`);
-        (new MessageUtil(this.client, {
+        this.client.autoMessageFactory({
             destination: re,
             edit: true,
             messageContent: `Connected to voice channel **${this.playQueue.voiceController.vchannel.name}**, I will accept all music commands in this text channel: **${this.playQueue.tchannel.name}**.`
-        })).execute();
+        });
         return true;
     }
 }

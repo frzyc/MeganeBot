@@ -1,7 +1,7 @@
 const request = require('request');
 const YoutubeDL = require('youtube-dl');
 const ytdlc = require('ytdl-core');
-const { MessageUtil, Util } = require('../../../MeganeClient');
+const { Util } = require('../../../MeganeClient');
 const VoiceController = require('./VoiceController');
 const Track = require('./Track');
 module.exports = class PlayQueue {
@@ -21,15 +21,14 @@ module.exports = class PlayQueue {
     }
     async addToList(track) {
         if (this.list.length >= this.MAX_NUM_SONGS_PER_PLAYLIST)
-            return (new MessageUtil(client, { destination: message, messageContent: `The Playlist size has been maxed: ${pq.MAX_NUM_SONGS_PER_PLAYLIST}`, deleteTime: 30 })).execute();
+            return this.client.autoMessageFactory({ destination: message, messageContent: `The Playlist size has been maxed: ${pq.MAX_NUM_SONGS_PER_PLAYLIST}`, deleteTime: 30 });
         track.trackId = this.getTrackId();//generates a unique trackID for each queued song, even if it has been requeued
         this.list.push(track);
         if (this.list.length === 1) this.updatePlayingMessage();//update the next playing part of playing message
         this.updatePlaylistMessage();
         if (!this.tchannel) return;
         let msgresolvable = track.getQueuedMessageResolvable();
-        let msg = await (new MessageUtil(this.client, msgresolvable)).execute();
-        track.message = msg;
+        track.message = await this.client.autoMessageFactory(msgresolvable);
         if (!this.current)
             this.playNextInQueue();
     }
@@ -53,14 +52,14 @@ module.exports = class PlayQueue {
         if (ind === 0) this.updatePlayingMessage();
         this.updatePlaylistMessage();
         //edit the queue messgae of the track to indicate it has been dequeued
-        (new MessageUtil(this.client, track.getDequeuedMessageResolvable())).execute();
+        this.client.autoMessageFactory(track.getDequeuedMessageResolvable());
     }
     shuffleQueue() {
         if (this.list.length > 1) {
             shuffleArray(this.list);
             this.updatePlayingMessage();
             this.updatePlaylistMessage();
-            (new MessageUtil(this.client, { destination: this.tchannel, messageContent: `Playlist Shuffled.`, deleteTime: 30 })).execute();
+            this.client.autoMessageFactory({ destination: this.tchannel, messageContent: `Playlist Shuffled.`, deleteTime: 30 });
         }
         function shuffleArray(array) {
             for (var i = array.length - 1; i > 0; i--) {
@@ -154,14 +153,13 @@ module.exports = class PlayQueue {
         if (track.message && track.message.deletable) await track.message.delete();//refresh with a new one
         let playingmsgres = track.getPlayingmessageResolvable();
         playingmsgres.destination = this.tchannel;
-        let re = await (new MessageUtil(this.client, playingmsgres)).execute();
-        track.message = re;
+        track.message = await this.client.autoMessageFactory(playingmsgres);
     }
     updatePlayingMessage() {
         if (this.current && this.current.message) {
             let playingmsgres = this.current.getPlayingmessageResolvable(this.current.message);
             playingmsgres.edit = true;
-            (new MessageUtil(this.client, playingmsgres)).execute();
+            this.client.autoMessageFactory(playingmsgres);
         }
     }
     getPlaylistmessageResolvable(editmsg) {
@@ -197,16 +195,16 @@ module.exports = class PlayQueue {
         if (this.playlistMessage && this.playlistMessage.deletable) this.playlistMessage.delete();
         let playlistmsgres = this.getPlaylistmessageResolvable();
         playlistmsgres.destination = this.tchannel;
-        this.playlistMessage = await (new MessageUtil(this.client, playlistmsgres)).execute();
+        this.playlistMessage = await this.client.autoMessageFactory(playlistmsgres);
     }
     updatePlaylistMessage() {//edit the original playlist message
         if (!this.playlistMessage) return;
-        (new MessageUtil(this.client, this.getPlaylistmessageResolvable(this.playlistMessage))).execute();
+        this.client.autoMessageFactory(this.getPlaylistmessageResolvable(this.playlistMessage));
     }
     async playStopped() {
         //console.log(`playQueue.playStopped in vchannel:${this.voiceController.vchannel}`);
         if (this.current.message)// modify the orginal playing message to show that its finished.
-            await (new MessageUtil(this.client, this.current.getFinishedMessageResolvable())).execute();
+            await await this.client.autoMessageFactory(this.current.getFinishedMessageResolvable());
         this.current = null;
         this.playNextInQueue();
     }
@@ -225,7 +223,7 @@ module.exports = class PlayQueue {
             'gvsearch1:'
         ], {}, (queryErr, queryInfo) => {
             console.log(queryInfo);
-            let errMsg = new MessageUtil(this.client, {
+            let errMsg = this.client.messageFactory({
                 destination: message,
                 reply: true,
                 messageContent: `Query **"${searchString}"** returned no valid results.`,

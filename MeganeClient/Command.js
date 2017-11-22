@@ -1,7 +1,6 @@
 const discord = require('discord.js');
 const Util = require('./Utility/Util');
 const CommandArgument = require('./CommandArgument');
-const MessageUtil = require('./MessageUtil');
 const CommandAndModule = require('./CommandAndModule');
 /**
  * This is the base Command class. All commands should extend this class.
@@ -20,18 +19,17 @@ module.exports = class Command extends CommandAndModule{
      * @property {CommandRestrictionFunction} [restriction] - Restriction function.
      * @property {CommandArgumentOptions[]} [args] - Arguments for the command.
      * @property {boolean} [ownerOnly=false] - Whether or not the command should only function for the bot owner
-     * Will override the property passed down from module.
+     * Will be overridden by the property passed down from module.
      * @property {boolean} [guildOnly=false] - Whether or not the command should only function in a guild channel
-     * Will override any property passed down from module.
+     * Will be overridden by the property passed down from module.
      * @property {boolean} [dmOnly=false] - Whether or not the command should only function in a direct message channel
-     * Will override any property passed down from module.
+     * Will be overridden by the property passed down from module.
      * @property {boolean} [defaultDisable=false] - Determines whether if this command is disabled by default. 
-     * Will override any property passed down from module.
+     * Will be overridden by the property passed down from module.
 	 * @property {PermissionResolvable[]} [clientPermissions] - Permissions required by the client to use the command.
-     * Will override any Permissions passed down from module.
+     * Will add onto any Permissions passed down from module.
 	 * @property {PermissionResolvable[]} [userPermissions] - Permissions required by the user to use the command.
-     * Will override any Permissions passed down from module.
-     * TODO defaultDisable - 
+     * Will add onto any Permissions passed down from module. 
 	 * @property {ThrottlingOptions} [throttling] - Options for throttling usages of the command.
      * @property {number} [numArgs] - The number of arguments to parse. The arguments are separated by white space. 
      * The last argument will have the remaining command string, white space and all. 
@@ -207,7 +205,7 @@ module.exports = class Command extends CommandAndModule{
             if (inCD.serverCooldown) msg += `This command is time- restricted per server.Cooldown: ${inCD.serverCooldown / 1000} seconds.\n`
             if (inCD.channelCooldown) msg += `This command is time- restricted per channel.Cooldown: ${inCD.channelCooldown / 1000} seconds.\n`
             if (reply)
-                (new MessageUtil(this.client, { destination: message, messageContent: msg, deleteTime: 10 })).execute();
+                this.client.autoMessageFactory({ destination: message, messageContent: msg, deleteTime: 30 })
             return false;
         }
         return true;

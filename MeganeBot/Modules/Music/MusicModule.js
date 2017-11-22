@@ -8,8 +8,6 @@ module.exports = class MusicModule extends CommandModule{
             guildOnly: true
         });
         this.playQueueManager = new PlayQueueManager(client);
-        this.addCommands([
-            require('./Commands/QueueMusic')
-        ])
+        this.addCommandsIn(require('path').join(__dirname, "Commands"));
     }
 }

@@ -1,4 +1,4 @@
-const { MessageUtil, Command } = require('../../../../MeganeClient');
+const { Command } = require('../../../../MeganeClient');
 const Track = require('../Track');
 const VoiceController = require('../VoiceController');
 const YoutubeDL = require('youtube-dl');

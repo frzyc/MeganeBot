@@ -8,7 +8,7 @@ module.exports = {
     CommandDispatcher: require('./CommandDispatcher'),
     CommandMessage: require('./CommandMessage'),
     CommandModule: require('./CommandModule'),
-    MessageUtil: require('./MessageUtil'),
+    MessageFactory: require('./MessageFactory'),
     Util: require('./Utility/Util'),
     permissions: require('./Utility/permissions.json'),
 
