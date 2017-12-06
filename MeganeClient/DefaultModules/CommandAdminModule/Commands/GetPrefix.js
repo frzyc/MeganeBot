@@ -12,17 +12,25 @@ module.exports = class GetPrefix extends Command {
 
     }
     execute(message, args) {
+        let msg = this.client.messageFactory({
+            destination: message,
+            reply: true,
+            deleteTime: 2 * 60,
+            destinationDeleteTime: 2 * 60,
+            messageContent: "Cannot get prefix."
+        })
         if (message.guild) {
             if (message.guild.prefix)
-                message.reply(`The command prefix for this guild: ${message.guild.prefix}`);
+                msg.messageContent = `The command prefix for this guild: ${message.guild.prefix}`;
             else
-                message.reply(`This guild has no command prefix. You can still use commands by mentioning me!`);
+                msg.messageContent = `This guild has no command prefix. You can still use commands by mentioning me!`;
         } else if (message.channel.type === 'dm') {
             if (this.client.prefix)
-                message.reply(`The command prefix is: ${this.client.prefix}`);
+                msg.messageContent = `The command prefix is: ${this.client.prefix}`;
             else
-                message.reply(`The global command prefix has been removed. You can still use commands by mentioning me!`);
+                msg.messageContent = `The global command prefix has been removed. You can still use commands by mentioning me!`;
         }
+        msg.execute();
 
     }
 }

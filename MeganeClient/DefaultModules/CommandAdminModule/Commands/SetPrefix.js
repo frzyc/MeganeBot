@@ -21,24 +21,31 @@ module.exports = class SetPrefix extends Command {
 
     }
     execute(message, args) {
+        let msg = this.client.messageFactory({
+            destination: message,
+            reply: true,
+            deleteTime: 2 * 60,
+            destinationDeleteTime: 2 * 60,
+            messageContent: "Cannot set prefix."
+        })
         if (message.guild) {
             message.guild.prefix = args['newprefix'];
             if (message.guild.prefix)
-                message.reply(`A new prefix is set for this guild: ${message.guild.prefix}`);
+                msg.messageContent = `A new prefix is set for this guild: ${message.guild.prefix}`;
             else
-                message.reply(`The prefix for this guild has been removed. You can still use commands by mentioning me!`);
+                msg.messageContent = `The prefix for this guild has been removed. You can still use commands by mentioning me!`;
         } else if (message.channel.type === 'dm') {
             if (this.client.isOwner(message.author.id)) {
                 this.client.prefix = args['newprefix'];
                 if (this.client.prefix)
-                    message.reply(`A new global prefix is set: ${this.client.prefix}`);
+                    msg.messageContent = `A new global prefix is set: ${this.client.prefix}`;
                 else
-                    message.reply(`The global prefix has been removed. You can still use commands by mentioning me!`);
+                    msg.messageContent = `The global prefix has been removed. You can still use commands by mentioning me!`;
             } else {
-                message.reply(`You must be a bot owner to change the global prefix!`);
+                msg.messageContent = `You must be a bot owner to change the global prefix!`;
             }
-
         }
+        msg.execute();
 
     }
 }

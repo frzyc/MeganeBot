@@ -14,7 +14,7 @@ try {//do a config.json check, the bot will not operate without a valid config.
 const client = new MeganeClient({
     prefix: config.prefix,
     ownerids: config.ownerids,
-    profilePictureDirectory: "./MeganeBot/glassesicon"
+    profilePictureDirectory: require('path').join(__dirname, "/glassesicon")
 });
 exports.client = client;
 
@@ -32,37 +32,6 @@ client
         console.log(`Ready to serve in ${client.channels.size} channels on ${client.guilds.size} servers, for a total of ${client.users.size} users.`);
         console.log(client);
     });
-    /*.on('disconnect', (m) => {
-        console.log(`[disconnect]:ReconnTimer:${reconnTimer}`, m)
-        function reconn(time) {
-            if (reconnTimer != null) return;
-            console.log(`Reconnecting after ${time / 1000} seconds`);
-            reconnTimer = setTimeout((m) => {
-                client.login(config.token).then((m) => {
-                    reconnTimer = null;
-                    console.log(`Reconnected! ${m}`);
-                }).catch((m) => {
-                    reconnTimer = null;
-                    console.log(`Error with reconnecting: ${m}`);
-                    reconn(time * 2);
-                })
-            }, time);
-        }
-        reconn(10000);
-    });*/
-
-/*
-process.on("unhandledRejection", err => {
-    console.error("Uncaught Promise Error: \n");
-    console.log(err);
-    console.log(err.stack);
-});
-
-process.on('uncaughtException', function (err) {//technically not a good idea, but YOLO
-    console.log("UNCAUGHTEXCEPTION!");
-    console.log(err);
-    console.log(err.stack);
-});*/
 
 //something to deal with spawn errors
 (function () {
@@ -83,42 +52,10 @@ client.depot.addModules([
 client.addDB(
     path.join(__dirname, 'data', 'db.sqlite3')
 ).catch(console.error);
-/* A small test client just to test some messages
-const Discord = require('discord.js');
-const client = new Discord.Client();
 
-client.on('ready', () => {
-  console.log('I am ready!');
-});
-
-client.on('message', message => {
-  if (message.content === 'ping') {
-    message.reply('pong');
-  }
-});*/
 
 client.login(config.token).then((m) => {
     console.log(`login success! ${m}`);
 }).catch((m) => {
     console.log(`Error with login: ${m}`);
 });
-
-/*
-process.stdin.resume();//so the program will not close instantly
-
-function exitHandler(options, err) {
-    if (options.cleanup) console.log('clean');
-    if (err) console.log(err.stack);
-    if (options.exit) process.exit();
-
-}
-
-//do something when app is closing
-process.on('exit', exitHandler.bind(null, { cleanup: true }));
-
-//catches ctrl+c event
-process.on('SIGINT', exitHandler.bind(null, { exit: true }));
-
-//catches uncaught exceptions
-process.on('uncaughtException', exitHandler.bind(null, { exit: true }));*/
-

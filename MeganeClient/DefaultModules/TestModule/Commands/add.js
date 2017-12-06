@@ -1,5 +1,4 @@
 const Command = require('../../../Command');
-
 module.exports = class addCommand extends Command {
     constructor(client) {
         super(client, {

@@ -22,8 +22,8 @@ module.exports = class CommandArgument {
     constructor(client, options) {
         this.constructor.preCheck(client, options);
         this.label = options.label;
-        this.type = options.type ? client.depot.types.get(options.type) : {id:'custom'};//if type is not defined, is is a custom type.
-        this.descriptionString =  options.description | null;
+        this.type = options.type ? client.depot.types.get(options.type) : { id: 'custom' };//if type is not defined, is is a custom type.
+        this.descriptionString = options.description || null;
         this.min = options.min !== undefined ? options.min : null;
         this.max = options.max !== undefined ? options.max : null;
         this.default = options.default;
@@ -33,21 +33,86 @@ module.exports = class CommandArgument {
         this.customValidator = options.validate || null;
         this.customParser = options.parse || null;
     }
-    validate(value, msg) {
-        if (this.customValidator) return this.customValidator(value, msg, this);
-        return this.type.validate(value, msg, this);
+    async validate(value, msg) {
+        if (this.customValidator) return await this.customValidator(value, msg, this);
+        return await this.type.validate(value, msg, this);
     }
-    parse(value, msg) {
-        if (this.customParser) return this.customParser(value, msg, this);
-        return this.type.parse(value, msg, this);
+    async parse(value, msg) {
+        if (this.customParser) return await this.customParser(value, msg, this);
+        return await this.type.parse(value, msg, this);
+    }
+    async validateAndParse(result, argString, msg) {
+        if (!argString) {//means we ran out of the argument string to parse, but an argument still havent been parsed.
+            if (typeof this.default !== 'undefined') {//allow for "" and null and 0 and such falsy values
+                result[this.label] = this.default;
+            } else throw new Error(`Ran out of arguments to parse at ${this.label}.`);
+        } else if (this.multiple) {//multiple -> keep parsing until the string is over
+            result[this.label] = [];
+            while (argString) {
+                //keep splitting until argString is nothing.
+                let sep = this.constructor.separateArgs(argString, 1);
+                if (sep && sep.length > 0 && await this.validate(sep[0], msg))
+                    result[this.label].push(await this.parse(sep[0], msg));
+                else
+                    throw Error(`Failed to validate "${sep[0]}" for argument ${this.label}.`);
+                if (sep.length > 1) argString = sep[1];
+                else argString = null;
+            }
+        } else if (this.remaining) {//remaining -> just give the whole remaining string to the arg
+            if (!await this.validate(argString, msg)) throw Error(`Failed to validate "${argString}" for argument ${this.label}.`);
+            result[this.label] = await this.parse(argString, msg);
+        } else if (this.quantity) {//quantitiy -> get a fixed number of arguments
+            result[this.label] = [];
+            let sep = this.constructor.separateArgs(argString, this.quantity);
+            for (let i = 0; i < this.quantity; i++) {
+                if (!await this.validate(sep[i], msg))
+                    throw Error(`Failed to validate ${
+                        i + 1 + ((i + 1) > 3 ?
+                            "th" : (i + 1) > 2 ?
+                                "rd" : (i + 1) > 1 ?
+                                    "nd" : "st")
+                        } parameter for argument ${this.label}.`);
+                result[this.label].push(await this.parse(sep[i], msg));
+            }
+            if (sep.length > this.quantity)
+                return sep[this.quantity];
+        } else {//single -> get a single argument 
+            let sep = this.constructor.separateArgs(argString, 1);
+            if (sep && sep.length > 0 && await this.validate(sep[0], msg))
+                result[this.label] = await this.parse(sep[0], msg);
+            else throw Error(`Failed to validate "${sep[0]}" for argument ${this.label}.`);
+            if (sep.length > 1) return sep[1];
+        }
+        return null;
+    }
+    /**
+     * 
+     * @param {String} argString 
+     * @param {number} argCount 
+     * @returns {String[]} will have length argCount+1 if there are still argString remaining.
+     */
+    static separateArgs(argString, argCount) {
+        if (!argString) return null;
+        const re = /\s*(?:("|')([^]*?)\1|(\S+))\s*/g;
+        const result = [];
+        let match = [];
+        while (argCount-- && (match = re.exec(argString))) {
+            if (!match) return null;
+            result.push(match[2] || match[3]);
+        }
+        if (match && re.lastIndex < argString.length) {
+            result.push(argString.substr(re.lastIndex));//push the remaining string in case separating argCount doesn't consume its entirety.
+        }
+        return result;
     }
 
-    get description(){
-        if(!this.descriptionString) return "No description specified.";
+
+    get description() {
+        if (!this.descriptionString) return "No description specified.";
         return this.descriptionString;
     }
-    hasDescription(){
-        if(this.descriptionString) return true;
+    hasDescription() {
+        if (this.descriptionString) return true;
         return false;
     }
 

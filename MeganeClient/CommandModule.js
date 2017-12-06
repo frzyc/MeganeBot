@@ -40,20 +40,24 @@ class CommandModule extends CommandAndModule {
         this.commands.set(command.name, command);
         command.moduleID = this.id;
 
-        //these values are passed down to the command being added only if the command does not declare them first.
-        if (this.guildOnly !== undefined && command.guildOnly === undefined)
-            command.guildOnly = this.guildOnly;
-        if (this.dmOnly !== undefined && command.dmOnly === undefined)
-            command.dmOnly = this.dmOnly;
-        if (this.ownerOnly !== undefined && command.ownerOnly === undefined)
-            command.ownerOnly = this.ownerOnly;
-        if (this.defaultDisable !== undefined && command.defaultDisable === undefined)
-            command.defaultDisable = this.defaultDisable;
-        if (this.clientPermissions && !command.clientPermissions)
-            command.clientPermissions = this.clientPermissions;
-        if (this.userPermissions && !command.userPermissions)
-            command.userPermissions = this.userPermissions;
+        //these values are passed down to the command.
+        if (command.guildOnly !== undefined && this.guildOnly !== undefined && command.guildOnly !== this.guildOnly)
+            this.client.emit('warn', `Module ${this.name}'s guildOnly will override the command ${command.name}'s guildOnly.`);
+        if (command.dmOnly !== undefined && this.dmOnly !== undefined && command.dmOnly !== this.dmOnly)
+            this.client.emit('warn', `Module ${this.name}'s dmOnly will override the command ${command.name}'s dmOnly.`);
+        if (command.ownerOnly !== undefined && this.ownerOnly !== undefined && command.ownerOnly !== this.ownerOnly)
+            this.client.emit('warn', `Module ${this.name}'s ownerOnly will override the command ${command.name}'s ownerOnly.`);
+        if (command.defaultDisable !== undefined && this.defaultDisable !== undefined && command.defaultDisable !== this.defaultDisable)
+            this.client.emit('warn', `Module ${this.name}'s defaultDisable will override the command ${command.name}'s defaultDisable.`);
+        if (this.clientPermissions)
+            command.clientPermissions = command.clientPermissions ? Array.from(new Set(command.clientPermissions.concat(this.clientPermissions))) : this.clientPermissions;
+        if (this.userPermissions)
+            command.userPermissions = command.userPermissions ? Array.from(new Set(command.userPermissions.concat(this.userPermissions))) : this.userPermissions;
 
+        command.guildOnly = this.guildOnly;
+        command.dmOnly = this.dmOnly;
+        command.ownerOnly = this.ownerOnly;
+        command.defaultDisable = this.defaultDisable;
     }
     addCommands(commands) {
         if (!Array.isArray(commands)) throw new TypeError('Commands must be an Array.');

@@ -4,7 +4,8 @@ module.exports = class BotAdminModule extends CommandModule {
         super(client, {
             name: "BotAdminModule",
             usage: "A module for manage the bot",
-            description: `Has commands to set display pic, update the bot, etc...`
+            description: `Has commands to set display pic, update the bot, etc...`,
+            ownerOnly: true
         });
         this.addCommandsIn(require('path').join(__dirname, "Commands"));
     }

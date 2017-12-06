@@ -34,7 +34,7 @@ module.exports = class MeganeClient extends discord.Client {
             options.ownerids = [options.ownerids];
         if (options.profilePictureDirectory) {
             if (typeof options.profilePictureDirectory !== 'string') throw new TypeError('MeganeClientOptions.profilePictureDirectory must be a string or an array of strings.');
-            if (!fs.existsSync(options.profilePictureDirectory)) throw new Error('MeganeClientOptions.profilePictureDirectory must be a valid path.')
+            if (!fs.existsSync(options.profilePictureDirectory)) throw new Error('MeganeClientOptions.profilePictureDirectory must be a valid path.');
         }
         super(options);
         console.log("MeganeClient constructor");
