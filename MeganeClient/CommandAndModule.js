@@ -83,7 +83,7 @@ module.exports = class CommandAndModule {
         if (typeof options !== 'object') throw new TypeError(`${optionName}.options must be an Object.`);
         if (typeof options.name !== 'string') throw new TypeError(`${optionName}.name must be a string.`);
         if (options.id && typeof options.id !== 'string') throw new TypeError(`${optionName}.id must be a string.`);
-        if (!options.id) options.id = options.name.toLowerCase();
+        if (!options.id) options.id = options.name.replace(/\s+/g, '').toLowerCase();
         if (options.usage && typeof options.usage !== 'string') throw new TypeError(`${optionName}.usage must be a string.`);
         if (options.description && typeof options.description !== 'string') throw new TypeError(`${optionName}.description must be a string.`);
         if (options.clientPermissions) {

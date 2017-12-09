@@ -1,3 +1,4 @@
+const CommandArgumentParseError = require('./Errors/CommandArgumentParseError');
 module.exports = class CommandArgument {
     /**
      * @typedef {Object} CommandArgumentOptions
@@ -41,11 +42,11 @@ module.exports = class CommandArgument {
         if (this.customParser) return await this.customParser(value, msg, this);
         return await this.type.parse(value, msg, this);
     }
-    async validateAndParse(result, argString, msg) {
+    async processArg(result, argString, msg) {
         if (!argString) {//means we ran out of the argument string to parse, but an argument still havent been parsed.
             if (typeof this.default !== 'undefined') {//allow for "" and null and 0 and such falsy values
                 result[this.label] = this.default;
-            } else throw new Error(`Ran out of arguments to parse at ${this.label}.`);
+            } else throw new CommandArgumentParseError(`Ran out of arguments to parse at ${this.label}.`);
         } else if (this.multiple) {//multiple -> keep parsing until the string is over
             result[this.label] = [];
             while (argString) {
@@ -54,19 +55,19 @@ module.exports = class CommandArgument {
                 if (sep && sep.length > 0 && await this.validate(sep[0], msg))
                     result[this.label].push(await this.parse(sep[0], msg));
                 else
-                    throw Error(`Failed to validate "${sep[0]}" for argument ${this.label}.`);
+                    throw new CommandArgumentParseError(`Failed to validate "${sep[0]}" for argument ${this.label}.`);
                 if (sep.length > 1) argString = sep[1];
                 else argString = null;
             }
         } else if (this.remaining) {//remaining -> just give the whole remaining string to the arg
-            if (!await this.validate(argString, msg)) throw Error(`Failed to validate "${argString}" for argument ${this.label}.`);
+            if (!await this.validate(argString, msg)) throw new CommandArgumentParseError(`Failed to validate "${argString}" for argument ${this.label}.`);
             result[this.label] = await this.parse(argString, msg);
         } else if (this.quantity) {//quantitiy -> get a fixed number of arguments
             result[this.label] = [];
             let sep = this.constructor.separateArgs(argString, this.quantity);
             for (let i = 0; i < this.quantity; i++) {
                 if (!await this.validate(sep[i], msg))
-                    throw Error(`Failed to validate ${
+                    throw new CommandArgumentParseError(`Failed to validate ${
                         i + 1 + ((i + 1) > 3 ?
                             "th" : (i + 1) > 2 ?
                                 "rd" : (i + 1) > 1 ?
@@ -80,7 +81,7 @@ module.exports = class CommandArgument {
             let sep = this.constructor.separateArgs(argString, 1);
             if (sep && sep.length > 0 && await this.validate(sep[0], msg))
                 result[this.label] = await this.parse(sep[0], msg);
-            else throw Error(`Failed to validate "${sep[0]}" for argument ${this.label}.`);
+            else throw new CommandArgumentParseError(`Failed to validate "${sep[0]}" for argument ${this.label}.`);
             if (sep.length > 1) return sep[1];
         }
         return null;

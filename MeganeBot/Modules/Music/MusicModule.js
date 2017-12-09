@@ -3,7 +3,7 @@ const PlayQueueManager = require('./PlayQueueManager');
 module.exports = class MusicModule extends CommandModule{
     constructor(client){
         super(client, {
-            name: "musicmodule",
+            name: "Music Module",
             usage: "A module to play music.",
             guildOnly: true
         });

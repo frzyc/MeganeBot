@@ -70,7 +70,8 @@ module.exports = class MeganeClient extends discord.Client {
                 require('./DefaultTypes/Boolean'),
                 require('./DefaultTypes/Integer'),
                 require('./DefaultTypes/String'),
-                require('./DefaultTypes/Float')
+                require('./DefaultTypes/Float'),
+                require('./DefaultTypes/User')
             ])
             .addModules([
                 require('./DefaultModules/TestModule/TestModule'),

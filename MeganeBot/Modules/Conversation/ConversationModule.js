@@ -2,7 +2,7 @@ const {CommandModule} = require('../../../MeganeClient');
 module.exports = class ConversationModule extends CommandModule{
     constructor(client){
         super(client, {
-            name: "conversationModule",
+            name: "Conversation Module",
             usage: "A module to talk to MeganeBot.",
             guildOnly: true
         });

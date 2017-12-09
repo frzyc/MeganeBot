@@ -1,3 +1,4 @@
+const CommandArgumentParseError = require('./Errors/CommandArgumentParseError');
 const Util = require('./Utility/Util');
 module.exports = class CommandMessage {
     /**
@@ -32,14 +33,15 @@ module.exports = class CommandMessage {
         var parsedArgs = null;
         if (this.command.args) {
             try {
-                parsedArgs = await this.parseAllArgs();
+                parsedArgs = await this.processArgs();
             } catch (e) {
-                let usageObj = this.command.getUsageEmbededMessageObject(this.message);
-                usageObj.messageContent = `Bad Arguments: ${e.message}`;
-                usageObj.destination = this.message;
-                this.client.autoMessageFactory(usageObj);
-                return false;
-
+                if (e instanceof CommandArgumentParseError) {
+                    let usageObj = this.command.getUsageEmbededMessageObject(this.message);
+                    usageObj.messageContent = `Bad Arguments: ${e.message}`;
+                    usageObj.destination = this.message;
+                    this.client.autoMessageFactory(usageObj);
+                    return false;
+                } else throw e;
             }
         }
 
@@ -63,11 +65,11 @@ module.exports = class CommandMessage {
      * a function to parse all the arguments of this command,
      * @returns {Set|false} result - Will result false if the string cannot be parsed
      */
-    async parseAllArgs() {
+    async processArgs() {
         let argString = this.argString.trim();
         let result = {};
         for (const arg of this.command.args)
-            argString = await arg.validateAndParse(result, argString, this.message);
+            argString = await arg.processArg(result, argString, this.message);
         return result;
     }
 }

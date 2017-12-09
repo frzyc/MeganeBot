@@ -9,8 +9,8 @@ const CommandAndModule = require('./CommandAndModule');
 class CommandModule extends CommandAndModule {
     /**
      * @typedef {Object} CommandModuleOptions
-     * @property {name} name
-     * @property {id} id can be generated from name, as long as it is unique. This value is not outwardly exposed, but its an unique key to reference the module.
+     * @property {name} name - An outward-exposed name for the module.
+     * @property {id} id  - This value is not outwardly exposed, but its an unique key to reference the module. Will be generated from CommandModuleOptions#name if not specified
      * @property {string} [usage] - A short usage description of the module. U
      * @property {string} [description] - A detailed description of the module
      * @property {Array[Command]} commands - A array of commands.
