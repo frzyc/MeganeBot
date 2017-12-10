@@ -34,57 +34,79 @@ module.exports = class CommandArgument {
         this.customValidator = options.validate || null;
         this.customParser = options.parse || null;
     }
-    async validate(value, msg) {
+    async validateType(value, msg) {
+        if (typeof value !== 'string') return TypeError(`type validation is only valid for strings`);
         if (this.customValidator) return await this.customValidator(value, msg, this);
-        return await this.type.validate(value, msg, this);
+        else return await this.type.validate(value, msg, this);
     }
-    async parse(value, msg) {
+    async validate(values, msg) {
+        if (this.multiple || this.quantity) {
+            if (!Array.isArray(values) || (this.quantity && values.length !== this.quantity))
+                throw Error(`Failed to validate argument ${this.label}.`);
+            for (let value of values) {
+                if (!await this.validateType(value, msg))
+                    return false;
+            }
+        } else {//remaining or single, both single argument
+            return await this.validateType(values, msg);
+        }
+        return true;
+    }
+    async parseType(value, msg) {
+        if (typeof value !== 'string') return TypeError(`type parsing is only valid for strings`);
         if (this.customParser) return await this.customParser(value, msg, this);
-        return await this.type.parse(value, msg, this);
+        else return await this.type.parse(value, msg, this);
     }
-    async processArg(result, argString, msg) {
+    async parse(values, msg) {
+        if (this.multiple || this.quantity) {
+            if (!Array.isArray(values) || (this.quantity && values.length !== this.quantity))
+                throw Error(`Failed to validate argument ${this.label}.`);
+            return await Promise.all(values.map(
+                async (value) => await this.parseType(value, msg))
+            );
+        } else {//remaining or single, both single argument
+            return await this.parseType(values, msg);
+        }
+    }
+    separateArg(argString) {
+        let result;
         if (!argString) {//means we ran out of the argument string to parse, but an argument still havent been parsed.
             if (typeof this.default !== 'undefined') {//allow for "" and null and 0 and such falsy values
-                result[this.label] = this.default;
-            } else throw new CommandArgumentParseError(`Ran out of arguments to parse at ${this.label}.`);
+                result = this.default;
+            } else throw new CommandArgumentParseError(`Ran out of arguments to separate at **${this.label}**.`);
         } else if (this.multiple) {//multiple -> keep parsing until the string is over
-            result[this.label] = [];
+            let arr = [];
             while (argString) {
                 //keep splitting until argString is nothing.
-                let sep = this.constructor.separateArgs(argString, 1);
-                if (sep && sep.length > 0 && await this.validate(sep[0], msg))
-                    result[this.label].push(await this.parse(sep[0], msg));
-                else
-                    throw new CommandArgumentParseError(`Failed to validate "${sep[0]}" for argument ${this.label}.`);
+                let sep = this.constructor.separateString(argString, 1);
+                if (!sep) break;
+                if (sep.length > 0)
+                    arr.push(sep[0]);
                 if (sep.length > 1) argString = sep[1];
                 else argString = null;
             }
+            if (arr.length === 0) throw new CommandArgumentParseError(`Failed to separate arguments at **${this.label}**.`);
+            result = arr;
         } else if (this.remaining) {//remaining -> just give the whole remaining string to the arg
-            if (!await this.validate(argString, msg)) throw new CommandArgumentParseError(`Failed to validate "${argString}" for argument ${this.label}.`);
-            result[this.label] = await this.parse(argString, msg);
+            result = argString;
         } else if (this.quantity) {//quantitiy -> get a fixed number of arguments
             result[this.label] = [];
-            let sep = this.constructor.separateArgs(argString, this.quantity);
-            for (let i = 0; i < this.quantity; i++) {
-                if (!await this.validate(sep[i], msg))
-                    throw new CommandArgumentParseError(`Failed to validate ${
-                        i + 1 + ((i + 1) > 3 ?
-                            "th" : (i + 1) > 2 ?
-                                "rd" : (i + 1) > 1 ?
-                                    "nd" : "st")
-                        } parameter for argument ${this.label}.`);
-                result[this.label].push(await this.parse(sep[i], msg));
-            }
+            let sep = this.constructor.separateString(argString, this.quantity);
+            if (!sep) throw new CommandArgumentParseError(`Cannot separate ${this.quantity} arguments at **${this.label}**.`);
             if (sep.length > this.quantity)
-                return sep[this.quantity];
+                argSting = sep.pop();
+            result = sep;
         } else {//single -> get a single argument 
-            let sep = this.constructor.separateArgs(argString, 1);
-            if (sep && sep.length > 0 && await this.validate(sep[0], msg))
-                result[this.label] = await this.parse(sep[0], msg);
-            else throw new CommandArgumentParseError(`Failed to validate "${sep[0]}" for argument ${this.label}.`);
-            if (sep.length > 1) return sep[1];
+            let sep = this.constructor.separateString(argString, 1);
+            if (!sep || sep.length === 0) throw new CommandArgumentParseError(`Failed to separate arguments at **${this.label}**.`);
+            result = sep[0]
+            if (sep.length > 1)
+                argString = sep[1];
         }
-        return null;
+        return {
+            result: result,
+            remaining: argString
+        };
     }
     /**
      * 
@@ -92,7 +114,7 @@ module.exports = class CommandArgument {
      * @param {number} argCount 
      * @returns {String[]} will have length argCount+1 if there are still argString remaining.
      */
-    static separateArgs(argString, argCount) {
+    static separateString(argString, argCount) {
         if (!argString) return null;
         const re = /\s*(?:("|')([^]*?)\1|(\S+))\s*/g;
         const result = [];

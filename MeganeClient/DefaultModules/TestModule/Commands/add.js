@@ -5,12 +5,11 @@ module.exports = class addCommand extends Command {
             name: 'add-numbers',
             aliases: ['add', 'add-nums'],
             usage: 'Adds numbers together.',
-            description: `This is an incredibly useful command that finds the sum of numbers. This command is the envy of all other commands.`,
+            description: `Gets the sum of numbers, good for testing arguments with multiple parameters`,
             examples: ['add-numbers 42 1337'],
             args: [
                 {
-                    label: 'numbers',
-                    prompt: 'What numbers would you like to add? Every message you send will be interpreted as a single number.',
+                    label: 'numbers',   
                     type: 'float',
                     multiple: true
                 }

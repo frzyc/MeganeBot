@@ -71,12 +71,14 @@ module.exports = class MeganeClient extends discord.Client {
                 require('./DefaultTypes/Integer'),
                 require('./DefaultTypes/String'),
                 require('./DefaultTypes/Float'),
-                require('./DefaultTypes/User')
+                require('./DefaultTypes/User'),
+                require('./DefaultTypes/GuildMember'),
             ])
             .addModules([
                 require('./DefaultModules/TestModule/TestModule'),
                 require('./DefaultModules/CommandAdminModule/CommandAdminModule'),
-                require('./DefaultModules/BotAdminModule/BotAdminModule')
+                require('./DefaultModules/BotAdminModule/BotAdminModule'),
+                require('./DefaultModules/UtilModule/UtilModule')
             ]);
 
     }
@@ -97,10 +99,10 @@ module.exports = class MeganeClient extends discord.Client {
         if (this.options.owner instanceof Set) return this.options.owner.has(user.id);
         throw new RangeError('The client\'s "owner" option is an unknown value.');
     }
-    messageFactory(options){
+    messageFactory(options) {
         return new MessageFactory(this, options);
     }
-    autoMessageFactory(options){
+    autoMessageFactory(options) {
         return (new MessageFactory(this, options)).execute();
     }
     async addDB(pathToDB) {

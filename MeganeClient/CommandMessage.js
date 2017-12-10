@@ -33,8 +33,9 @@ module.exports = class CommandMessage {
         var parsedArgs = null;
         if (this.command.args) {
             try {
-                parsedArgs = await this.processArgs();
+                parsedArgs = await this.separateArgs();
             } catch (e) {
+                console.log(e);
                 if (e instanceof CommandArgumentParseError) {
                     let usageObj = this.command.getUsageEmbededMessageObject(this.message);
                     usageObj.messageContent = `Bad Arguments: ${e.message}`;
@@ -61,15 +62,29 @@ module.exports = class CommandMessage {
         }
     }
 
-    /**
-     * a function to parse all the arguments of this command,
-     * @returns {Set|false} result - Will result false if the string cannot be parsed
-     */
-    async processArgs() {
+    async separateArgs() {
+        //break up the string into arguments
         let argString = this.argString.trim();
+        this.argStrings = this.command.args.map(
+            (arg) => {
+                let processed = arg.separateArg(argString);
+                argString = processed.remainingString;
+                return processed.result;
+            }
+        )
+        //validate
+        for (let i = 0; i < this.command.args.length; i++) {
+            let arg = this.command.args[i];
+            if (!await arg.validate(this.argStrings[i], this.message))
+                throw new CommandArgumentParseError(`Failed to validate argument **${arg.label}**.`);
+        }
+
+        //parse
         let result = {};
-        for (const arg of this.command.args)
-            argString = await arg.processArg(result, argString, this.message);
+        for (let i = 0; i < this.command.args.length; i++) {
+            let arg = this.command.args[i];
+            result[arg.label] = await arg.parse(this.argStrings[i], this.message);
+        }
         return result;
     }
 }
