@@ -4,6 +4,7 @@ module.exports = class GuildMember extends Type {
 		super(client, 'guildmember');
 	}
 	validate(value, msg, arg) {
+		if (value === 'message-author') return true;
 		if (!msg.guild) return false;
 		let matches = value.match(/^(?:<@!?)?([0-9]+)>?$/);
 		if (matches && msg.guild.members.has(matches[1])) {
@@ -22,6 +23,8 @@ module.exports = class GuildMember extends Type {
 	}
 
 	parse(value, msg, arg) {
+		if (value === 'message-author')
+			return msg.author;
 		let matches = value.match(/^(?:<@!?)?([0-9]+)>?$/);
 		if (matches) {
 			return msg.guild.members.get(matches[1]);

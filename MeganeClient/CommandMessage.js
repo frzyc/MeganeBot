@@ -54,7 +54,7 @@ module.exports = class CommandMessage {
             let response = await this.command.execute(this.message, parsedArgs);
             console.log("cmd resolved");
             this.client.emit("commandsuccess", this, response);
-            if (response) this.client.dispatcher.handleResponse(response);
+            if (response) this.client.dispatcher.handleResponse(response, this.message);
         } catch (err) {
             this.client.emit("commandfailed", this, err);
             this.command.clearCooldown(this.message);

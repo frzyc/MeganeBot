@@ -64,7 +64,6 @@ module.exports = class Help extends Command {
         });
     }
     execute(message, args) {
-        console.log(args);
         if (typeof args['cmdsOrMods'] === 'string' && args['cmdsOrMods'] === "list")
             args['cmdsOrMods'] = { modules: this.client.depot.findModules() };//since return all, don't need to go through and find commands.
         let commands = args['cmdsOrMods'].commands;

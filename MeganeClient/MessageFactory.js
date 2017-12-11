@@ -30,7 +30,6 @@ module.exports = class MessageFactory {
     constructor(client, options) {
         this.constructor.preCheck(client, options);
         Object.defineProperty(this, 'client', { value: client });
-        this.constructor.preCheck(client, options);
         if (options.destMessage) this.destMessage = options.destMessage;
         if (options.destChannel) this.destChannel = options.destChannel;
         if (options.messageContent) this.messageContent = options.messageContent;
@@ -39,8 +38,8 @@ module.exports = class MessageFactory {
         this.edit = options.edit ? options.edit : false;
         this.typing = options.typing ? options.typing : false;
         this.reply = options.reply ? options.reply : false;
-        if (options.deleteTime) this.deleteTime = options.deleteTime * 1000; //convert to ms
-        if (options.destinationDeleteTime) this.destinationDeleteTime = options.destinationDeleteTime * 1000; //convert to ms
+        if (typeof options.deleteTime === 'number') this.deleteTime = Math.floor(options.deleteTime * 1000); //convert to ms
+        if (typeof options.destinationDeleteTime === 'number') this.destinationDeleteTime = Math.floor(options.destinationDeleteTime * 1000); //convert to ms
     }
     
     async execute() {
@@ -63,8 +62,8 @@ module.exports = class MessageFactory {
         if (!msgToPostProcess) return;// in theory this shouldn't happen...
         //do the post process on the message
         //TODO if a message is deleted, remove it from the waitlist
-        if (this.deleteTime && msgToPostProcess.deletable) msgToPostProcess.delete(this.deleteTime).catch(console.error);
-        if (this.destinationDeleteTime && this.destMessage && this.destMessage.deletable) this.destMessage.delete(this.destinationDeleteTime).catch(console.error);
+        if (Number.isInteger(this.deleteTime) && msgToPostProcess.deletable) msgToPostProcess.delete(this.deleteTime).catch(console.error);
+        if (Number.isInteger(this.destinationDeleteTime)  && this.destMessage && this.destMessage.deletable) this.destMessage.delete(this.destinationDeleteTime).catch(console.error);
         let dmChannel = msgToPostProcess.channel.type === "dm";//reactions and such interactions does not work for a DM channel.
         if (this.reactions) {
             if (!dmChannel)
@@ -119,8 +118,8 @@ module.exports = class MessageFactory {
         if (typeof options.typing !== 'undefined' && typeof options.typing !== 'boolean') throw new TypeError('MessageFactoryOptions.typing must be an boolean.');
         if (options.typing && (!options.messageContent && !optoins.messageOptions)) throw new Error('MessageFactoryOptions.typing must accompany either MessageFactoryOptions.messageContent or MessageFactoryOptions.messageOptions');
         if (typeof options.reply !== 'undefined' && typeof options.reply !== 'boolean') throw new TypeError('MessageFactoryOptions.reply must be an boolean.');
-        if (options.deleteTime && (!Number.isInteger(options.deleteTime) || options.deleteTime < 0)) throw new TypeError('MessageFactoryOptions.deleteTime must be a positive integer.');
-        if (options.destinationDeleteTime && (!Number.isInteger(options.destinationDeleteTime) || options.destinationDeleteTime < 0)) throw new TypeError('MessageFactoryOptions.destinationDeleteTime must be a positive integer.');
+        if (typeof options.deleteTime === 'number' && options.deleteTime <= 0) throw new TypeError('MessageFactoryOptions.deleteTime must be a positive integer.');
+        if (typeof options.destinationDeleteTime === 'number' && options.destinationDeleteTime < 0) throw new TypeError('MessageFactoryOptions.destinationDeleteTime must be a positive integer or 0.');
         if (!destinationTypeofMessage) {
             if (options.destinationDeleteTime) throw new Error('MessageFactoryOptions.destinationDeleteTime does not work when MessageFactoryOptions.destination is not a Message');
             if (options.reply) throw new Error('MessageFactoryOptions.reply does not work when MessageFactoryOptions.destination is not a Message');

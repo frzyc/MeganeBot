@@ -3,11 +3,9 @@ module.exports = class ConversationModule extends CommandModule{
     constructor(client){
         super(client, {
             name: "Conversation Module",
-            usage: "A module to talk to MeganeBot.",
+            usage: "A module to converse with MeganeBot.",
             guildOnly: true
         });
-        this.addCommands([
-            require('./Commands/BasicResponse'),
-        ]);
+        this.addCommandsIn(require('path').join(__dirname, "Commands"));
     }
 }

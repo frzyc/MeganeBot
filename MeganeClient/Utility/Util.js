@@ -149,6 +149,8 @@ exports.otherCharSymbol = function (char) {
     let symarr = {}
     symarr[`!`] = `❕`;
     symarr[`?`] = `❔`;
+    symarr[`#`] = `:hash:`;
+    symarr[`*`] = `:asterisk:`;
     return symarr[char] ? symarr[char] : char;
 }
 var messageQueue = function (channel) {

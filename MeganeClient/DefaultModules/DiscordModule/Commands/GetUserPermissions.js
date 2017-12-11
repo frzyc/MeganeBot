@@ -1,6 +1,6 @@
 const Command = require('../../../Command');
 
-module.exports = class getPerms extends Command {
+module.exports = class GetUserPermissions extends Command {
     constructor(client) {
         super(client, {
             name: 'get-user-permissions',
@@ -22,11 +22,6 @@ module.exports = class getPerms extends Command {
     execute(message, args) {
         let guildmember = args['member'];
         let perms = message.channel.permissionsFor(guildmember).serialize();
-        this.client.autoMessageFactory({
-            destination: message,
-            reply: true,
-            messageContent: `<@${guildmember.id}>'s Permissions:\`\`\`JSON\n${JSON.stringify(perms, null, 2)}\`\`\``,
-            deleteTime: 15 * 60
-        });
+        return `<@${guildmember.id}>'s Permissions:\`\`\`JSON\n${JSON.stringify(perms, null, 2)}\`\`\``
     }
 }

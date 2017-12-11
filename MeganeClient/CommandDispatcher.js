@@ -39,16 +39,20 @@ class CommandDispatcher {
             let emojiCollection = this.watchlist.get(messageReaction.message.id);
             if (emojiCollection.has(messageReaction.emoji.toString())) {
                 await messageReaction.remove(user.id);
-                this.handleResponse(await emojiCollection.get(messageReaction.emoji.toString()).execute(messageReaction, user));
+                this.handleResponse(await emojiCollection.get(messageReaction.emoji.toString()).execute(messageReaction, user),messageReaction.message);
             }
         }
     }
-    async handleResponse(response) {
+    async handleResponse(response,message) {
         if (!response) return;
         if (typeof response === 'string') {
-            this.message.reply(response);
+            message.reply(response);
         } else if (typeof response === 'object') {
-            this.client.autoMessageFactory(response);
+            try {
+                this.client.autoMessageFactory(response);
+            } catch (err) {
+                console.log(err);
+            }
         } else {
             throw new TypeError("Response must be typeof [null|string|MessageFactoryOptions].");
         }

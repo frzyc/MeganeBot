@@ -78,7 +78,8 @@ module.exports = class MeganeClient extends discord.Client {
                 require('./DefaultModules/TestModule/TestModule'),
                 require('./DefaultModules/CommandAdminModule/CommandAdminModule'),
                 require('./DefaultModules/BotAdminModule/BotAdminModule'),
-                require('./DefaultModules/UtilModule/UtilModule')
+                require('./DefaultModules/UtilModule/UtilModule'),
+                require('./DefaultModules/DiscordModule/DiscordModule'),
             ]);
 
     }
