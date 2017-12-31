@@ -1,9 +1,9 @@
 const { Guild } = require('discord.js');
 const GeneralDataColumn = require('./GeneralDataColumn');
 /**
- * A class to deal general guild data.
+ * A class to deal with general guild data.
  */
-module.exports = class GuildData extends GeneralDataColumn {
+class GuildData extends GeneralDataColumn {
     constructor(table, columnName) {
         super(table, columnName);
         this.listeners = new Map();
@@ -53,7 +53,7 @@ module.exports = class GuildData extends GeneralDataColumn {
     /**
      * 
      * @param {Guild} guild 
-     * @param {string} key 
+     * @param {string} dataKey 
      */
     async remove(guild, dataKey) {
         let guildid = this.constructor.getGuildID(guild);
@@ -88,3 +88,4 @@ module.exports = class GuildData extends GeneralDataColumn {
     }
 
 }
+module.exports = GuildData;

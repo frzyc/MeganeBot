@@ -3,7 +3,7 @@ const CommandMessage = require('./CommandMessage');
 const Util = require('./Utility/Util');
 const { Collection } = require('discord.js');
 /**
- * Interface to handle commands from a CommandDepot
+ * A class to handle received {@link external:Message}, and then finding corresponding {@link Command}s within the message from a {@link CommandDepot}.
  */
 class CommandDispatcher {
     /**
@@ -11,15 +11,38 @@ class CommandDispatcher {
      * @param {CommandDepot} commandDepot 
      */
     constructor(client, commandDepot) {
+
+        /**
+         * A reference to the MeganeClient.
+         * @name CommandMessage#client
+         * @type {MeganeClient}
+         * @readonly
+         */
         Object.defineProperty(this, 'client', { value: client });
+
+        /**
+         * The {@link CommandDepot} that is the database of commands.
+         * @type {CommandDepot}
+         */
         this.commandDepot = commandDepot;
+
+        /**
+         * A storage for all the {@link Preprocess}s.
+         * @type {Set<Preprocess>}
+         */
         this.preprocesses = new Set();
+
+        /**
+         * A watchlist to keep track of some messages. for the callbacks of {@link ReactionUtil#execute}
+         * @private
+         * @type {external:Collection<string,external:Collection<emoji,ReactionUtil>>}
+         */
         this.watchlist = new Collection();
     }
     /**
-     * Parse through a new message / an edited message
-     * @param {Message} message 
-     * @param {Message} oldMessage 
+     * Handle a new message / an edited message
+     * @param {external:Message} message 
+     * @param {external:Message} oldMessage 
      */
     async handleMessage(message, oldMessage) {//old messgae before the update
         if (!this.preCheckMessage(message, oldMessage)) return;
@@ -31,6 +54,12 @@ class CommandDispatcher {
             cmdMsg.execute();
         } //else throw new Error('Unable to resolve command.');
     }
+
+    /**
+     * Handle a reaction to a message. This usually calls the callback added by {@link ReactionUtil}.
+     * @param {external:MessageReaction} messageReaction 
+     * @param {external:User} user 
+     */
     async handleReaction(messageReaction, user) {
         if (user.bot) return; //wont respond to bots
         //console.log(messageReaction);
@@ -43,6 +72,12 @@ class CommandDispatcher {
             }
         }
     }
+
+    /**
+     * Handle a response as a result of {@link Command#execute}.
+     * @param {null|string|MessageFactoryOptions} response 
+     * @param {external:Message} message - The Message that triggered the command.
+     */
     async handleResponse(response,message) {
         if (!response) return;
         if (typeof response === 'string') {
@@ -75,6 +110,7 @@ class CommandDispatcher {
         this.preprocesses.add(preprocess);
         return true;
     }
+
     /**
      * Removes a preprocess
      * @param {Preprocess} preprocess 
@@ -87,8 +123,8 @@ class CommandDispatcher {
     }
     /**
      * Preprocess this message using all the registered preprocesses.
-     * @param {Message} message 
-     * @param {Message} oldMessage
+     * @param {external:Message} message 
+     * @param {external:Message} oldMessage
      * @returns {null|string[]}
      */
     preprocess(message, oldMessage) {
@@ -105,10 +141,10 @@ class CommandDispatcher {
     /**
      * this is executed right after receiving the message.
      * Will reject(return false) for messages:
-     * * by a bot
-     * * that are edits, but same as the original message
-     * @param {Message} message the message to handle.
-     * @param {OldMessage} OldMessage the message before the update.
+     * - by a bot
+     * - that are edits, but same as the original message
+     * @param {external:Message} message the message to handle.
+     * @param {external:Message} OldMessage the message before the update.
      * @private
      */
     preCheckMessage(message, OldMessage) {
@@ -116,9 +152,10 @@ class CommandDispatcher {
         if (OldMessage && OldMessage.content === message.content) return false;
         return true;
     }
+
     /**
      * Parse the cmdstring, and arguments for this message.
-     * @param {Message} message message to parse for commands
+     * @param {external:Message} message - Message to parse for commands
      * @returns {?CommandMessage}
      */
     parseMessage(message) {
@@ -131,6 +168,12 @@ class CommandDispatcher {
         if (!cmd) return null;
         return new CommandMessage(this.client, message, cmd, argString);
     }
+
+    /**
+     * A helper function to generate a regex that parses out the command using the prefix/mentions.
+     * @private
+     * @param {external:Message} message - Provides a context to get the prefix.
+     */
     buildPattern(message) {
         //when a message is from a guild, must use the prefix from the guild, if the guild has the prefix unset, then only mentions will work.
         //else, for a dm message, both the client's global prefix and mentions will work.

@@ -1,9 +1,11 @@
 {
   "name": "MeganeBot",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "a bot made by a glasses fetishtist",
   "main": "MeganeBot/bot.js",
   "scripts": {
+    "docgen": "./node_modules/.bin/jsdoc MeganeClient -r -d docs --configure jsdoc-conf.json --private",
+    "docgen-test": "./node_modules/.bin/jsdoc MeganeClient -r -d docs --configure jsdoc-conf.json --private --debug --verbose",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "frzyc",
@@ -21,5 +23,8 @@
     "uws": "^8.14.1",
     "youtube-dl": "^1.12.2",
     "ytdl-core": "^0.18.1"
+  },
+  "devDependencies": {
+    "jsdoc": "^3.5.5"
   }
 }

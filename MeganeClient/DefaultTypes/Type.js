@@ -1,7 +1,7 @@
 /**
  * A base type, for other types to build on top of.
  */
-module.exports = class Type {
+class Type {
     /**
      * @param {MeganeClient} client 
      * @param {string} typeid 
@@ -34,7 +34,8 @@ module.exports = class Type {
      * @returns {null|parsedValue} return null if the value cannot be parsed by this type. 
      * @abstract
      */
-    parse(value, msg, args){
+    parse(value, msg, arg){
         throw new Error(`${this.constructor.name} doesn't have a parse() method.`);
     }
 }
+module.exports = Type;

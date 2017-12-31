@@ -1,18 +1,18 @@
 const CommandArgumentParseError = require('./Errors/CommandArgumentParseError');
-module.exports = class CommandArgument {
+class CommandArgument {
     /**
      * @typedef {Object} CommandArgumentOptions
-     * @property {string} [type] - Should corresponding to an existing type, or leave it null for a custom type
-     * @property {string} label - label of the parsed values for this command in the return object
-     * @property {string} [description] - A description for this argument, printed out for Command usage
-     * @property {number} [max] the max value if type is a scaler value, or can be measured by a length.
-     * @property {number} [min] the min value if type is a scaler value, or can be measured by a length(length >= 0);
-     * @property {*} [default] the default value. All arguments after this will need to be optional as well(have default values)
-     * @property {number} [quantity] retrieve a set quantitiy of values. This will return the values as an array. Mutually exclusive from CommandArgumentOptions#multiple and CommandArgumentOptions#remaining
-     * @property {boolean} [multiple] retrieve several values. This argument have to be at the end of the command arguments. Mutually exclusive from CommandArgumentOptions#quantity and CommandArgumentOptions#remaining
-     * @property {boolean} [remaining] retrieve the last remaining string of input. Mutually exclusive from CommandArgumentOptions#quantity and CommandArgumentOptions#quantity
-     * @property {function} [validate] see {@link Type#validate}
-     * @property {function} [parse] see {@link Type#parse}
+     * @property {string} [type] - Should corresponding to an existing type, or leave it null for a custom type. See {@link CommandArgument#type}.
+     * @property {string} label - Property value of the parsed results in the results object. See {@link CommandArgument#label}.
+     * @property {string} [description] - A description for this argument. See {@link CommandArgument#descriptionString}.
+     * @property {number} [max] - The max value. See {@link CommandArgument#max}.
+     * @property {number} [min] - The min value. See {@link CommandArgument#min}.
+     * @property {*} [default] - The default value. See {@link CommandArgument#default}.
+     * @property {number} [quantity] - Retrieve a set quantitiy of values. Needs to be a whole number. Mutually exclusive from {@link CommandArgument#multiple}|{@link CommandArgument#remaining}. See {@link CommandArgument#quantity}. 
+     * @property {boolean} [multiple] - Retrieve several values. Mutually exclusive from {@link CommandArgument#quantity}|{@link CommandArgument#remaining}. See {@link CommandArgument#multiple}.
+     * @property {boolean} [remaining] - Retrieve the last remaining string of input. Mutually exclusive from {@link CommandArgument#quantity}|{@link CommandArgument#multiple}. See {@link CommandArgument#remaining}.
+     * @property {function} [validate] - Custom validator. Only when {@link CommandArgumentOptions#type} is null. See {@link CommandArgument#customValidator}.
+     * @property {function} [parse] - Custom parser. Only when {@link CommandArgumentOptions#type} is null. See {@link CommandArgument#customParser}.
      */
 
     /**
@@ -22,23 +22,108 @@ module.exports = class CommandArgument {
      */
     constructor(client, options) {
         this.constructor.preCheck(client, options);
+        /**
+         * A reference to the MeganeClient.
+         * @name CommandArgument#client
+         * @type {MeganeClient}
+         * @readonly
+         */
+        Object.defineProperty(this, 'client', { value: client });
+
+        /**
+         * A label to reference this {@link CommandArgument} in the parsed object.
+         * @type {string}
+         */
         this.label = options.label;
+
+        /**
+         * The {@link Type} for this {@link CommandArgument}.
+         * @type {Type|"custom"}
+         */
         this.type = options.type ? client.depot.types.get(options.type) : { id: 'custom' };//if type is not defined, is is a custom type.
+
+        /**
+         * The description for this {@link CommandArgument}.
+         * @type {?string}
+         */
         this.descriptionString = options.description || null;
+
+        /**
+         * The min value if {@link CommandArgument#type} is a scaler value, or can be measured by a length.
+         * @type {?number}
+         */
         this.min = options.min !== undefined ? options.min : null;
+
+        /**
+         * The max value if {@link CommandArgument#type} is a scaler value, or can be measured by a length.
+         * @type {?number}
+         */
         this.max = options.max !== undefined ? options.max : null;
+
+        /**
+         * The default value for this {@link CommandArgument}.
+         * This makes this argument optional.
+         * All arguments in {@link Command#args} after this one will need to be optional as well. 
+         * @type {?Object}
+         */
         this.default = options.default;
+
+        /**
+         * The number of values this {@link CommandArgument} parses. 
+         * This will return the values as an array. 
+         * @type {?number}
+         */
         this.quantity = options.quantity !== undefined ? options.quantity : null;
+
+        /**
+         * This will keep parsing arguments until the end of the arugment string. 
+         * This will return the values as an array. 
+         * Must be the last argument for the {@link Command#args}.
+         * only applicable if true.
+         * @type {?boolean}
+         */
         this.multiple = options.multiple !== undefined ? options.multiple : null;
+
+        /**
+         * This will dump the remaining argument string into one argument. 
+         * Must be the last argument for the {@link Command#args}.
+         * only applicable if true.
+         * @type {?boolean}
+         */
         this.remaining = options.remaining !== undefined ? options.remaining : null;
+        
+        /**
+         * A customized Validator for a custom type. See {@link Type#validate}.
+         * @type {?function}
+         */
         this.customValidator = options.validate || null;
+        
+        /**
+         * A customized parser for a custom type. See {@link Type#parse}.
+         * @type {?function}
+         */
         this.customParser = options.parse || null;
     }
+
+    /**
+     * Validate the {@link Type} of this {@link Argument} against the value/values.
+     * @param {string|string[]} value - The value/values to validate.
+     * @param {external:Message} msg - The message the value was extracted from.
+     * @returns {boolean} - Whether the value is legit.
+     */
     async validateType(value, msg) {
         if (typeof value !== 'string') return TypeError(`type validation is only valid for strings`);
         if (this.customValidator) return await this.customValidator(value, msg, this);
         else return await this.type.validate(value, msg, this);
     }
+
+    /**
+     * validate values individually against the the {@link Type} of this {@link Argument}.
+     * @private
+     * @param {string[]} values - The values to validate.
+     * @param {msg} msg - The message the values were extracted from.
+     * @returns {boolean} - Returns true if all valuse are legit.
+     */
     async validate(values, msg) {
         if (this.multiple || this.quantity) {
             if (!Array.isArray(values) || (this.quantity && values.length !== this.quantity))
@@ -52,11 +137,26 @@ module.exports = class CommandArgument {
         }
         return true;
     }
+
+    /**
+     * Parse the {@link Type} of this {@link Argument} against the value/values.
+     * @param {string|string[]} value - The value/values to validate.
+     * @param {external:Message} msg - The message the value was extracted from.
+     * @returns {object} - The parsed output.
+     */
     async parseType(value, msg) {
         if (typeof value !== 'string') return TypeError(`type parsing is only valid for strings`);
         if (this.customParser) return await this.customParser(value, msg, this);
         else return await this.type.parse(value, msg, this);
     }
+
+    /**
+     * Parse values individually against the the {@link Type} of this {@link Argument}.
+     * @private
+     * @param {string[]} values - The values to validate.
+     * @param {msg} msg - The message the values were extracted from.
+     * @returns {object} - The parsed output.
+     */
     async parse(values, msg) {
         if (this.multiple || this.quantity) {
             if (!Array.isArray(values) || (this.quantity && values.length !== this.quantity))
@@ -68,6 +168,20 @@ module.exports = class CommandArgument {
             return await this.parseType(values, msg);
         }
     }
+
+    /**
+     * @typedef {Object} SeparatedArgs
+     * @private
+     * @property {string|string[]} result - The parsed string/strings for this argument
+     * @property {string} [remaining] - The remaining part of the argString after the arugments have been extracted.
+     */
+
+    /**
+     * Separate Arguments from the argstring. 
+     * @private
+     * @param {string} argString - The string to parse the argument from.
+     * @returns {SeparatedArgs}
+     */
     separateArg(argString) {
         let result;
         if (!argString) {//means we ran out of the argument string to parse, but an argument still havent been parsed.
@@ -108,13 +222,15 @@ module.exports = class CommandArgument {
             remaining: argString
         };
     }
+
     /**
-     * 
-     * @param {String} argString 
-     * @param {number} argCount 
-     * @returns {String[]} will have length argCount+1 if there are still argString remaining.
+     * Separate argCount of arguments from the argstring. Arguments are separated by spaces.  
+     * @private
+     * @param {String} argString - String to parse arguments from.
+     * @param {number} [argCount=1] - The number of argumetns to parse.
+     * @returns {String[]} - The array of parsed strings. Will have length argCount+1 if there are still argString remaining.
      */
-    static separateString(argString, argCount) {
+    static separateString(argString, argCount = 1) {
         if (!argString) return null;
         const re = /\s*(?:("|')([^]*?)\1|(\S+))\s*/g;
         const result = [];
@@ -129,18 +245,27 @@ module.exports = class CommandArgument {
         return result;
     }
 
-
+    /**
+     * Get the description of this {@link CommandArgument}.
+     * @returns {string} - Will return the description, else returns "No description specified.".
+     */
     get description() {
         if (!this.descriptionString) return "No description specified.";
         return this.descriptionString;
     }
+
+    /**
+     * Check if {@link CommandArgument} has a description.
+     * @returns {boolean}
+     */
     hasDescription() {
         if (this.descriptionString) return true;
         return false;
     }
 
     /**
-     * 
+     * A helper function to validate the options before the class is created.
+     * @private
      * @param {MeganeClient} client 
      * @param {CommandArgumentOptions} options 
      */
@@ -180,3 +305,4 @@ module.exports = class CommandArgument {
             throw new TypeError('multiple and quantity and remaining are mutually exclusive.');
     }
 }
+module.exports = CommandArgument;

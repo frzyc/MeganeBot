@@ -1,11 +1,12 @@
-const discord = require('discord.js');
-const Util = require('./Utility/Util');
-const CommandArgument = require('./CommandArgument');
-const CommandAndModule = require('./CommandAndModule');
+let discord = require('discord.js');
+let Util = require('./Utility/Util');
+let CommandArgument = require('./CommandArgument');
+let CommandAndModule = require('./CommandAndModule');
 /**
  * This is the base Command class. All commands should extend this class.
+ * @extends CommandAndModule
 */
-module.exports = class Command extends CommandAndModule{
+class Command extends CommandAndModule{
     /**
      * Options that sets the format and property of the a command.
      * @typedef {Object} CommandOptions
@@ -52,42 +53,95 @@ module.exports = class Command extends CommandAndModule{
      */
 
     /**
-     * @param {MeganeClient} client
-     * @param {CommandOptions} options
+     * Constructor. Will precheck the options before creating.
+     * @param {MeganeClient} client - The client for the command
+     * @param {CommandOptions} options - The options for the command
      */
     constructor(client, options) {
         super(client,options);
         this.constructor.CommandPreCheck(client, options);
+
+        /**
+         * An array of aliases
+         * @type {?string[]}
+         */
         this.aliases = options.aliases ? options.aliases : [];
+        
+        /**
+         * The moduleId to associate this {@link Command} with a {@link CommandModule}.
+         * @type {string}
+         */
         this.moduleID = options.module;
+
+        /**
+         * A example for using this {@link Command}
+         * @type {?string}
+         */
         this.examples = options.examples ? options.examples : null;
+
+        /**
+         * A function to restrict this command. Will be executed before {@link Command#execute}.
+         * @type {?function}
+         */
         this.restriction = options.restriction === undefined ? false : options.restriction;
+
+        /**
+         * A map to each guild, to determine whether if this {@link Command} is enabled.
+         * @todo implementation and testing, maybe create this in CommandAndModule?
+         * @type {Map<string,boolean>}
+         */
         this.enabledInGuild = new Map();
         if (options.throttling) {
+            /**
+             * Seconds before a user can use this {@link Command} again.
+             * @type {?number}
+             */
             this.userCooldown = options.throttling.userCooldown === undefined ? false : options.throttling.userCooldown;
+            /**
+             * Seconds before this {@link Command} can be used in a guild.
+             * @type {?number}
+             */
             this.serverCooldown = options.throttling.serverCooldown === undefined ? false : options.throttling.serverCooldown;
+            /**
+             * Seconds before this {@link Command} can be used in a channel.
+             * @type {?number}
+             */
             this.channelCooldown = options.throttling.channelCooldown === undefined ? false : options.throttling.channelCooldown;
         }
         if (options.args) {
+            /**
+             * Array of {@link CommandArgument}s.
+             * @type {?CommandArgument[]}
+             */
             this.args = new Array(options.args.length);
             for (let i = 0; i < options.args.length; i++) this.args[i] = new CommandArgument(this.client, options.args[i]);
         }
+        /**
+         * The number of arguments in this {@link Command}
+         * @type {?number}
+         */
         this.numArgs = options.numArgs || null;
     }
+
     /**
-     * A template for the execute method of commands
-     * @param {Message} message 
+     * A template for the execute method of {@link Command}.
+     * @param {external:Message} message 
      * @param {Object|string|string[]} args Depending on the arguments defined, or numArguments. numArguements === 1 will be a string 
+     * @abstract
      */
     async execute(message, args) { // eslint-disable-line no-unused-vars, require-await
         throw new Error(`${this.constructor.name} doesn't have a execute() method.`);
     }
 
+    /**
+     * Generate a usage embed message for this {@link Command}. Mainly used for the help command, or if you use the command incorrectly.
+     * @param {external:Message} message - The message that triggered the usage, for getting contextual information like prefix.
+     * @returns {MessageFactoryOptions} - The generated message that can be fed right into a MessageFactory.
+     */
     getUsageEmbededMessageObject(message) {
         let prefix = message.guild ? message.guild.prefix : this.client.prefix;
         if (!prefix)
             prefix = "<@mentionme> ";
-        //TODO getUsageEmbededMessageObject
         let title = `Usage of **${this.name}${this.aliases.length > 0 ? ", " + this.aliases.join(", ") : ""}**`;
         let desc = `**${prefix}${this.name} ${this.getTemplateArguments()}**\n${this.usage}`;
         let msgobj = {
@@ -131,17 +185,20 @@ module.exports = class Command extends CommandAndModule{
         }
         return msgobj;
     }
+
     /**
-     * creates a template for the arguments, based on the args of this command
+     * creates a template string for the arguments, based on the args of this command
+     * @returns {string} - Template string.
      */
     getTemplateArguments() {
         if (!this.args) return "";
         return this.args.map(arg => typeof arg.default === 'undefined' ? `[${arg.label}]` : `<${arg.label}>`).join(" ");
     }
+
     /**
-     * Start the cooldown peroid of the command
-     * TODO rewrite entire throttling infastructure.
-     * @param {Message} message 
+     * Start the cooldown peroid of this {@link Command}.
+     * @todo rewrite entire throttling infastructure.
+     * @param {external:Message} message 
      */
     setCooldown(message) {
         let setCD = (coolDownType, property) => {
@@ -158,9 +215,10 @@ module.exports = class Command extends CommandAndModule{
             setCD('serverCooldown', message.guild.id);
         setCD('channelCooldown', message.channel.id);
     }
+
     /**
-     * Check whether the command is in cooldown period.
-     * @param {Message} message 
+     * Check whether this {@link Command} is in cooldown period.
+     * @param {external:Message} message 
      * @returns {Object} 
      */
     inCooldown(message) {
@@ -183,6 +241,11 @@ module.exports = class Command extends CommandAndModule{
 
         return (!ret.userCooldown && !ret.serverCooldown && !ret.channelCooldown) ? null : ret;
     }
+
+    /**
+     * Clears the cooldowns of this {@link Command} from the author/channel/guild context provided by the message.
+     * @param {external:Message} message - The message to provide the author/channel/guild context.
+     */
     clearCooldown(message) {
         let clrCD = (coolDownType, property, msg) => {
             if (!this[coolDownType]) return;
@@ -195,6 +258,12 @@ module.exports = class Command extends CommandAndModule{
         clrCD('channelCooldown', message.channel.id);
     }
     
+    /**
+     * Check if this {@link Command} is in cooldown, in the author/channel/guild context provided by the message.
+     * @param {external:Message} message - The message to provide the author/channel/guild context.
+     * @param {boolean} [reply=false] - Whether to reply to the message if the command is in cooldown.
+     * @returns {boolean} - True if no cooldown, False otherwise.
+     */
     passCooldown(message, reply = false) {
         //check cooldown restriction
         let inCD = this.inCooldown(message);
@@ -210,6 +279,12 @@ module.exports = class Command extends CommandAndModule{
         }
         return true;
     }
+
+    /**
+     * Check if this {@link Command} is enabled in a guild or not.
+     * @param {Guild} guild - The guild to check the condition for. 
+     * @returns {boolean} - True if is enabled, false if disabled.
+     */
     getEnabledInGuild(guild) {
         let guildid = guild.id;
         if (this.enabledInGuild.has(guildid)) {
@@ -218,6 +293,12 @@ module.exports = class Command extends CommandAndModule{
             return false;
         return true
     }
+
+    /**
+     * Sets whether this {@link Command} is enabled in a guild or not.
+     * @param {Guild} guild - The guild to set the conditon for.
+     * @param {boolean} enabled - Boolean to set.
+     */
     setEnabledInGuild(guild, enabled) {
         let guildid = guild.id;
         let old;
@@ -228,6 +309,12 @@ module.exports = class Command extends CommandAndModule{
             this.client.emit('CommandEnabledChange', guild, this, enabled);
         }
     }
+    /**
+     * A helper function to validate the options before the class is created.
+     * @private
+     * @param {MeganeClient} client 
+     * @param {CommandOptions} options 
+     */
     static CommandPreCheck(client, options) {
         //if (options.name !== options.name.toLowerCase()) throw new Error('CommandOptions.name must be lowercase.');
         if (options.aliases && (!Array.isArray(options.aliases) || options.aliases.some(ali => typeof ali !== 'string'))) throw new TypeError('CommandOptions.aliases must be an Array of strings.');
@@ -266,3 +353,4 @@ module.exports = class Command extends CommandAndModule{
         if (options.numArgs < 0) throw new RangeError('CommandOptions.numArgs must be a positive integer');
     }
 }
+module.exports = Command;

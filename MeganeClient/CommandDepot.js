@@ -4,20 +4,60 @@ const Command = require('./Command');
 const CommandMessage = require('./CommandMessage');
 const CommandModule = require('./CommandModule');
 const Type = require('./DefaultTypes/Type');
-module.exports = class CommandDepot {
+/**
+ * A class to store all the {@link Command}s, {@link CommandModule}s, and {@link Type}s.
+ */
+class CommandDepot {
+    /**
+     * @constructor
+     * @param {MeganeClient} client 
+     */
     constructor(client) {
-        //read only property for client
+
+        /**
+         * A reference to the MeganeClient.
+         * @name CommandMessage#client
+         * @type {MeganeClient}
+         * @readonly
+         */
         Object.defineProperty(this, 'client', { value: client });
+
+        /**
+         * A collection of {@link Command}s.
+         * @type {external:Collection<string,Command>}
+         */
         this.commands = new discord.Collection();
+
+        /**
+         * A collection of {@link CommandModule}s.
+         * @type {external:Collection<string,CommandModule>}
+         */
         this.modules = new discord.Collection();
+
+        /**
+         * A collection of {@link Type}s.
+         * @type {external:Collection<string,Type>}
+         */
         this.types = new discord.Collection();
     }
+    
+    /**
+     * Add an array of {@link CommandModule}s.
+     * @param {CommandModule[]} modules 
+     * @returns {CommandDepot} - This {@link CommandDepot} so that functions can be chained.
+     */
     addModules(modules) {
         if (!Array.isArray(modules)) throw new TypeError("Modules must be an array.");
         for (let module of modules)
             this.addModule(module);
         return this;
     }
+
+    /**
+     * Add a single module to the Depot. must have a unique {@link CommandModule#id}.
+     * @param {CommandModule} module 
+     * @returns {CommandDepot} - This {@link CommandDepot} so that functions can be chained.
+     */
     addModule(module) {
         //convert the module to an CommandModule object for better parsing
         if (typeof module === 'function') {
@@ -38,6 +78,14 @@ module.exports = class CommandDepot {
         }
         return this;
     }
+
+    /**
+     * Search for {@link CommandModule}s.
+     * @param {string} searchString - A search string.
+     * @param {boolean} [exact=false] - Whether to search using wholewords for {@link CommandModule#name}s/{@link CommandModule#id}s.
+     * @param {?external:Message} [message] - Restricts the search using the context provided by the message.
+     * @returns {CommandModule[]} - Matches.
+     */
     findModules(searchString = null, exact = false, message = null) {
         if (!searchString) return message ? this.modules.filterArray(mod => mod.passContextRestriction(message) && mod.passPermissions(message)) : Array.from(this.modules.values());
         const lcSearch = searchString.toLowerCase();
@@ -54,6 +102,12 @@ module.exports = class CommandDepot {
         }
         return matchedModules;
     }
+
+    /**
+     * find an single {@link CommandModule}.
+     * @param {CommandModule|string} module - Module to find.
+     * @returns {CommandModule} - Match.
+     */
     getModule(module) {
         if (module instanceof CommandModule) return module;
         if (typeof module === 'string') {
@@ -63,12 +117,23 @@ module.exports = class CommandDepot {
         throw new Error('Unable to resolve module.');
     }
 
+    /**
+     * Add an array of {@link Command}s.
+     * @param {Command[]} commands 
+     * @returns {CommandDepot} - This {@link CommandDepot} so that functions can be chained.
+     */
     addCommands(commands) {
         if (!Array.isArray(commands)) throw new TypeError('Commands must be an Array.');
         for (let command of commands)
             this.addCommand(command);
         return this;
     }
+
+    /**
+     * Add a single module to the Depot. must have a unique {@link Command#id}. Will also add it to the corresponding {@link CommandModule}.
+     * @param {Command} command 
+     * @returns {CommandDepot} - This {@link CommandDepot} so that functions can be chained.
+     */
     addCommand(command) {
         //convert the command to an Command object for better parsing
         if (typeof command === 'function') command = new command(this.client);
@@ -96,6 +161,7 @@ module.exports = class CommandDepot {
         this.client.emit('debug', `Added command ${module.id}:${command.id}.`);
         return this;
     }
+
     //addCommandsInDir(){
     /* TODO add all commands in a directory
     fs.readdir('./glassesicon', (err, files) => { 
@@ -109,6 +175,14 @@ module.exports = class CommandDepot {
     });
     return this;*/
     //}
+
+    /**
+     * Search for {@link Command}s.
+     * @param {string} searchString - A search string.
+     * @param {boolean} [exact=false] - Whether to search using wholewords for {@link Command#name}s/{@link Command#aliases}.
+     * @param {?external:Message} [message] - Restricts the search using the context provided by the message.
+     * @returns {Command[]} - Matches.
+     */
     findCommands(searchString = null, exact = false, message = null) {
         if (!searchString) return message ? this.commands.filterArray(cmd => cmd.passContextRestriction(message) && cmd.passPermissions(message)) : Array.from(this.commands.values());
 
@@ -129,6 +203,11 @@ module.exports = class CommandDepot {
         return matchedCommands;
     }
 
+    /**
+     * Find an single {@link Command}.
+     * @param {Command|CommandMessage|string} module - Module to find.
+     * @returns {Command} - Match.
+     */
     resolveCommand(command) {
         if (command instanceof Command) return command;
         if (command instanceof CommandMessage) return command.command;
@@ -140,6 +219,11 @@ module.exports = class CommandDepot {
         return null;
     }
 
+    /**
+     * Add a single module to the Depot. must have a unique {@link Type#id}.
+     * @param {Type} type 
+     * @returns {CommandDepot} - This {@link CommandDepot} so that functions can be chained.
+     */
     addType(type) {
         if (typeof type === 'function') type = new type(this.client);
         if (!(type instanceof Type)) {
@@ -152,6 +236,12 @@ module.exports = class CommandDepot {
         this.client.emit('debug', `Registered argument type ${type.id}.`);
         return this;
     }
+
+    /**
+     * Add an array of {@link Types}s.
+     * @param {Types[]} types 
+     * @returns {CommandDepot} - This {@link CommandDepot} so that functions can be chained.
+     */
     addTypes(types) {
         if (!Array.isArray(types)) throw new TypeError('Commands must be an Array.');
         for (let type of types)
@@ -163,3 +253,4 @@ module.exports = class CommandDepot {
     //TODO add types in a directory
 
 }
+module.exports = CommandDepot;

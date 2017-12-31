@@ -204,6 +204,9 @@ exports.justOnePromise = function (promise, resolveResponse, rejectResponse) {
         });
     });
 }
+/**
+ * @deprecated Deprecated by the type parsing of the new system.
+ */
 exports.staticArgTypes = {
     'none': {
         type: 'none',//special process for none

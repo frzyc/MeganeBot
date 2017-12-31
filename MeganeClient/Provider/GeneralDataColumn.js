@@ -4,15 +4,11 @@ const ColumnBase = require('./ColumnBase');
  * A class to deal general data: data that is not updated very often, and can be grouped into a general object. 
  * It will be converted into a JSON and stored as a string in a single column in a table.
  * setting is expensive, but getting is relatively cheap, since the object is cached here.
- * For values that are updated often, use GuildSpecificData.
+ * For values that are updated often, use SpecificDataColumn.
  */
-module.exports = class GeneralDataColumn extends ColumnBase {
+class GeneralDataColumn extends ColumnBase {
     constructor(table, columnName) {
-        super();
-        Object.defineProperty(this, 'client', { value: table.client });
-        this.table = table;
-        this.columnName = columnName;
-        this.db = table.db;
+        super(table, columnName);
         this.data = new Map();
         this.changeStatement = null;
     }
@@ -66,3 +62,4 @@ module.exports = class GeneralDataColumn extends ColumnBase {
         await this.changeStatement.run(dbPrimaryKey, JSON.stringify(null));
     }
 }
+module.exports = GeneralDataColumn;

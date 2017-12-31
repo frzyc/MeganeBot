@@ -15,7 +15,7 @@ let flag = `🚩`;//'f'
 let wrongflag = `❌`;//'x'
 let letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
-minesweeperGame = function (xsmin, ysmin, xsmax, ysmax) {
+let minesweeperGame = function (xsmin, ysmin, xsmax, ysmax) {
     this.xsizemin = xsmin;
     this.ysizemin = ysmin;
 

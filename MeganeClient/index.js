@@ -1,6 +1,7 @@
 const { Guild } = require('discord.js');
 const provider = 'Provider';
-module.exports = {
+
+const index = {
     MeganeClient: require('./MeganeClient'),
     Command: require('./Command'),
     CommandArgument: require('./CommandArgument'),
@@ -19,5 +20,41 @@ module.exports = {
     GeneralDataColumn: require(`./${provider}/GeneralDataColumn`),
     GuildData: require(`./${provider}/GuildData`),
 };
-
+module.exports = index;
 require('./Extensions/GuildExtension').doExtension(Guild);
+
+/**
+ * The discord.js Client.
+ * @external Client
+ * @see {@link https://discord.js.org/#/docs/main/master/class/Client}
+ */
+
+/**
+ * Basically a map with extra Utility.
+ * @external Collection
+ * @see {@link https://discord.js.org/#/docs/main/master/class/Collection}
+ */
+
+/**
+ * The discord.js Message Object.
+ * @external Message
+ * @see {@link https://discord.js.org/#/docs/main/master/class/Message}
+ */
+
+/**
+ * The discord.js MessageRection Object.
+ * @external MessageReaction
+ * @see {@link https://discord.js.org/#/docs/main/master/class/MessageReaction}
+ */
+
+/**
+ * The discord.js User Object.
+ * @external User
+ * @see {@link https://discord.js.org/#/docs/main/master/class/User}
+ */
+
+/**
+ * The discord.js Guild Object.
+ * @external Guild
+ * @see {@link https://discord.js.org/#/docs/main/master/class/Guild}
+ */

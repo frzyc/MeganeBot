@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: CommandDispatcher.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: CommandDispatcher.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>﻿const Command = require('./Command');
+const CommandMessage = require('./CommandMessage');
+const Util = require('./Utility/Util');
+const { Collection } = require('discord.js');
+/**
+ * A class to handle received {@link external:Message}, and then finding corresponding {@link Command}s within the message from a {@link CommandDepot}.
+ */
+class CommandDispatcher {
+    /**
+     * @param {MeganeClient} client 
+     * @param {CommandDepot} commandDepot 
+     */
+    constructor(client, commandDepot) {
+
+        /**
+         * A reference to the MeganeClient.
+         * @name CommandMessage#client
+         * @type {MeganeClient}
+         * @readonly
+         */
+        Object.defineProperty(this, 'client', { value: client });
+
+        /**
+         * The {@link CommandDepot} that is the database of commands.
+         * @type {CommandDepot}
+         */
+        this.commandDepot = commandDepot;
+
+        /**
+         * A storage for all the {@link Preprocess}s.
+         * @type {Set&lt;Preprocess>}
+         */
+        this.preprocesses = new Set();
+
+        /**
+         * A watchlist to keep track of some messages. for the callbacks of {@link ReactionUtil#execute}
+         * @private
+         * @type {external:Collection&lt;string,external:Collection&lt;emoji,ReactionUtil>>}
+         */
+        this.watchlist = new Collection();
+    }
+    /**
+     * Handle a new message / an edited message
+     * @param {external:Message} message 
+     * @param {external:Message} oldMessage 
+     */
+    async handleMessage(message, oldMessage) {//old messgae before the update
+        if (!this.preCheckMessage(message, oldMessage)) return;
+        let reasons = this.preprocess(message, oldMessage);
+        if (reasons) return;
+        if (oldMessage) Object.defineProperty(message, 'oldMessage', { value: oldMessage });
+        const cmdMsg = this.parseMessage(message);
+        if (cmdMsg) {
+            cmdMsg.execute();
+        } //else throw new Error('Unable to resolve command.');
+    }
+
+    /**
+     * Handle a reaction to a message. This usually calls the callback added by {@link ReactionUtil}.
+     * @param {external:MessageReaction} messageReaction 
+     * @param {external:User} user 
+     */
+    async handleReaction(messageReaction, user) {
+        if (user.bot) return; //wont respond to bots
+        //console.log(messageReaction);
+        //console.log(`NEW REACTION BOOO YEAH emoji.name:${messageReaction.emoji.name}, emoji.id:${messageReaction.emoji.id}, emoji.identifier:${messageReaction.emoji.identifier}, emoji.toString():${messageReaction.emoji.toString()}`);
+        if (this.watchlist.has(messageReaction.message.id)) {
+            let emojiCollection = this.watchlist.get(messageReaction.message.id);
+            if (emojiCollection.has(messageReaction.emoji.toString())) {
+                await messageReaction.remove(user.id);
+                this.handleResponse(await emojiCollection.get(messageReaction.emoji.toString()).execute(messageReaction, user),messageReaction.message);
+            }
+        }
+    }
+
+    /**
+     * Handle a response as a result of {@link Command#execute}.
+     * @param {null|string|MessageFactoryOptions} response 
+     * @param {external:Message} message - The Message that triggered the command.
+     */
+    async handleResponse(response,message) {
+        if (!response) return;
+        if (typeof response === 'string') {
+            message.reply(response);
+        } else if (typeof response === 'object') {
+            try {
+                this.client.autoMessageFactory(response);
+            } catch (err) {
+                console.log(err);
+            }
+        } else {
+            throw new TypeError("Response must be typeof [null|string|MessageFactoryOptions].");
+        }
+    }
+
+    /**
+     * A function that takes (message, OldMessage), and makes a determination whether it should be executed or not. 
+     * @typedef {function} Preprocess
+     * @returns {false|string} - return false if the CommandMessage should not be stopped, and keep going to be processed; a String for the reason why the CommandMessage has to be blocked.
+     */
+
+    /**
+     * Add a function to execute for almost every message, even ones without commands. Message is preprocessed before parsing for commands.
+     * Note: this is relatively expensive, since almost all messages will be preprocessed.
+     * @param {Preprocess} preprocess 
+     */
+    addPreprocess(preprocess) {
+        if (typeof preprocess !== 'function') throw new TypeError("Preprocess must be a function.");
+        if (this.preprocesses.has(preprocess)) return false;
+        this.preprocesses.add(preprocess);
+        return true;
+    }
+
+    /**
+     * Removes a preprocess
+     * @param {Preprocess} preprocess 
+     */
+    removePrerocess(preprocess) {
+        if (typeof preprocess !== 'function') throw new TypeError("Preprocess must be a function.");
+        if (this.preprocesses.has(preprocess)) return false;
+        this.preprocesses.add(preprocess);
+        return true;
+    }
+    /**
+     * Preprocess this message using all the registered preprocesses.
+     * @param {external:Message} message 
+     * @param {external:Message} oldMessage
+     * @returns {null|string[]}
+     */
+    preprocess(message, oldMessage) {
+        let reasons = [];
+        for (prepro of this.preprocesses) {
+            let reason = prepro(message, oldMessage);
+            if (reason) {
+                reasons.push(reason);
+                this.client.emit('commandblocked', cmdMsg, restrictMsg);
+            }
+        }
+    }
+
+    /**
+     * this is executed right after receiving the message.
+     * Will reject(return false) for messages:
+     * - by a bot
+     * - that are edits, but same as the original message
+     * @param {external:Message} message the message to handle.
+     * @param {external:Message} OldMessage the message before the update.
+     * @private
+     */
+    preCheckMessage(message, OldMessage) {
+        if (message.author.bot) return false; //wont respond to bots
+        if (OldMessage &amp;&amp; OldMessage.content === message.content) return false;
+        return true;
+    }
+
+    /**
+     * Parse the cmdstring, and arguments for this message.
+     * @param {external:Message} message - Message to parse for commands
+     * @returns {?CommandMessage}
+     */
+    parseMessage(message) {
+        let cont = message.content;
+        const pattern = this.buildPattern(message);
+        const matches = pattern.exec(cont);
+        if (!matches) return null;
+        const cmd = this.client.depot.resolveCommand(matches[2]);
+        const argString = cont.substring(matches[0].length);
+        if (!cmd) return null;
+        return new CommandMessage(this.client, message, cmd, argString);
+    }
+
+    /**
+     * A helper function to generate a regex that parses out the command using the prefix/mentions.
+     * @private
+     * @param {external:Message} message - Provides a context to get the prefix.
+     */
+    buildPattern(message) {
+        //when a message is from a guild, must use the prefix from the guild, if the guild has the prefix unset, then only mentions will work.
+        //else, for a dm message, both the client's global prefix and mentions will work.
+        let prefix = message.guild ? message.guild.prefix : this.client.prefix;
+
+        /* matches {prefix}cmd
+         * &lt;{prefix}{cmd}
+         * &lt;@{id}> {cmd}
+         * &lt;@!{id}> {cmd}
+         */
+        if (!prefix) {
+            return new RegExp(`(^&lt;@!?${this.client.user.id}>\\s+)([^\\s]+)`, 'i');
+        }
+        let escapedPrefix = Util.escapeRegexString(prefix);
+        return new RegExp(`^(${escapedPrefix}\\s*|&lt;@!?${this.client.user.id}>\\s+(?:${escapedPrefix})?)([^\\s]+)`, 'i');
+    }
+}
+module.exports = CommandDispatcher;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Externals</h3><ul><li><a href="external-Client.html">Client</a></li><li><a href="external-Collection.html">Collection</a></li><li><a href="external-Guild.html">Guild</a></li><li><a href="external-Message.html">Message</a></li><li><a href="external-MessageReaction.html">MessageReaction</a></li><li><a href="external-User.html">User</a></li></ul><h3>Classes</h3><ul><li><a href="ColumnBase.html">ColumnBase</a></li><li><a href="Command.html">Command</a></li><li><a href="CommandAndModule.html">CommandAndModule</a></li><li><a href="CommandArgument.html">CommandArgument</a></li><li><a href="CommandDepot.html">CommandDepot</a></li><li><a href="CommandDispatcher.html">CommandDispatcher</a></li><li><a href="CommandMessage.html">CommandMessage</a></li><li><a href="CommandModule.html">CommandModule</a></li><li><a href="GeneralDataColumn.html">GeneralDataColumn</a></li><li><a href="GuildData.html">GuildData</a></li><li><a href="GuildExtension.html">GuildExtension</a></li><li><a href="MeganeClient.html">MeganeClient</a></li><li><a href="MessageFactory.html">MessageFactory</a></li><li><a href="Table.html">Table</a></li><li><a href="Type.html">Type</a></li></ul><h3>Global</h3><ul><li><a href="global.html#staticArgTypes">staticArgTypes</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Sun Dec 31 2017 02:50:13 GMT-0500 (Eastern Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

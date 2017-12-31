@@ -3,7 +3,7 @@ const { Collection } = require('discord.js');
 /**
  * A Utilize class to handle Message creation/editing or adding reactions. 
  */
-module.exports = class MessageFactory {
+class MessageFactory {
     /**
      * @typedef {Object} MessageFactoryOptions
      * @property {Message|Channel} destination - A message or a channel as a destination to send the message.
@@ -18,8 +18,9 @@ module.exports = class MessageFactory {
      */
 
     /**
+     * The reaction to add to a message. Can have a callback function to triggered by someone reacting to it.
      * @typedef {Object} ReactionUtil
-     * @property {string|Emoji|ReactionEmoji} emoji
+     * @property {string|Emoji|ReactionEmoji} emoji - The emoji to use. 
      * @property {function} execute - a function to execute when someone reacts to this reaction.
      */
 
@@ -29,19 +30,103 @@ module.exports = class MessageFactory {
      */
     constructor(client, options) {
         this.constructor.preCheck(client, options);
+        
+        /**
+         * A reference to the MeganeClient.
+         * @name MessageFactory#client
+         * @type {MeganeClient}
+         * @readonly
+         */
         Object.defineProperty(this, 'client', { value: client });
+
+        /**
+         * The destination message, a place to get the context of the channel/author. Mutually exclusive to {@link MessageFactory#destChannel}
+         * @name MessageFactory#destMessage
+         * @private
+         * @type {?external:Message}
+         */
         if (options.destMessage) this.destMessage = options.destMessage;
+
+        /**
+         * The destination channel. Mutually exclusive to {@link MessageFactory#destMessage}
+         * @name MessageFactory#destChannel
+         * @private
+         * @type {?Channel}
+         */
         if (options.destChannel) this.destChannel = options.destChannel;
+
+        /**
+         * The content of the message to be processed.
+         * @name MessageFactory#messageContent
+         * @private
+         * @type {?string}
+         */
         if (options.messageContent) this.messageContent = options.messageContent;
+
+        /**
+         * The content of the messageOptions to be processed. This has the embeds and tts and other options.
+         * @name MessageFactory#messageOptions
+         * @private
+         * @type {?messageOptionsObject}
+         */
         if (options.messageOptions) this.messageOptions = options.messageOptions;
+
+        /**
+         * An array of {@link ReactionUtil}.
+         * @name MessageFactory#reactions
+         * @private
+         * @type {?ReactionUtil[]}
+         */
         if (options.reactions) this.reactions = options.reactions;
+
+        /**
+         * Whether to edit the message with the new {@link MessageFactory#messageContent}, {@link MessageFactory#messageOptions} and {@link MessageFactory#reactions}.
+         * @name MessageFactory#edit
+         * @private
+         * @type {?boolean}
+         */
         this.edit = options.edit ? options.edit : false;
+
+        /**
+         * Whether to simulate typing of the message before sending it. Will delay the sending of the message according to the length of {@link MessageFactory#messageContent}.
+         * @name MessageFactory#typing
+         * @private
+         * @type {?boolean}
+         */
         this.typing = options.typing ? options.typing : false;
+
+        /**
+         * Whether to send the message as a reply. Must have {@link MessageFactory#destMessage}.
+         * @name MessageFactory#reply
+         * @private
+         * @type {?boolean}
+         */
         this.reply = options.reply ? options.reply : false;
+
+        /**
+         * How long to send before deleting the generated message, in ms.
+         * @name MessageFactory#deleteTime
+         * @private
+         * @type {?number}
+         */
         if (typeof options.deleteTime === 'number') this.deleteTime = Math.floor(options.deleteTime * 1000); //convert to ms
+        
+        /**
+         * How long to send before deleting the {@link MessageFactory#destMessage}, in ms. 
+         * @name MessageFactory#destinationDeleteTime
+         * @private
+         * @type {?number}
+         */
         if (typeof options.destinationDeleteTime === 'number') this.destinationDeleteTime = Math.floor(options.destinationDeleteTime * 1000); //convert to ms
     }
     
+    /**
+     * Does all the actions inscribed by the options.
+     * - Will simulate typing,
+     * - Queue up deletion of message/original message
+     * - Add reactions, and attach callbacks
+     * @returns {Promise}
+     */
     async execute() {
         let msgPromise = null;
         if (this.typing) {//a simulated typing msg
@@ -82,6 +167,11 @@ module.exports = class MessageFactory {
         return msgToPostProcess;
     }
 
+    /**
+     * Sends a message.
+     * @private
+     * @returns {Promise}
+     */
     sendMessage() {
         if (this.destMessage) {
             if (this.reply)
@@ -94,6 +184,12 @@ module.exports = class MessageFactory {
         return this.destChannel.send(this.messageContent, this.messageOptions);
     }
 
+    /**
+     * A helper function to validate the options before the class is created.
+     * @private
+     * @param {MeganeClient} client 
+     * @param {MessageFactoryOptions} options 
+     */
     static preCheck(client, options) {
         if (!client) throw new Error('The client must be specified for MessageFactory.');
         if (typeof options !== 'object') throw new TypeError('MessageFactoryOptions must be an Object.');
@@ -127,3 +223,4 @@ module.exports = class MessageFactory {
         }
     }
 }
+module.exports = MessageFactory;

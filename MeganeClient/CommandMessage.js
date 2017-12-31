@@ -1,18 +1,56 @@
 const CommandArgumentParseError = require('./Errors/CommandArgumentParseError');
 const Util = require('./Utility/Util');
-module.exports = class CommandMessage {
+/**
+ * A class after the corresponding command from the message is parsed. 
+ * This class primarily deals with setting up the environment to execute the command, parse the arguments for the command, and finally executing the command.
+ */
+class CommandMessage {
     /**
+     * @constructor
      * @param {MeganeClient} client
-     * @param {Message} message 
+     * @param {external:Message} message 
      * @param {Command} command 
      * @param {String} argString basically the whole content except the prefix + command part 
      */
     constructor(client, message, command = null, argString = null) {
+
+        /**
+         * A reference to the MeganeClient.
+         * @name CommandMessage#client
+         * @type {MeganeClient}
+         * @readonly
+         */
         Object.defineProperty(this, 'client', { value: client });
+
+        /**
+         * The {@link external:Message} that initiated the command.
+         * @type {external:Message}
+         */
         this.message = message;
+
+        /**
+         * The {@link Command} inside the message.
+         * @type {Command}
+         */
         this.command = command;
+
+        /**
+         * The arguments that is the command in the message content.
+         * @type {?string}
+         */
         this.argString = argString;
     }
+
+    /**
+     * Does all the operations for execution of the {@link CommandMessage#command}.
+     * - Check for {@link CommandMessage#command}'s context restrictions.
+     * - Check for {@link CommandMessage#command}'s cooldown restrictions.
+     * - Check for {@link CommandMessage#command}'s permission restrictions.
+     * - Check for {@link CommandMessage#command}'s custom restrictions.
+     * - Validate and parse all the arguments from {@link CommandMessage#argString}.
+     * - Initiate cooldown, if applicable.
+     * - Execute the {@link CommandMessage#command}.
+     */
     async execute() {
         //command based restrictions
         if (!this.command.passContextRestriction(this.message, true)) return;
@@ -31,7 +69,7 @@ module.exports = class CommandMessage {
             }
         }
         var parsedArgs = null;
-        if (this.command.args) {
+        if (this.command.args && this.command.args.length > 0) {
             try {
                 parsedArgs = await this.separateArgs();
             } catch (e) {
@@ -62,6 +100,11 @@ module.exports = class CommandMessage {
         }
     }
 
+    /**
+     * A Helper function to help parse the {@link CommandMessage#argString}.
+     * @private
+     * @returns {?Object} - The parsed results.
+     */
     async separateArgs() {
         //break up the string into arguments
         let argString = this.argString.trim();
@@ -88,3 +131,4 @@ module.exports = class CommandMessage {
         return result;
     }
 }
+module.exports = CommandMessage;

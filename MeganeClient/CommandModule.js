@@ -5,6 +5,7 @@ const Command = require('./Command');
 const CommandAndModule = require('./CommandAndModule');
 /**
  * A module to hold commands. All commands belong in a module.
+ * @class
  */
 class CommandModule extends CommandAndModule {
     /**
@@ -13,7 +14,7 @@ class CommandModule extends CommandAndModule {
      * @property {id} id  - This value is not outwardly exposed, but its an unique key to reference the module. Will be generated from CommandModuleOptions#name if not specified
      * @property {string} [usage] - A short usage description of the module. U
      * @property {string} [description] - A detailed description of the module
-     * @property {Array[Command]} commands - A array of commands.
+     * @property {Command[]} commands - A array of commands.
      * @property {boolean} [ownerOnly=false] - This module and all its commands should only be used for bot owners. 
      * @property {boolean} [guildOnly=false] - This module and all its commands should only be used on a sever, not DM.
      * @property {boolean} [dmOnly=false] - This module and all its commands should only be used on DM channels.
@@ -29,10 +30,26 @@ class CommandModule extends CommandAndModule {
     constructor(client, options) {
         super(client, options);
         this.constructor.CommandModulePreCheck(client, options);
+        
+        /**
+         * A collection of commands
+         * @type {external:Collection<string, Command>}
+         */
         this.commands = new discord.Collection();
         if (options.commands) for (const command of options.commands) this.addCommand(command);
+        
+        /**
+         * @todo a map to determine if this module is disabled in a guild. Should be saved to the database as well.
+         * @type {Map<string, boolean>}
+         */
         this.enabledInGuild = new Map();
     }
+
+    /**
+     * Adds a command to this module. This command will inherent some of the properties of this module.
+     * @param {Command} command - Command to add 
+     * @returns {CommandModule} - This CommandModule so methods can be chained.
+     */
     addCommand(command) {
         if (typeof command === 'function') command = new command(this.client);
         if (!(command instanceof Command)) return this.client.emit('warn', `Attempting to add an invalid command object: ${command}; skipping.`);
@@ -58,13 +75,26 @@ class CommandModule extends CommandAndModule {
         command.dmOnly = this.dmOnly;
         command.ownerOnly = this.ownerOnly;
         command.defaultDisable = this.defaultDisable;
+        return this;
     }
+
+    /**
+     * Adds a array of commands into this module. 
+     * @param {Command[]} commands - Array of commands
+     * @returns {CommandModule} - This CommandModule so methods can be chained.
+     */
     addCommands(commands) {
         if (!Array.isArray(commands)) throw new TypeError('Commands must be an Array.');
         for (let command of commands)
             this.addCommand(command);
         return this;
     }
+
+    /**
+     * Adds all files in an directory as commands into this module.
+     * @param {string} directory - directory of commands
+     * @returns {CommandModule} - This CommandModule so methods can be chained.
+     */
     addCommandsIn(directory) {
         if (!fs.existsSync(directory)) throw new Error(`"${directory}" is not an valid directory.`);
         let files = fs.readdirSync(directory);
@@ -74,8 +104,15 @@ class CommandModule extends CommandAndModule {
             cmdfile.push(file);
         }
         this.addCommands(cmdfile.map(file => require(path.join(directory, file))));
+        return this;
     }
-    getUsageEmbededMessageObject(message) {
+
+    /**
+     * Generate a usage embed message for this module. Mainly used for the help command.
+     * @param {external:Message} [message=null] - Not used.
+     * @returns {MessageFactoryOptions} - The generated message that can be fed right into a MessageFactory.
+     */
+    getUsageEmbededMessageObject(message=null) {
         //TODO getUsageEmbededMessageObject
         let title = `Module: ${this.name}`;
         let desc = `${this.usage}`;
@@ -111,6 +148,12 @@ class CommandModule extends CommandAndModule {
         return msgobj;
     }
 
+    /**
+     * A helper function to validate the options before the class is created.
+     * @private
+     * @param {MeganeClient} client 
+     * @param {CommandModuleOptions} options 
+     */
     static CommandModulePreCheck(client, options) {
         if (options.commands && !Array.isArray(options.commands)) throw new TypeError('CommandModuleOptions.commands must be an Array of Commands.');
     }
