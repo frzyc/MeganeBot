@@ -1,40 +1,40 @@
-const { Util } = require('../../../MeganeClient');
+const { Util } = require("../../../MeganeClient")
 module.exports = class Track {
     constructor(playQueue, info, user) {
-        this.playQueue = playQueue;
-        this.info = info;
-        this.title = info.title;
-        this.url = info.url;
-        this.thumbnail = info.thumbnail;
-        this.extractor = info.extractor;
-        this.webpage_url = info.webpage_url;
-        this.uploader = info.uploader;
-        this.lengthSeconds = info.duration;
-        this.user = user;
-        this.userID = this.user ? this.user.id : null;
-        this.message = null;//used to keep track of the status messages
-        this.formatTime = Util.formatTime(this.lengthSeconds);
+        this.playQueue = playQueue
+        this.info = info
+        this.title = info.title
+        this.url = info.url
+        this.thumbnail = info.thumbnail
+        this.extractor = info.extractor
+        this.webpage_url = info.webpage_url
+        this.uploader = info.uploader
+        this.lengthSeconds = info.duration
+        this.user = user
+        this.userID = this.user ? this.user.id : null
+        this.message = null//used to keep track of the status messages
+        this.formatTime = Util.formatTime(this.lengthSeconds)
 
         this.uploader = {
-            name: 'Uploader:',
+            name: "Uploader:",
             value: this.uploader
-        };
+        }
         this.duration = {
-            name: 'Duration:',
+            name: "Duration:",
             value: this.formatTime
-        };
+        }
         this.footer = {
             icon_url: this.user ? this.user.avatarURL : null,
             text: `Queued by: ${this.user.username}`
-        };
+        }
     }
-    getTime() { return this.lengthSeconds; };
-    getPlayingmessageResolvable(editmsg) {
+    getTime() { return this.lengthSeconds }
+    getPlayingMessageResolvable(editmsg) {
         let playmsgresolvable = {
             messageOptions: {
                 embed: {
                     color: 6604830,//Green
-                    title: `${this.playQueue.voiceController.paused ? 'Paused:' : 'Playing:'} ${this.title}`,
+                    title: `${this.playQueue.voiceController.paused ? "Paused:" : "Playing:"} ${this.title}`,
                     url: this.webpage_url,
                     thumbnail: {
                         url: this.thumbnail,
@@ -43,12 +43,12 @@ module.exports = class Track {
                         this.uploader,
                         this.duration,
                         {
-                            name: 'Volume',
+                            name: "Volume",
                             value: this.playQueue.voiceController.getVol()
                         },
                         {
-                            name: 'Playing Next',
-                            value: this.playQueue.list[0] ? this.playQueue.list[0].title : `None`
+                            name: "Playing Next",
+                            value: this.playQueue.list[0] ? this.playQueue.list[0].title : "None"
                         }
                     ],
                     footer: this.footer
@@ -56,56 +56,56 @@ module.exports = class Track {
             },
         }
         if (editmsg) {
-            playmsgresolvable.destination = editmsg;
+            playmsgresolvable.destination = editmsg
         } else {//if there is not a edit message, it means sending a new play message, so attach buttons to this new resolvable
-            let vc = this.playQueue.voiceController;
+            let vc = this.playQueue.voiceController
             playmsgresolvable.reactions = [
                 {
-                    emoji: '⏯',
-                    execute: (messageReaction, user) => {
-                        if (vc.paused) vc.resume();
-                        else vc.pause();
+                    emoji: "⏯",
+                    execute: () => {
+                        if (vc.paused) vc.resume()
+                        else vc.pause()
                     }
                 },
                 {
-                    emoji: '⏭',
-                    execute: (messageReaction, user) => {
-                        vc.stop();
+                    emoji: "⏭",
+                    execute: () => {
+                        vc.stop()
                     }
                 },
                 {
-                    emoji: '🔀',
-                    execute: (messageReaction, user) => {
-                        this.playQueue.shuffleQueue();
+                    emoji: "🔀",
+                    execute: () => {
+                        this.playQueue.shuffleQueue()
                     }
                 },
                 {
-                    emoji: '🔉',
-                    execute: (messageReaction, user) => {
-                        vc.volDec();
+                    emoji: "🔉",
+                    execute: () => {
+                        vc.volDec()
                     }
                 },
                 {
-                    emoji: '🔊',
-                    execute: (messageReaction, user) => {
-                        vc.volInc();
+                    emoji: "🔊",
+                    execute: () => {
+                        vc.volInc()
                     }
                 },
                 {
-                    emoji: '🔠',
-                    execute: (messageReaction, user) => {
-                        this.playQueue.sendPlaylistMessage();
+                    emoji: "🔠",
+                    execute: () => {
+                        this.playQueue.sendPlaylistMessage()
                     }
                 },
                 {
-                    emoji: '⬇',
-                    execute: (messageReaction, user) => {
-                        this.playQueue.sendPlayingmessage();
+                    emoji: "⬇",
+                    execute: () => {
+                        this.playQueue.sendPlayingmessage()
                     }
                 }
-            ];
+            ]
         }
-        return playmsgresolvable;
+        return playmsgresolvable
     }
     getFinishedMessageResolvable() {
         return {
@@ -127,13 +127,13 @@ module.exports = class Track {
                 }
             },
             reactions: [{
-                emoji: '↪',
+                emoji: "↪",
                 execute: async (messageReaction, user) => {
-                    if (user.id !== this.userID) return;
+                    if (user.id !== this.userID) return
                     if (this.message && this.message.deletable)
-                        await this.message.delete();
-                    this.message = null;
-                    this.playQueue.addToQueue(this);
+                        await this.message.delete()
+                    this.message = null
+                    this.playQueue.addToQueue(this)
                 }
             }],
         }
@@ -157,11 +157,11 @@ module.exports = class Track {
                 }
             },
             reactions: [{
-                emoji: '❌',
+                emoji: "❌",
                 execute: async (reactionMessage, user) => {
-                    if (user.id !== this.userID) return;
-                    await reactionMessage.remove();
-                    this.playQueue.removefromQueue(this.trackId);
+                    if (user.id !== this.userID) return
+                    await reactionMessage.remove()
+                    this.playQueue.removefromQueue(this.trackId)
                 }
             }],
         }
@@ -187,13 +187,13 @@ module.exports = class Track {
             },
             deleteTime: 3 * 60,
             reactions: [{
-                emoji: '↪',
+                emoji: "↪",
                 execute: async (messageReaction, user) => {
-                    if (user.id !== this.userID) return;
+                    if (user.id !== this.userID) return
                     if (this.message && this.message.deletable)
-                        await this.message.delete();
-                    this.message = null;
-                    this.playQueue.addToQueue(this);
+                        await this.message.delete()
+                    this.message = null
+                    this.playQueue.addToQueue(this)
                 }
             }],
         }

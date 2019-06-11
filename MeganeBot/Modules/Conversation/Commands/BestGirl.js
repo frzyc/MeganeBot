@@ -1,11 +1,11 @@
-const { Command } = require('../../../../MeganeClient');
+const { Command } = require("../../../../MeganeClient")
 module.exports = class BestGirl extends Command {
     constructor(client) {
         super(client, {
-            name: 'bestgirl?',
+            name: "bestgirl?",
         })
     }
     async execute(message, args) {
-        return 'The best girl is undoubtly Mirai Kuriyama!'
+        return "The best girl is undoubtly Mirai Kuriyama!"
     }
 }

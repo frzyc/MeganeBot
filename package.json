@@ -1,12 +1,17 @@
 {
-  "name": "MeganeBot",
+  "name": "@frzyc/meganebot",
   "version": "1.6.0",
   "description": "a bot made by a glasses fetishtist",
-  "main": "MeganeBot/bot.js",
+  "main": "index.js",
   "scripts": {
     "docgen": "./node_modules/.bin/jsdoc MeganeClient -r -d docs --configure jsdoc-conf.json --private",
     "docgen-test": "./node_modules/.bin/jsdoc MeganeClient -r -d docs --configure jsdoc-conf.json --private --debug --verbose",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "./node_modules/.bin/eslint --ext .js MeganeClient/ MeganeBot/",
+    "lint-layout": "./node_modules/.bin/eslint --ext .js --fix --fix-type layout MeganeClient/ MeganeBot/",
+    "test": "mocha **/**.spec.js",
+    "coverage": "nyc npm run test",
+    "no-test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
   },
   "author": "frzyc",
   "repository": {
@@ -15,16 +20,21 @@
   },
   "license": "ISC",
   "dependencies": {
-    "discord.js": "^11.2.1",
+    "discord.js": "^11.5.0",
     "ffmpeg-binaries": "^3.2.2",
-    "node-opus": "^0.2.7",
-    "request": "^2.83.0",
-    "sqlite": "^2.8.0",
+    "node-opus": "^0.3.2",
+    "request": "^2.88.0",
+    "sqlite": "^2.9.3",
+    "sqlite3": "^4.0.9",
     "uws": "^8.14.1",
-    "youtube-dl": "^1.12.2",
-    "ytdl-core": "^0.18.1"
+    "youtube-dl": "^1.13.1",
+    "ytdl-core": "^0.29.2"
   },
   "devDependencies": {
-    "jsdoc": "^3.5.5"
+    "chai": "^4.2.0",
+    "eslint": "^6.0.1",
+    "jsdoc": "^3.6.2",
+    "mocha": "^6.1.4",
+    "nyc": "^14.1.1"
   }
 }

@@ -1,27 +1,27 @@
-const { Guild } = require('discord.js');
-const provider = 'Provider';
+
+const provider = "Provider"
 
 const index = {
-    MeganeClient: require('./MeganeClient'),
-    Command: require('./Command'),
-    CommandArgument: require('./CommandArgument'),
-    CommandDepot: require('./CommandDepot'),
-    CommandDispatcher: require('./CommandDispatcher'),
-    CommandMessage: require('./CommandMessage'),
-    CommandModule: require('./CommandModule'),
-    MessageFactory: require('./MessageFactory'),
-    Util: require('./Utility/Util'),
-    permissions: require('./Utility/permissions.json'),
+    MeganeClient: require("./MeganeClient"),
+    Command: require("./Command"),
+    CommandArgument: require("./CommandArgument"),
+    CommandDepot: require("./CommandDepot"),
+    CommandDispatcher: require("./CommandDispatcher"),
+    CommandMessage: require("./CommandMessage"),
+    CommandModule: require("./CommandModule"),
+    MessageFactory: require("./MessageFactory"),
+    Util: require("./Utility/Util"),
+    permissions: require("./Utility/permissions.json"),
 
-    Type: require('./DefaultTypes/Type'),
+    Type: require("./DefaultTypes/Type"),
 
     Table: require(`./${provider}/Table`),
     ColumnBase: require(`./${provider}/ColumnBase`),
     GeneralDataColumn: require(`./${provider}/GeneralDataColumn`),
     GuildData: require(`./${provider}/GuildData`),
-};
-module.exports = index;
-require('./Extensions/GuildExtension').doExtension(Guild);
+}
+module.exports = index
+require("./Extensions/GuildExtension")
 
 /**
  * The discord.js Client.

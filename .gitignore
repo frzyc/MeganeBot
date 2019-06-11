@@ -252,3 +252,6 @@ ModelManifest.xml
 
 # FAKE - F# Make
 .fake/
+
+# nyc
+.nyc_output/

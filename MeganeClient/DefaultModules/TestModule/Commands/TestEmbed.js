@@ -1,16 +1,16 @@
-﻿const Command = require('../../../Command');
+﻿const Command = require("../../../Command")
 
 module.exports = class TestEmbed extends Command {
     constructor(client) {
         super(client, {
-            name: 'testembed'
+            name: "testembed"
         })
 
     }
     execute(message, args) {
         return Promise.resolve({
             destination: message,
-            messageContent: 'testing',
+            messageContent: "testing",
             deleteTimeCmdMessage: 5 * 1000,
             //emojis: ['🇦', '🇧','🇨']
             messageOptions: {
@@ -20,53 +20,53 @@ module.exports = class TestEmbed extends Command {
                         name: this.client.user.username,
                         icon_url: this.client.user.avatarURL
                     },
-                    title: 'This is an embed',
-                    url: 'http://google.com',
-                    description: 'This is a test embed to showcase what they look like and what they can do.',
+                    title: "This is an embed",
+                    url: "http://google.com",
+                    description: "This is a test embed to showcase what they look like and what they can do.",
                     fields: [
                         {
-                            name: 'Fields',
-                            value: 'They can have different fields with small headlines.'
+                            name: "Fields",
+                            value: "They can have different fields with small headlines."
                         },
                         {
-                            name: 'Masked links',
-                            value: 'You can put [masked links](http://google.com) inside of rich embeds.'
+                            name: "Masked links",
+                            value: "You can put [masked links](http://google.com) inside of rich embeds."
                         },
                         {
-                            name: 'Markdown',
-                            value: 'You can put all the *usual* **__Markdown__** inside of them.'
+                            name: "Markdown",
+                            value: "You can put all the *usual* **__Markdown__** inside of them."
                         }
                     ],
                     timestamp: new Date(),
                     footer: {
                         icon_url: this.client.user.avatarURL,
-                        text: '© Example'
+                        text: "© Example"
                     }
                 }
             },
             reactions: [
                 {
-                    emoji: '🇦',
+                    emoji: "🇦",
                     execute: (messageReaction, user) => {
-                        console.log("PROCESSA");
-                        return Promise.resolve({ destination: messageReaction.message, messageContent: '🇦' })
+                        console.log("PROCESSA")
+                        return Promise.resolve({ destination: messageReaction.message, messageContent: "🇦" })
                     }
                 },
                 {
-                    emoji: '🇧',
+                    emoji: "🇧",
                     execute: (messageReaction, user) => {
-                        console.log("PROCESSB");
-                        return Promise.resolve({ destination: messageReaction.message, messageContent: '🇧' })
+                        console.log("PROCESSB")
+                        return Promise.resolve({ destination: messageReaction.message, messageContent: "🇧" })
                     }
                 },
                 {
-                    emoji: '🇨',
+                    emoji: "🇨",
                     execute: (messageReaction, user) => {
-                        console.log("PROCESSC");
-                        return Promise.resolve({ destination: messageReaction.message, messageContent: '🇨' })
+                        console.log("PROCESSC")
+                        return Promise.resolve({ destination: messageReaction.message, messageContent: "🇨" })
                     }
                 }
             ],
-        });
+        })
     }
 }

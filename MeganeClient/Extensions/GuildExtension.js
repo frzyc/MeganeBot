@@ -7,7 +7,7 @@ class GuildExtension {
      * @returns {string}
      */
     get prefix() {
-        return this.prefixForCommands;
+        return this.prefixForCommands
     }
 
     /**
@@ -15,20 +15,14 @@ class GuildExtension {
      * @param {string} newPrefix
      */
     set prefix(newPrefix) {
-        this.prefixForCommands = newPrefix;
-        this.client.emit("CommandPrefixChange", this, this.prefixForCommands);
+        this.prefixForCommands = newPrefix
+        this.client.emit("CommandPrefixChange", this, this.prefixForCommands)
     }
-
-    /**
-     * a Helper function that copies the functions here into the {@link external:Guild}'s prototype.
-     * @private
-     * @param {external:Guild} baseClass 
-     */
-    static doExtension(baseClass) {
-        for (const prop of [
-            'prefix'
-        ]) Object.defineProperty(baseClass.prototype, prop, Object.getOwnPropertyDescriptor(this.prototype, prop));
-    }
-
 }
-module.exports = GuildExtension;
+const { Guild } = require("discord.js")
+for (const prop of Object.getOwnPropertyNames(GuildExtension.prototype)) {
+    if (prop === "constructor") continue
+    console.log("Adding Extension to Guild: " + prop)
+    Object.defineProperty(Guild.prototype, prop, Object.getOwnPropertyDescriptor(GuildExtension.prototype, prop))
+}
+module.exports = GuildExtension

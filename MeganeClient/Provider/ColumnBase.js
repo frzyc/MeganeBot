@@ -15,41 +15,41 @@ class ColumnBase {
          * @type {MeganeClient}
          * @readonly
          */
-        Object.defineProperty(this, 'client', { value: table.client });
+        Object.defineProperty(this, "client", { value: table.client })
 
         /**
          * A reference to the table Object.
          * @type {Table}
          */
-        this.table = table;
+        this.table = table
 
         /**
          * The column name.
          * @type {string}
          */
-        this.columnName = columnName;
+        this.columnName = columnName
 
         /**
          * A reference to the sqlite database
          * @type {sqliteDatabase}
          */
-        this.db = table.db;
+        this.db = table.db
     }
     /**
      * initilize the column.
      * @param {MeganeClient} client 
      */
     init(client) {
-        throw new Error(`${this.construtor.name} does not have a init function.`);
+        throw new Error(`${this.construtor.name} does not have a init function.`)
     }
     destroy(client) {
-        throw new Error(`${this.construtor.name} does not have a destroy function.`);
+        throw new Error(`${this.construtor.name} does not have a destroy function.`)
     }
     get(id, key, defVal) {
-        throw new Error(`${this.construtor.name} does not have a get function.`);
+        throw new Error(`${this.construtor.name} does not have a get function.`)
     }
     set(id, key, defVal) {
-        throw new Error(`${this.construtor.name} does not have a set function.`);
+        throw new Error(`${this.construtor.name} does not have a set function.`)
     }
 }
-module.exports = ColumnBase;
+module.exports = ColumnBase
