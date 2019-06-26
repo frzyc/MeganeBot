@@ -33,7 +33,7 @@ module.exports = class Library {
             })
             msgobj.reactions.push({
                 emoji: Util.getLetterSymbol(String.fromCharCode(97 + i)),
-                execute: (reactionMessage, user) => {
+                execute: (reactionMessage) => {
                     let storyMsgRes = story.getMessageResolvable()
                     storyMsgRes.destination = reactionMessage.message
                     storyMsgRes.edit = true

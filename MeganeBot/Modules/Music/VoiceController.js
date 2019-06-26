@@ -120,7 +120,7 @@ module.exports = class VoiceController {
             return false
         }
         let re = await this.client.autoMessageFactory({ destination: message, messageContent: "Connecting..." })
-        let conn = await (usrVoiceChannel.join())
+        await (usrVoiceChannel.join())
         this.playQueue.tchannel = message.channel
         this.vchannel = usrVoiceChannel
         this.playQueue.guildID = message.guild.id

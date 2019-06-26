@@ -8,7 +8,7 @@
     "docgen-test": "./node_modules/.bin/jsdoc MeganeClient -r -d docs --configure jsdoc-conf.json --private --debug --verbose",
     "lint": "./node_modules/.bin/eslint --ext .js MeganeClient/ MeganeBot/",
     "lint-layout": "./node_modules/.bin/eslint --ext .js --fix --fix-type layout MeganeClient/ MeganeBot/",
-    "test": "mocha **/**.spec.js",
+    "test": "mocha \"**/**.spec.js\"",
     "coverage": "nyc npm run test",
     "no-test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js"
@@ -24,7 +24,7 @@
     "ffmpeg-binaries": "^3.2.2",
     "node-opus": "^0.3.2",
     "request": "^2.88.0",
-    "sqlite": "^2.9.3",
+    "rimraf": "^2.6.3",
     "sqlite3": "^4.0.9",
     "uws": "^8.14.1",
     "youtube-dl": "^1.13.1",

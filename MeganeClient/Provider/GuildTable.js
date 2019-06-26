@@ -1,18 +1,30 @@
 const Table = require("./Table")
-class GuildTable extends Table {
+module.exports = class GuildTable extends Table {
     constructor(db, tableName) {
         super(db, tableName)
     }
+    /**
+     * Create the guildTable, and assign the primaryKey.
+     * @override
+     */
     init() {
-        //return new Promise((resolve,reject)=>{
         this.primaryKey = "id"
+
+        /**
+         * Name of the command_prefix column
+         * @type {string}
+         * @private
+         */
         this.prefixKey = "command_prefix"
-        this.db.run(`CREATE TABLE ${this.tableName}(
+
+        //create the new table here
+        this.db.serialize()
+        this.db.run(`CREATE TABLE IF NOT EXISTS ${this.tableName}(
             ${this.primaryKey} text UNIQUE PRIMARY KEY,
             ${this.prefixKey} text
             );
         `)
-        //})
+        this.db.parallelize()
     }
 
     /**
@@ -34,4 +46,3 @@ class GuildTable extends Table {
         return this.set(guildid, this.prefixKey, value)
     }
 }
-module.exports = GuildTable

@@ -1,5 +1,4 @@
 ﻿const { MeganeClient } = require("../MeganeClient")
-const path = require("path")
 console.log(`Starting MeganeBot\nNode version: ${process.version}`)
 
 var config
@@ -50,9 +49,6 @@ client.depot.addModules([
     require("./Modules/Conversation/ConversationModule"),
     require("./Modules/CYOA/CYOAModule"),
 ])
-client.addDB(
-    path.join(__dirname, "data", "db.sqlite3")
-).catch(console.error)
 
 
 client.login(config.token).then((m) => {

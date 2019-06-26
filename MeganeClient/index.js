@@ -14,11 +14,10 @@ const index = {
     permissions: require("./Utility/permissions.json"),
 
     Type: require("./DefaultTypes/Type"),
-
+    
     Table: require(`./${provider}/Table`),
-    ColumnBase: require(`./${provider}/ColumnBase`),
-    GeneralDataColumn: require(`./${provider}/GeneralDataColumn`),
-    GuildData: require(`./${provider}/GuildData`),
+    Database: require(`./${provider}/Database`),
+    GuildTable: require(`./${provider}/GuildTable`)
 }
 module.exports = index
 require("./Extensions/GuildExtension")

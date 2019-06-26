@@ -1,10 +1,8 @@
 ﻿const fs = require("fs")
 const discord = require("discord.js")
-const sqlite = require("sqlite")
 const CommandDepot = require("./CommandDepot")
 const CommandDispatcher = require("./CommandDispatcher")
-const Table = require("./Provider/Table")
-const GuildData = require("./Provider/GuildData")
+const { Database, GuildTable } = require("./Provider")
 const MessageFactory = require("./MessageFactory")
 /**
  * The Main client for the MeganeClient, a wrapper over the discord client.
@@ -15,7 +13,9 @@ class MeganeClient extends discord.Client {
      * In addition to the options of the default discord.js client, some extra ones.
      * @typedef {object} MeganeClientOptions - Options that are added for MeganeClient
      * @property {string|string[]} ownerids - List of owners by user ids.
-     * @property {?string} prefix - The global prefix used by the Client.
+     * @property {string} [prefix] - The default global prefix used by the Client. 
+     * Will be overwritten by a prefix that was saved in the db. 
+     * Will default to {@link MeganeClient#DEFAULT_PREFIX}.
      * @property {string} profilePictureDirectory - The directory with some display pictures to change for the bot.
      */
 
@@ -29,7 +29,7 @@ class MeganeClient extends discord.Client {
         if (!options.ownerids) throw new TypeError("MeganeClientOptions must be have ownerids.")
         if (typeof options.ownerids !== "string" && !Array.isArray(options.ownerids)) throw new TypeError("MeganeClientOptions.ownerids must be a string or an array of strings.")
         if (Array.isArray(options.ownerids))
-            for (ownerid of options.ownerids)
+            for (let ownerid of options.ownerids)
                 if (typeof ownerid !== "string") throw new TypeError("MeganeClientOptions.ownerids must be a string or an array of strings.")
         if (typeof options.ownerids === "string")
             options.ownerids = [options.ownerids]
@@ -38,25 +38,51 @@ class MeganeClient extends discord.Client {
             if (!fs.existsSync(options.profilePictureDirectory)) throw new Error("MeganeClientOptions.profilePictureDirectory must be a valid path.")
         }
         super(options)
+        
 
         /**
-         * The global command prefix used mainly for private message channels and defaults
-         * @private
-         * @type {?String}
+         * The default path of the database.
+         * @type {string}
          */
-        this.globalPrefix = options.prefix ? options.prefix : null
+        this.DEFAULT_DB_PATH = "./data/database.db"
 
+        let path = require("path")
+        //make any intermediary directory for the database
+        fs.mkdir(path.dirname(this.DEFAULT_DB_PATH), { recursive: true }, (err) => {
+            if (err) throw err
+        })
         /**
          * The sqlite database to persist data for the Client.
          * @type {Database}
          */
-        this.db = null
+        this.db = new Database(this.DEFAULT_DB_PATH, (err) => {
+            if (err) throw err
+        })
 
         /**
          * A sqlite table for all guild-related things.
-         * @type {Table}
+         * @type {GuildTable}
          */
-        this.guildTable = null
+        this.guildTable = new GuildTable(this.db, "guild_table")
+
+        //Check and set global prefix.
+
+        /**
+         * This is the default prefix, if a prefix is not set.
+         */
+        this.DEFAULT_PREFIX = "!"
+
+        //check if there is a previous prefix from the database
+        this.getPrefixFromDb().then(prevPrefix=>{
+            if(prevPrefix) this.globalPrefix = prevPrefix
+        })
+
+        /**
+         * The global command prefix. It is used as the default for private message channels or new servers.
+         * @private
+         * @type {String}
+         */
+        this.globalPrefix = options.prefix ? options.prefix : this.DEFAULT_PREFIX
 
         //validate owners
         options.owner = new Set(options.ownerids)
@@ -116,7 +142,15 @@ class MeganeClient extends discord.Client {
                 require("./DefaultModules/UtilModule/UtilModule"),
                 require("./DefaultModules/DiscordModule/DiscordModule"),
             ])
+    }
 
+    /**
+     * A "destructor". Basically closes the database and clean up any stateful stuff
+     */
+    destructor(){
+        this.db.close()
+        this.db = null
+        this.guildTable = null
     }
 
     /**
@@ -128,13 +162,21 @@ class MeganeClient extends discord.Client {
     }
 
     /**
+     * Get the prefix from DB.
+     */
+    getPrefixFromDb(){
+        return this.guildTable.getPrefix("0")
+    }
+
+    /**
      * Sets the new global prefix. Will be saved to databse.
      * @param {string} newPrefix - The new Prefix
      */
     set prefix(newPrefix) {
-        this.globalPrefix = newPrefix
-        //globalPrefixChange , guild, prefix
-        this.emit("CommandPrefixChange", "global", this.globalPrefix)
+        if (this.globalPrefix !== newPrefix) {
+            this.globalPrefix = newPrefix
+            this.guildTable.setPrefix("0", newPrefix)
+        }
     }
 
     /**
@@ -173,41 +215,6 @@ class MeganeClient extends discord.Client {
      */
     autoMessageFactory(msgResovlable) {
         return (new MessageFactory(this, msgResovlable)).execute()
-    }
-
-    /**
-     * Initiates the database using the filepath. Will initialize after the Client is ready.
-     * @param {string} pathToDB Path to the .db file used as the database for the client.
-     */
-    async addDB(pathToDB) {
-        this.db = await sqlite.open(pathToDB)
-        if (this.readyTimestamp) {
-            this.initDB()
-        }
-        this.once("ready", () => {
-            this.initDB()
-        })
-    }
-
-    /**
-     * Initiates the Database for the client.
-     * @private
-     */
-    async initDB() {
-        this.guildTable = new Table(this, this.db, "guild", "guildid", "INTEGER")
-        await this.guildTable.init()
-        this.guildTable.guildData = new GuildData(this.guildTable, "guilddata")
-        await this.guildTable.guildData.init()
-    }
-
-    /**
-     * Destroys the Database for the client.
-     * @private
-     */
-    async destroyDB() {
-        await super.destroy()
-        if (this.guildTable)
-            this.guildTable.destroy()
     }
 }
 module.exports = MeganeClient

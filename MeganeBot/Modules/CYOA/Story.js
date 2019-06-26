@@ -56,7 +56,7 @@ module.exports = class Story {
                         choice.node = choiceNode
                         checknode(choiceNode)
                     } else
-                        throw new Error(storyErrorMsg + `the story node "${node.id}" has an invalid choice to "${choiceNode}".`)
+                        throw new Error(storyErrorMsg + `the story node "${storynode.id}" has an invalid choice to "${choiceNode}".`)
                 }
             }
         }
@@ -85,7 +85,7 @@ module.exports = class Story {
             reactions: [
                 {
                     emoji: "📖",
-                    execute: (reactionMessage, user) => {
+                    execute: (reactionMessage) => {
                         let beginningMsgRes = this.beginning.getMessageResolvable()
                         beginningMsgRes.destination = reactionMessage.message
                         beginningMsgRes.edit = true

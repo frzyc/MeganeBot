@@ -1,5 +1,4 @@
-﻿const request = require("request")
-const YoutubeDL = require("youtube-dl")
+﻿const YoutubeDL = require("youtube-dl")
 const ytdlc = require("ytdl-core")
 const util = require.main.exports.getRequire("util")
 const Command = require.main.exports.getRequire("command")
@@ -221,7 +220,7 @@ playQueue.prototype.getPlayingMessageResolvable = function (editmsg) {
         playmsgresolvable.emojis = [
             {
                 emoji: "⏯",
-                execute: (messageReaction, user) => {
+                execute: () => {
                     if (this.paused) this.resume()
                     else this.pause()
                     return Promise.resolve()
@@ -229,42 +228,42 @@ playQueue.prototype.getPlayingMessageResolvable = function (editmsg) {
             },
             {
                 emoji: "⏭",
-                execute: (messageReaction, user) => {
+                execute: () => {
                     this.stop()
                     return Promise.resolve()
                 }
             },
             {
                 emoji: "🔀",
-                execute: (messageReaction, user) => {
+                execute: () => {
                     this.shuffleQueue()
                     return Promise.resolve()
                 }
             },
             {
                 emoji: "🔉",
-                execute: (messageReaction, user) => {
+                execute: () => {
                     this.volDec()
                     return Promise.resolve()
                 }
             },
             {
                 emoji: "🔊",
-                execute: (messageReaction, user) => {
+                execute: () => {
                     this.volInc()
                     return Promise.resolve()
                 }
             },
             {
                 emoji: "🔠",
-                execute: (messageReaction, user) => {
+                execute: () => {
                     this.sendPlaylistMessage()
                     return Promise.resolve()
                 }
             },
             {
                 emoji: "⬇",
-                execute: (messageReaction, user) => {
+                execute: () => {
                     this.sendPlayingmessage()
                     return Promise.resolve()
                 }
@@ -342,7 +341,7 @@ playQueue.prototype.playStopped = function () {
             },
             emojis: [{
                 emoji: "↪",
-                execute: (messageReaction, user) => {
+                execute: () => {
                     this.addtoQueue(curTrack, curTrack.playingMessage)
                     return Promise.resolve()
                 }
@@ -464,7 +463,7 @@ function joinvoice(message) {
         
         if (voiceConnection != null && voiceConnection.channel.id === usrVoiceChannel.id)  return resolve(util.redel("BAKA... I'm already here! "))//technically a success cause already joined...
         util.createMessage({ messageContent: "Connecting..." }, message).then(re => {
-            usrVoiceChannel.join().then(conn => {
+            usrVoiceChannel.join().then(() => {
                 let pq = queueList.getOrCreatePlayQueue(message.guild.id)
                 pq.tchannel = message.channel
                 pq.vchannel = usrVoiceChannel
@@ -485,14 +484,14 @@ let joinvoicecmd = new Command("joinvoice")
 joinvoicecmd.usage = ["**{0}** Meganebot will join the current voice channel you are in. This also binds other music commands to this channel."]
 joinvoicecmd.reqBotPerms = ["CONNECT", "SPEAK"]
 joinvoicecmd.serverCooldown = 5//5 seconds
-joinvoicecmd.process = function (message, args) {
+joinvoicecmd.process = function (message) {
     return joinvoice(message)
 }
 cmdModule.addCmd(joinvoicecmd)
 
 let leavevoice = new Command("leavevoice")
 leavevoice.usage = ["**{0}** Meganebot will leave the current voicechannel."]
-leavevoice.process = function (message, args) {
+leavevoice.process = function (message) {
     leaveVoice(message)
     return Promise.resolve()
 }
@@ -501,7 +500,7 @@ cmdModule.addCmd(leavevoice)
 let playingcmd = new Command("musicplaying")
 playingcmd.usage = ["** Meganebot will reprint the current playing song."]
 playingcmd.channelCooldown = 3
-playingcmd.process = function (message, args) {
+playingcmd.process = function (message) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."))
     let pq = queueList.getPlayQueue(message.guild.id)
     if (pq.tchannel.id !== message.channel.id) return Promise.reject()//wrong chat bro
@@ -513,7 +512,7 @@ cmdModule.addCmd(playingcmd)
 let pause = new Command("pause")
 pause.usage = ["**{0}** Pause song."]
 pause.channelCooldown = 3
-pause.process = function (message, args) {
+pause.process = function (message) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."))
     let pq = queueList.getPlayQueue(message.guild.id)
     if (pq.tchannel.id !== message.channel.id) return Promise.reject()//wrong chat bro
@@ -525,7 +524,7 @@ cmdModule.addCmd(pause)
 let resume = new Command("resume")
 resume.usage = ["**{0}** Resume song."]
 resume.channelCooldown = 3
-resume.process = function (message, args) {
+resume.process = function (message) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."))
     let pq = queueList.getPlayQueue(message.guild.id)
     if (pq.tchannel.id !== message.channel.id) return Promise.reject()//wrong chat bro
@@ -544,11 +543,11 @@ volumecmd.usage = [
 ]
 volumecmd.argsTemplate = [
     [util.staticArgTypes["none"]],
-    [new util.customType((args, message) => {
+    [new util.customType((args) => {
         let match = args.match(/^(1?\d{0,2})$/)
         if (match) return parseInt(match[1])
     })],
-    [new util.customType((args, message) => {
+    [new util.customType((args) => {
         let match = args.match(/^(1?\d{0,2})%$/)
         if (match) return parseInt(match[1])
     })],
@@ -564,9 +563,6 @@ function getDisplayVolume(vol) {
     //console.log(`getDisplayVolume:${vol}`)
     if (isNaN(vol)) vol = 0
     return Math.round(Math.pow(vol, 0.6020600085251697) * 100.0)
-}
-function getSystemVolFromDisplay(disvol) {
-    return Math.pow((disvol / 100), 1.660964)
 }
 volumecmd.process = function (message, args) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."))
@@ -614,7 +610,7 @@ cmdModule.addCmd(nextcmd)
 let clearpl = new Command("plclear")
 clearpl.aliases = ["plc"]
 clearpl.usage = ["**{0}** Remove every song in the playqueue."]
-clearpl.process = function (message, args) {
+clearpl.process = function (message) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."))
     let pq = queueList.getPlayQueue(message.guild.id)
     if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return Promise.reject()
@@ -626,7 +622,7 @@ cmdModule.addCmd(clearpl)
 let plpop = new Command("playlistpop")
 plpop.aliases = ["plpop"]
 plpop.usage = ["**{0}** Dequeue the last added song from the playlist."]
-plpop.process = function (message, args) {
+plpop.process = function (message) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."))
     let pq = queueList.getPlayQueue(message.guild.id)
     if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return Promise.reject()
@@ -639,7 +635,7 @@ cmdModule.addCmd(plpop)
 
 let shufflecmd = new Command("shuffle")
 shufflecmd.usage = ["**{0}** Shuffle the playqueue."]
-shufflecmd.process = function (message, args) {
+shufflecmd.process = function (message) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."))
     let pq = queueList.getPlayQueue(message.guild.id)
     if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return Promise.reject()
@@ -652,7 +648,7 @@ cmdModule.addCmd(shufflecmd)
 let playlistcmd = new Command("playlist")
 playlistcmd.aliases = ["pl"]
 playlistcmd.usage = ["**{0}** Display the playlist."]
-playlistcmd.process = function (message, args) {
+playlistcmd.process = function (message) {
     if (!queueList.hasPlayQueue(message.guild.id)) return Promise.reject(util.redel("I should join a voice channel first."))
     let pq = queueList.getPlayQueue(message.guild.id)
     if (!pq.tchannel || pq.tchannel.id !== message.channel.id) return

@@ -5,7 +5,7 @@ module.exports = class BestGirl extends Command {
             name: "bestgirl?",
         })
     }
-    async execute(message, args) {
+    async execute() {
         return "The best girl is undoubtly Mirai Kuriyama!"
     }
 }

@@ -3,7 +3,7 @@ module.exports = class User extends Type {
     constructor(client) {
         super(client, "user")
     }
-    async validate(value, msg, arg) {
+    async validate(value) {
         let matches = value.match(/^(?:<@!?)?([0-9]+)>?$/)
         if (matches) {
             try {
@@ -14,7 +14,7 @@ module.exports = class User extends Type {
         }
     }
 
-    async parse(value, msg, arg) {
+    async parse(value) {
         let matches = value.match(/^(?:<@!?)?([0-9]+)>?$/)
         if (matches)
             return await this.client.fetchUser(matches[1])

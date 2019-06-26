@@ -1,7 +1,5 @@
-const request = require("request")
 const YoutubeDL = require("youtube-dl")
 const ytdlc = require("ytdl-core")
-const { Util } = require("../../../MeganeClient")
 const VoiceController = require("./VoiceController")
 const Track = require("./Track")
 module.exports = class PlayQueue {

@@ -1,13 +1,22 @@
 const expect = require("chai").expect
 const discord = require("discord.js")
 const MeganeClient = require("../").MeganeClient
+const rimraf = require("rimraf")
+const fs = require("fs")
 
 describe("Check the client", () => {
-    var client
+    /**
+     * @type {MeganeClient}
+     */
+    let client
     before(() => {
+        fs.mkdir("./data", { recursive: true }, (err) => {
+            if (err) throw err
+        })
         client = new MeganeClient({
             ownerids: "1"
         })
+        expect(client).to.exist
     })
     it("Check MeganeClient extends discord.Client", () => {
         expect(client).to.be.instanceOf(discord.Client)
@@ -48,14 +57,27 @@ describe("Check the client", () => {
         })
     })
 
-    describe("prefix", () => {
-        it("global should be null", () => {
-            expect(client.prefix).to.be.null
+    describe("Client Global prefix", () => {
+        it("Check default global prefix", () => {
+            //only works if the previous database was wiped out.
+            expect(client.prefix).to.eq(client.DEFAULT_PREFIX)
         })
-        it("set prefix", () => {
+        it("set global prefix", async () => {
             let pre = "!!!"
             client.prefix = pre
             expect(client.prefix).to.be.equal(pre)
+            // wait for the value to be set before checking...
+            await (new Promise(resolve => setTimeout(resolve, 200)))
+            expect(await client.guildTable.getPrefix("0")).to.eq(pre)
+        })
+    })
+    
+    after(()=>{
+        expect(client).to.exist
+        client.destructor()
+        // delete the database
+        rimraf(client.DEFAULT_DB_PATH,(err) => {
+            if (err) throw err
         })
     })
 

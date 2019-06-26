@@ -1,20 +1,24 @@
 const expect = require("chai").expect
 const { Database, GuildTable } = require("../")
+const fs = require("fs")
+const rimraf = require("rimraf")
 describe("Database Provider Tests", () => {
+    before(done => {
+        fs.mkdir("./data", { recursive: true }, (err) => {
+            if (err) throw err
+            done()
+        })
+    })
     it("Check in memory", () => {
         let db = new Database(":memory:", (err) => {
-            if (err) {
-                return console.error(err.message)
-            }
+            if (err) throw err
         })
         expect(db).to.exist
         db.close()
     })
     it("Create a database", () => {
         let db = new Database("./data/testdb.db", (err) => {
-            if (err) {
-                return console.error(err.message)
-            }
+            if (err) throw err
         })
         expect(db).to.exist
         db.close()
@@ -25,10 +29,10 @@ describe("Database Provider Tests", () => {
         before(() => {
             database = new Database("./data/testdb.db")
             expect(database).to.exist
-            database.db.on("trace", (stment) => {
-                //print out the executing statement from the database.
-                // console.log(`\x1b[36m\n${stment}\n\x1b[0m`)//cyan
-            })
+            // database.db.on("trace", (stment) => {
+            //     //print out the executing statement from the database.
+            //     console.log(`\x1b[36m\n${stment}\n\x1b[0m`)//cyan
+            // })
         })
         describe("Test GuildTable", () => {
             let tableName = "test_guild_table"
@@ -36,6 +40,7 @@ describe("Database Provider Tests", () => {
             before(() => {
                 table = new GuildTable(database.db, tableName)
             })
+            let columnName = "command_prefix"
             it("Verify GuildTable creation", done => {
                 database.db.get("SELECT name FROM sqlite_master WHERE type='table' AND name=?;", tableName, (err, row) => {
                     expect(err).to.be.null
@@ -43,45 +48,43 @@ describe("Database Provider Tests", () => {
                     done()
                 })
             })
-            it("Add value and get value", done => {
+            it("Add value and get value", async () => {
                 let prefix = "testval1"
-                table.set("123", "command_prefix", prefix).then(() => {
-                    table.get("123", "command_prefix").then(val => {
-                        expect(val).to.equal(prefix)
-                        done()
-                    })
-                })
+                await table.set("123", columnName, prefix)
+                expect(await table.get("123", columnName)).to.equal(prefix)
             })
-            it("change value that was set before", done => {
-                let prefix = "testval2"
-                table.set("123", "command_prefix", prefix).then(() => {
-                    table.get("123", "command_prefix").then(val => {
-                        expect(val).to.equal(prefix)
-                        done()
-                    })
-                })
+            it("change value that was set before", async () => {
+                let prefix = "testval2" //different prefix
+                await table.set("123", columnName, prefix)
+                expect(await table.get("123", columnName)).to.equal(prefix)
             })
-            it("setPrefix and getPrefix", done => {
+            it("get value that doesn't exist", async () => {
+                expect(await table.get("invalid_id", columnName)).to.be.null
+            })
+            it("setPrefix and getPrefix", async () => {
                 let prefix = "testprefix"
                 let guildid = "1234"
-                table.setPrefix(guildid, prefix).then(() => {//use the string
-                    table.getPrefix({ id: guildid }).then(val => {//use object
-                        expect(val).to.equal(prefix)
-                        done()
-                    })
-                })
+                await table.setPrefix(guildid, prefix) //use string
+                expect(await table.getPrefix({ id: guildid })).to.equal(prefix) //use object
             })
-            after(() => {
+            after(done => {
                 table.destroy()
                 database.db.get("SELECT name FROM sqlite_master WHERE type='table' AND name=?;", tableName, (err, row) => {
                     expect(err).to.be.null
                     expect(row).to.be.undefined
+                    done()
                 })
             })
         })
         after(() => {
+            expect(database).to.exist
             database.close()
         })
     })
-
+    after(done => {
+        rimraf("./data", (err) => {
+            if (err) throw err
+            done()
+        })
+    })
 })

@@ -1,18 +1,20 @@
+const Database = require("./Database")
 /**
  * A base class for a sqlite Table.
  * only has consideration for single primary key.
  * has functions to set/get a single value in row & column.
  * will try to cache values that has been gotten.
  */
-class Table {
+module.exports = class Table {
 
     /**
      * @constructor
-     * @param {string} db
+     * @param {Database|sqlite3.Database} db
      * @param {string} tableName
      */
     constructor(db, tableName) {
-
+        if(db instanceof Database)
+            db = db.db
         /**
          * The Database
          * @type {sqlite3.Database}
@@ -26,6 +28,11 @@ class Table {
          */
         this.tableName = tableName
         this.init()
+
+        /**
+         * @name primaryKey the unique primary key of the table
+         * @type {string}
+         */
         if (!this.primaryKey) throw Error("Should define primaryKey in the init() of the Table.")
     }
 
@@ -33,6 +40,7 @@ class Table {
      * Initiate the table. will be called in the constructor.
      * Will need to set this.primaryKey to the primary column name.
      * Classes that extends this class will also have to consider possible upgrades here if they change the table schema.
+     * @abstract
      */
     init() {
         throw new Error(`${this.construtor.name} does not have a init function.`)
@@ -47,14 +55,15 @@ class Table {
 
     /**
      * Get a single value.
-     * @param {string} row The value of the primary.
+     * @param {string} rowval The value of the primary.
      * @param {string} column The column to get.
      */
-    get(row, column) {
+    get(rowval, column) {
         return new Promise((resolve, reject) => {
-            this.db.get(`SELECT ${column} FROM ${this.tableName} WHERE ${this.primaryKey} = ?`, row, (err, row) => {
+            this.db.get(`SELECT ${column} FROM ${this.tableName} WHERE ${this.primaryKey} = ?`, rowval, (err, row) => {
                 if (err) return reject(err)
-                resolve(row[column])
+                if (row && row[column]) resolve(row[column])
+                else resolve(null)
             })
         })
 
@@ -68,14 +77,16 @@ class Table {
      */
     set(row, column, value) {
         return new Promise((resolve, reject) => {
-            this.db.run(`INSERT INTO ${this.tableName}(${this.primaryKey},${column})`
+            this.db.run(
+                `INSERT INTO ${this.tableName}(${this.primaryKey},${column})`
                 + "VALUES(?, ?)"
                 + `ON CONFLICT(${this.primaryKey}) DO UPDATE SET ${column} = ?;`,
-            row, value, value, (err) => {
-                if (err) throw err
-                if (err) return reject(err)
-                resolve()
-            })
+                row, value, value, (err) => {
+                    if (err) throw err
+                    if (err) return reject(err)
+                    resolve()
+                }
+            )
         })
 
     }
@@ -83,13 +94,12 @@ class Table {
     /**
      * @returns Promise that resolves to a boolean of whether a table of this.tableName exists in the database.
      */
-    tableExists(){
-        return Promise((resolve, reject)=>{
-            database.db.get("SELECT name FROM sqlite_master WHERE type='table' AND name=?;", this.tableName, (err, row) => {
-                if(err) return reject(err)
+    tableExists() {
+        return Promise((resolve, reject) => {
+            this.db.get("SELECT name FROM sqlite_master WHERE type='table' AND name=?;", this.tableName, (err, row) => {
+                if (err) return reject(err)
                 resolve(row.name === this.tableName)
             })
         })
     }
 }
-module.exports = Table
