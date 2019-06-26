@@ -183,7 +183,7 @@ messageQueue.prototype.queue = function (msg) {
         }
         if (msgcontent.length === 0) return
         //console.log(`NEW MESSAGE: msgcontent.length(${msgcontent.length})`);
-        this.tchannel.send(msgcontent).then(msg => { }).catch(console.error)
+        this.tchannel.send(msgcontent).then(() => { }).catch(console.error)
     }, 3000)
 }
 
@@ -196,7 +196,7 @@ exports.queueMessages = function (channel, queuestring) {
 
 exports.justOnePromise = function (promise, resolveResponse, rejectResponse) {
     return new Promise((resolve, reject) => {
-        promise.then().then((channel) => {
+        promise.then().then(() => {
             return resolve(resolveResponse)
         }).catch((err) => {
             console.error(err)

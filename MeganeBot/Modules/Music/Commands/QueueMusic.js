@@ -1,7 +1,4 @@
 const { Command } = require("../../../../MeganeClient")
-const Track = require("../Track")
-const VoiceController = require("../VoiceController")
-const YoutubeDL = require("youtube-dl")
 module.exports = class QueuMusic extends Command {
     constructor(client) {
         super(client, {

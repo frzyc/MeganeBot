@@ -9,7 +9,7 @@ module.exports = class KillBot extends Command {
         })
 
     }
-    async execute(message, args) {
+    async execute(message) {
         let msg = this.client.messageFactory({
             destination: message,
             messageContent: "Bye!"

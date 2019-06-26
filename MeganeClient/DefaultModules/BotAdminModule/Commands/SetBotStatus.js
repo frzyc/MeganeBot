@@ -46,10 +46,11 @@ module.exports = class SetPrefix extends Command {
         })
         if (status === this.client.user.presence.status)
             return msg.execute()
-        this.client.user.setStatus(status).then(user => {
+        this.client.user.setStatus(status).then(() => {
             msg.messageContent = `Changed my status to ${status}!`
             msg.execute()
         }).catch((err) => {
+            console.error(err)
             msg.messageContent = `Cannot change my status to ${status}!`
             msg.execute()
         })

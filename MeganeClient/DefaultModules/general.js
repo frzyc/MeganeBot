@@ -1,7 +1,11 @@
-﻿const fs = require("fs")
-const util = require.main.exports.getRequire("util")
+﻿const util = require.main.exports.getRequire("util")
 const command = require.main.exports.getRequire("command")
 const cmdModuleobj = require.main.exports.getRequire("commandmodule")
+
+let cmdModule = new cmdModuleobj("General")
+// cmdModule.description = "Some general commands."
+// cmdModule.guildOnly = true
+// module.exports = cmdModule
 
 let prune = new command(["prune"])
 prune.usage = [
@@ -28,7 +32,7 @@ prune.process = function (message, args) {
                 return reject(util.redel("You don't have the \"manage messages\" permissions to delete other people's messages"))
             matchid = []
             let mentiondict = arg[1]
-            for (id in mentiondict)
+            for (let id in mentiondict)
                 matchid.push(id)
         }
         message.channel.fetchMessages({ limit: 100, before: message.id })

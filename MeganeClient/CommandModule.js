@@ -138,7 +138,7 @@ class CommandModule extends CommandAndModule {
                 value: `${this.description}`
             })
         }
-        for (let [key, cmd] of this.commands) {
+        for (let [, cmd] of this.commands) {
             msgobj.messageOptions.embed.fields.push({
                 name: `Command: ${cmd.name}${cmd.aliases && cmd.aliases.length > 0 ? ", " + cmd.aliases.join(", ") : ""}`,
                 value: `Usage: ${cmd.usage}`

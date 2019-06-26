@@ -7,7 +7,7 @@ module.exports = class TestEmbed extends Command {
         })
 
     }
-    execute(message, args) {
+    execute(message) {
         return Promise.resolve({
             destination: message,
             messageContent: "testing",
@@ -47,21 +47,21 @@ module.exports = class TestEmbed extends Command {
             reactions: [
                 {
                     emoji: "🇦",
-                    execute: (messageReaction, user) => {
+                    execute: (messageReaction) => {
                         console.log("PROCESSA")
                         return Promise.resolve({ destination: messageReaction.message, messageContent: "🇦" })
                     }
                 },
                 {
                     emoji: "🇧",
-                    execute: (messageReaction, user) => {
+                    execute: (messageReaction) => {
                         console.log("PROCESSB")
                         return Promise.resolve({ destination: messageReaction.message, messageContent: "🇧" })
                     }
                 },
                 {
                     emoji: "🇨",
-                    execute: (messageReaction, user) => {
+                    execute: (messageReaction) => {
                         console.log("PROCESSC")
                         return Promise.resolve({ destination: messageReaction.message, messageContent: "🇨" })
                     }

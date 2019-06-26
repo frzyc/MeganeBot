@@ -9,7 +9,7 @@ module.exports = class GetBotVersion extends Command {
             description: "Returns the latest git commit message."
         })
     }
-    async execute(message, args) {
+    async execute(message) {
         let returnMsg = this.client.messageFactory({
             destination: message,
             messageContent: "Failed checking git version!",

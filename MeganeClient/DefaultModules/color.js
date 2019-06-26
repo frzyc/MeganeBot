@@ -81,7 +81,7 @@ colorcmd.process = function (message, args) {
             })
         }
 
-        function removeColorRoles(callback) {
+        function removeColorRoles() {
             return new Promise((resolve, reject) => {
                 let currColors = message.member.roles.filter((r) => colorList[message.guild.id].includes(r.name))
                 message.member.removeRoles(currColors).then(resolve, reject)
@@ -94,7 +94,7 @@ cmdModule.addCmd(colorcmd)
 
 let colorlistcmd = new command("colorlist")
 colorlistcmd.usage = ["**\nprints out a list of colors on the server"]
-colorlistcmd.process = function (message, args) {
+colorlistcmd.process = function (message) {
     if (!colorList || !colorList[message.guild.id]) return Promise.reject(util.redel("There is no color database for this server."))
     if (colorList[message.guild.id].length === 0) return Promise.reject(util.redel("There is no color roles on this server."))
     let res = colorList[message.guild.id].join(", ")
@@ -119,7 +119,7 @@ coloraddcmd.process = function (message, args) {
         colorrole.edit({
             mentionable: true,
             permissions:[]
-        }).then(role => {
+        }).then(() => {
             colorList[message.guild.id].push(colorrole.name)
             colorList[message.guild.id] = colorList[message.guild.id].sort()
             fs.writeFile(__dirname + "/" + colorfile, JSON.stringify(colorList), "utf8", (err) => {

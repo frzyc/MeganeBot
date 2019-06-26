@@ -11,7 +11,7 @@ module.exports = class ChangeBotGlasses extends Command {
         })
         //TODO choose a specific display pic, and use the random selection for the default option. 
     }
-    async execute(message, args) {
+    async execute(message) {
         let msg = await this.client.autoMessageFactory({
             destination: message,
             messageContent: "Changing my glasses...",

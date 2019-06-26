@@ -34,7 +34,7 @@ class Type {
      * @returns {null|parsedValue} return null if the value cannot be parsed by this type. 
      * @abstract
      */
-    parse(value, msg, arg){
+    parse(value, msg, arg){ // eslint-disable-line no-unused-vars
         throw new Error(`${this.constructor.name} doesn't have a parse() method.`)
     }
 }

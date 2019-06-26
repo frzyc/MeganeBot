@@ -93,7 +93,7 @@ playerDataObj.prototype.readData = function () {
             this.playerList = {}
         }
         if (!this.playerList) this.playerList = {}
-        for (id in this.playerList) {
+        for (let id in this.playerList) {
             //console.log(`reconstructing wallet for ${id}`);
             let player = this.playerList[id]
             if (player.wallet && player.wallet.amount) 
@@ -133,7 +133,7 @@ let walletcmd = new Command("wallet")
 walletcmd.usage = [
     `**{0}** Get how much ${currency.nameplural} in your wallet.`,
 ]
-walletcmd.process = function (message, args) {
+walletcmd.process = function (message) {
     let amount = playerData.getOrCreatePlayer(message.author.id).wallet.getAmount()
     return Promise.resolve({
         messageContent: `You currently have ${currency.emoji} ${currency.symbol}${amount} ${currency.nameplural} ${currency.emoji} in your wallet.`, 
@@ -193,7 +193,7 @@ awardcmd.argsTemplate = [
 ]
 awardcmd.ownerOnly = true
 awardcmd.process = function (message, args) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         let amount = args[0][0]
         let mentionedusers = args[0][1]
         //start giving
@@ -220,7 +220,7 @@ takecmd.argsTemplate = [
 ]
 takecmd.ownerOnly = true
 takecmd.process = function (message, args) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         let amount = args[0][0]
         let mentionedusers = args[0][1]
         //start taking

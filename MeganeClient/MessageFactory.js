@@ -134,7 +134,7 @@ class MessageFactory {
             channel.startTyping()
             msgPromise = new Promise((replyResolve) => {
                 let typelength = this.messageContent ? this.messageContent.length : 0 + this.messageOptions ? JSON.stringify(this.messageOptions).length : 0
-                let typeduration = this.typelength * 30 + 100
+                let typeduration = typelength * 30 + 100
                 setTimeout(() => {
                     channel.stopTyping(true)
                     return replyResolve(this.sendMessage())

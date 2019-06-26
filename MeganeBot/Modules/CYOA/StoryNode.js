@@ -34,7 +34,7 @@ module.exports = class StoryNode {
             })
             msgobj.reactions.push({
                 emoji: Util.getLetterSymbol(String.fromCharCode(97 + i)),
-                execute: (reactionMessage, user) => {
+                execute: (reactionMessage) => {
                     let nodeMsgRes = choice.node.getMessageResolvable()
                     nodeMsgRes.destination = reactionMessage.message
                     nodeMsgRes.edit = true
@@ -54,7 +54,7 @@ module.exports = class StoryNode {
             }]
             msgobj.reactions = [{
                 emoji: "📖",
-                execute: (reactionMessage, user) => {
+                execute: (reactionMessage) => {
                     let titleMsgRes = this.story.getMessageResolvable()
                     titleMsgRes.destination = reactionMessage.message
                     titleMsgRes.edit = true

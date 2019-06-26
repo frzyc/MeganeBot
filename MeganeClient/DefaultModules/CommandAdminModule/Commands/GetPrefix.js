@@ -11,7 +11,7 @@ module.exports = class GetPrefix extends Command {
         })
 
     }
-    execute(message, args) {
+    execute(message) {
         let msg = this.client.messageFactory({
             destination: message,
             reply: true,

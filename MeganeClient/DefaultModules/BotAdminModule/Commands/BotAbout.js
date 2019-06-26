@@ -9,7 +9,7 @@ module.exports = class BotAbout extends Command {
             description: "Returns the bot version, and uptime info."
         })
     }
-    async execute(message, args) {
+    async execute() {
         let msg = `Name: ${packagejson.name} \nVersion: ${packagejson.version} \nDescription: ${packagejson.description}\n`
         let uptime = Math.floor(process.uptime())
         let hours = Math.floor(uptime / (60 * 60))

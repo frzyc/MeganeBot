@@ -11,7 +11,7 @@ module.exports = class PullAndDeploy extends Command {
         })
 
     }
-    async execute(message, args) {
+    async execute(message) {
         let updateMsg = await this.client.autoMessageFactory({
             destination: message,
             messageContent: "fetching updates...",
@@ -21,12 +21,12 @@ module.exports = class PullAndDeploy extends Command {
         fetch.stdout.on("data", data => {
             console.log(data.toString())
         })
-        fetch.on("close", code => {
+        fetch.on("close", () => {
             var reset = spawn("git", ["reset", "--hard", "origin/master"])
             reset.stdout.on("data", data => {
                 console.log(data.toString())
             })
-            reset.on("close", code => {
+            reset.on("close", () => {
                 let isWin = /^win/.test(process.platform)
                 let npmspawn = null
                 if (isWin) {
@@ -36,7 +36,7 @@ module.exports = class PullAndDeploy extends Command {
                 npmspawn.stdout.on("data", data => {
                     console.log(data.toString())
                 })
-                npmspawn.on("close", async code => {
+                npmspawn.on("close", async () => {
                     console.log("goodbye")
                     await updateMsg.edit("brb!")
                     await this.client.destroy()
