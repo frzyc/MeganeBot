@@ -1,9 +1,10 @@
 const CommandArgumentParseError = require("../Errors/CommandArgumentParseError")
+const joi = require('@hapi/joi');
 class CommandArgument {
     /**
      * @typedef {Object} CommandArgumentOptions
-     * @property {string} [type] - Should corresponding to an existing type, or leave it null for a custom type. See {@link CommandArgument#type}.
      * @property {string} label - Property value of the parsed results in the results object. See {@link CommandArgument#label}.
+     * @property {string} [type] - Should corresponding to an existing type, or leave it null for a custom type. See {@link CommandArgument#type}.
      * @property {string} [description] - A description for this argument. See {@link CommandArgument#descriptionString}.
      * @property {number} [max] - The max value. See {@link CommandArgument#max}.
      * @property {number} [min] - The min value. See {@link CommandArgument#min}.
@@ -14,6 +15,22 @@ class CommandArgument {
      * @property {function} [validate] - Custom validator. Only when {@link CommandArgumentOptions#type} is null. See {@link CommandArgument#customValidator}.
      * @property {function} [parse] - Custom parser. Only when {@link CommandArgumentOptions#type} is null. See {@link CommandArgument#customParser}.
      */
+    static CommandArgumentOptionsSchema = joi.object().keys({
+        label: joi.string().required(),
+        type: joi.string().lowercase(),
+        description: joi.string(),
+        max: joi.any(),
+        min: joi.any(),
+        default: joi.any(),
+        quantity: joi.number().integer().greater(0),
+        multiple: joi.boolean(),
+        remaining: joi.boolean(),
+        validate: joi.func().maxArity(3),
+        parse: joi.func().maxArity(3)
+    })
+        .oxor("quantity", "multiple", "remaining")//only one is allowed
+        .without("type", ["validate", "parse"])
+        .with("validate", "parse")
 
     /**
      * Constructor
@@ -21,7 +38,6 @@ class CommandArgument {
      * @param {CommandArgumentOptions} options
      */
     constructor(client, options) {
-        this.constructor.preCheck(client, options)
         /**
          * A reference to the MeganeClient.
          * @name CommandArgument#client
@@ -30,79 +46,101 @@ class CommandArgument {
          */
         Object.defineProperty(this, "client", { value: client })
 
+        let result = this.constructor.CommandArgumentOptionsSchema.validate(options)
+        if (result.error) throw result.error
+        if (result.value) {
+            /**
+             * Rename the property value because CommandArgument has getters with the same name.
+             */
+            if (result.value.description) {
+                result.value.descriptionString = result.value.description
+                delete result.value.description
+            }
+            if (result.value.description) {
+                result.value.customValidator = result.value.validate
+                delete result.value.validate
+            }
+            if (result.value.description) {
+                result.value.customParser = result.value.parse
+                delete result.value.parse
+            }
+            Object.assign(this, result.value)
+        }
+
         /**
          * A label to reference this {@link CommandArgument} in the parsed object.
+         * @name label
          * @type {string}
          */
-        this.label = options.label
 
         /**
          * The {@link Type} for this {@link CommandArgument}.
+         * @name type
          * @type {Type|"custom"}
          */
-        this.type = options.type ? client.depot.types.get(options.type) : { id: "custom" }//if type is not defined, is is a custom type.
+        this.type = this.type ? client.depot.types.get(this.type) : { id: "custom" }//if type is not defined, is is a custom type.
 
         /**
          * The description for this {@link CommandArgument}.
+         * @name descriptionString
          * @type {?string}
          */
-        this.descriptionString = options.description || null
 
         /**
          * The min value if {@link CommandArgument#type} is a scaler value, or can be measured by a length.
+         * @name min
          * @type {?number}
          */
-        this.min = options.min !== undefined ? options.min : null
 
         /**
          * The max value if {@link CommandArgument#type} is a scaler value, or can be measured by a length.
+         * @name max
          * @type {?number}
          */
-        this.max = options.max !== undefined ? options.max : null
 
         /**
          * The default value for this {@link CommandArgument}.
          * This makes this argument optional.
          * All arguments in {@link Command#args} after this one will need to be optional as well.
+         * @name default
          * @type {?Object}
          */
-        this.default = options.default
 
         /**
          * The number of values this {@link CommandArgument} parses.
          * This will return the values as an array.
+         * @name quantity
          * @type {?number}
          */
-        this.quantity = options.quantity !== undefined ? options.quantity : null
 
         /**
          * This will keep parsing arguments until the end of the arugment string.
          * This will return the values as an array.
          * Must be the last argument for the {@link Command#args}.
          * only applicable if true.
+         * @name multiple
          * @type {?boolean}
          */
-        this.multiple = options.multiple !== undefined ? options.multiple : null
 
         /**
          * This will dump the remaining argument string into one argument.
          * Must be the last argument for the {@link Command#args}.
          * only applicable if true.
+         * @name remaining
          * @type {?boolean}
          */
-        this.remaining = options.remaining !== undefined ? options.remaining : null
 
         /**
          * A customized Validator for a custom type. See {@link Type#validate}.
+         * @name customValidator
          * @type {?function}
          */
-        this.customValidator = options.validate || null
 
         /**
          * A customized parser for a custom type. See {@link Type#parse}.
+         * @name customParser
          * @type {?function}
          */
-        this.customParser = options.parse || null
     }
 
     /**

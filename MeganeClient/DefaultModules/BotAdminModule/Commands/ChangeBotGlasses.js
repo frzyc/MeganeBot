@@ -4,12 +4,12 @@ const { Command } = require("../../../")
 module.exports = class ChangeBotGlasses extends Command {
     constructor(client) {
         super(client, {
-            name: "change-bot-glasses",
-            aliases: ["changebotglasses"],
+            name: "Change my glasses",
+            commands: ["change-bot-glasses", "changebotglasses"],
             usage: "Change the bot's display picture",
             description: "Randomly select a display picture from a preset directory, and set it as my profile picture.\n Set this directory using ```MeganeClient.profilePictureDirectory```"
         })
-        //TODO choose a specific display pic, and use the random selection for the default option. 
+        //TODO choose a specific display pic, and use the random selection for the default option.
     }
     async execute(message) {
         let msg = await this.client.autoMessageFactory({

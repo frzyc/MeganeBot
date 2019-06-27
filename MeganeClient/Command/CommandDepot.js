@@ -65,15 +65,15 @@ class CommandDepot {
             module = new CommandModule(this.client, module.id, module.name, null, module.commands)
         }
 
-        const existing = this.modules.get(module.id)
+        const existing = this.modules.get(module.name)
         if (existing) {
-            throw new Error(`Module ${module.id} is already added.`)
+            throw new Error(`Module ${module.name} is already added.`)
         } else {
-            if (!module.hasDescription()) this.client.emit("warn", `addModule:WARN: Module ${module.id} does not have a description.`)
-            this.modules.set(module.id, module)
-            this.client.emit("moduleAdded", module, this)
-            this.client.emit("debug", `Added module ${module.id}.`)
+            if (!module.hasDescription()) this.client.emit("warn", `addModule:WARN: Module "${module.name}" does not have a description.`)
+            this.modules.set(module.name, module)
             this.addCommands(module.commands.array())
+            this.client.emit("moduleAdded", module, this)
+            this.client.emit("debug", `Added module ${module.name}.`)
         }
         return this
     }
@@ -90,16 +90,16 @@ class CommandDepot {
         const lcSearch = searchString.toLowerCase()
         const matchedModules = this.modules.filter(
             mod => {
-                if (exact) return mod.id === lcSearch || mod.name.toLowerCase() === lcSearch
-                else return mod.id.includes(lcSearch) || mod.name.toLowerCase().includes(lcSearch)
+                if (exact) return  mod.name.toLowerCase() === lcSearch
+                else return  mod.name.toLowerCase().includes(lcSearch)
             }
         )
-        if (exact) return matchedModules
+        if (exact) return matchedModules.array()
+        //check for exact match in fuzzy search
+        for (const mod of matchedModules.array())
+            if (mod.name.toLowerCase() === lcSearch) return [mod]
 
-        for (const mod of matchedModules) {
-            if (mod.name.toLowerCase() === lcSearch || mod.id === lcSearch) return [mod]
-        }
-        return matchedModules
+        return matchedModules.array()
     }
 
     /**
@@ -129,7 +129,7 @@ class CommandDepot {
     }
 
     /**
-     * Add a single command to the Depot. must have a unique {@link Command#id}. Will also add it to the corresponding {@link CommandModule}.
+     * Add a single command to the Depot.
      * @param {Command} command
      * @returns {CommandDepot} - This {@link CommandDepot} so that functions can be chained.
      */
@@ -137,27 +137,18 @@ class CommandDepot {
         //convert the command to an Command object for better parsing
         if (typeof command === "function") command = new command(this.client)
         if (!(command instanceof Command)) return this.client.emit("warn", `Attempting to add an invalid command object: ${command}; skipping.`)
-        if (this.commands.some(cmd => cmd.name === command.name || cmd.aliases.includes(command.name))) {
+        if (this.commands.some(cmd => cmd.name === command.name || cmd.commands.includes(command.name)))
             throw new Error(`A command with the name/alias "${command.name}" is already added.`)
-        }
-        for (const alias of command.aliases) {
-            if (this.commands.some(cmd => cmd.name === alias || cmd.aliases.includes(alias))) {
-                throw new Error(`A command with the name/alias "${alias}" is already added.`)
-            }
-        }
-        if (!command.moduleID) throw new Error("A command must have a moduleID to attach to a module.")//TODO create a internal module to store all the cmds without a module.
-        const module = this.modules.find(mod => mod.id === command.moduleID)
-        if (!module) throw new Error(`Module "${command.moduleID}" is not added.`)
-        if (module.commands.some(cmd => cmd.id === command.id)) {
-            this.client.emit("debug", `A command with the id "${command.id}" is already added in ${module.id}`)
-        }
-        if (!command.execute) throw new Error(`Command ${command.id} does not have a execute function.`)
-        if (!command.usage) this.client.emit("warn", `Command ${command.id} does not have a usage.`)
-        command.module = module
-        module.commands.set(command.name, command)
+
+        for (const alias of command.commands)
+            if (this.commands.some(cmd => cmd.name === alias || cmd.commands.includes(alias)))
+                throw new Error(`A command with the command/alias "${alias}" is already added.`)
+
+        if (!command.execute) throw new Error(`Command "${command.name}" does not have a execute function.`)
+        if (!command.usage) this.client.emit("warn", `Command "${command.name}" does not have a usage.`)
         this.commands.set(command.name, command)
         this.client.emit("commandAdded", command, this)
-        this.client.emit("debug", `Added command ${module.id}:${command.id}.`)
+        this.client.emit("debug", `Added command "${module.name}":"${command.name}".`)
         return this
     }
 
@@ -178,7 +169,7 @@ class CommandDepot {
     /**
      * Search for {@link Command}s.
      * @param {string} searchString - A search string.
-     * @param {boolean} [exact=false] - Whether to search using wholewords for {@link Command#name}s/{@link Command#aliases}.
+     * @param {boolean} [exact=false] - Whether to search using wholewords for {@link Command#name}s/{@link Command#commands}.
      * @param {?external:Message} [message] - Restricts the search using the context provided by the message.
      * @returns {Command[]} - Matches.
      */
@@ -189,18 +180,18 @@ class CommandDepot {
         const matchedCommands = this.commands.filter(
             cmd => {
                 let lcname = cmd.name.toLowerCase()
-                if (exact) return lcname === lcSearch || (cmd.aliases && cmd.aliases.some(ali => ali.toLowerCase() === lcSearch)) || `${cmd.moduleID}:${cmd.memberName}` === lcSearch
-                else return lcname.includes(lcSearch) || `${cmd.moduleID}:${cmd.memberName}` === lcSearch || (cmd.aliases && cmd.aliases.some(ali => ali.toLowerCase().includes(lcSearch)))
+                if (exact) return lcname === lcSearch || (cmd.commands.some(ali => ali.toLowerCase() === lcSearch))
+                else return lcname.includes(lcSearch) ||(cmd.commands.some(ali => ali.toLowerCase().includes(lcSearch)))
             }
         )
-        if (exact) return matchedCommands
-        // See if there's an exact match
-        for (const command of matchedCommands) {
-            if (command.name === lcSearch || (command.aliases && command.aliases.some(ali => ali === lcSearch))) {
+        if (exact) return matchedCommands.array()
+        // See if there's an exact match in the fuzzy search
+        for (const command of matchedCommands.array()) {
+            if (command.name === lcSearch || (command.commands.some(cmd => cmd === lcSearch))) {
                 return [command]
             }
         }
-        return matchedCommands
+        return matchedCommands.array()
     }
 
     /**

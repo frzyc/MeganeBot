@@ -1,7 +1,7 @@
 /**
- * 
+ *
  */
-const { Util } = require("../../../MeganeClient").default
+const { Util } = require("../../../MeganeClient")
 module.exports = class StoryNode {
     constructor(story, storyNodeObj) {
         /**

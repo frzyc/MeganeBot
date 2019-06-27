@@ -2,8 +2,8 @@ const { Command } = require("../../../")
 module.exports = class addCommand extends Command {
     constructor(client) {
         super(client, {
-            name: "add-numbers",
-            aliases: ["add", "add-nums"],
+            name: "Add numbers",
+            commands: ["add-numbers", "add", "add-nums"],
             usage: "Adds numbers together.",
             description: "Gets the sum of numbers, good for testing arguments with multiple parameters",
             examples: ["add-numbers 42 1337"],

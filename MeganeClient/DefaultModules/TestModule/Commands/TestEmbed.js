@@ -3,7 +3,8 @@
 module.exports = class TestEmbed extends Command {
     constructor(client) {
         super(client, {
-            name: "testembed"
+            name: "Test Message Embed",
+            commands:"testembed"
         })
 
     }

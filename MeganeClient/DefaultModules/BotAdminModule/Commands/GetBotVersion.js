@@ -2,8 +2,8 @@ const { Command } = require("../../../")
 module.exports = class GetBotVersion extends Command {
     constructor(client) {
         super(client, {
-            name: "get-bot-version",
-            aliases: ["getbotversion"],
+            name: "Get bot version",
+            commands: ["get-bot-version", "getbotversion"],
             examples: ["get-bot-version"],
             usage: "Get the bot version.",
             description: "Returns the latest git commit message."

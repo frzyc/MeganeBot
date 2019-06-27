@@ -2,8 +2,8 @@ const { Command } = require("../../../")
 module.exports = class SetPrefix extends Command {
     constructor(client) {
         super(client, {
-            name: "set-bot-status",
-            aliases: ["setbotstatus"],
+            name: "Set bot online presence",
+            commands: ["set-bot-status", "setbotstatus"],
             examples: ["set-bot-status idle", "setbotstatus dnd?"],
             usage: "Change the bot status.",
             description: "Can change the status to one of \"Online\", \"Idle\", \"Invisible\", \"Do Not Disturb\"",

@@ -3,8 +3,8 @@ const { Command } = require("../../../")
 module.exports = class PullAndDeploy extends Command {
     constructor(client) {
         super(client, {
-            name: "pull-and-deploy",
-            aliases: ["pullanddeploy", "dumbledores-pet"],
+            name: "Pull and Deploy",
+            commands: ["pull-and-deploy", "pullanddeploy", "dumbledores-pet"],
             examples: ["pull-and-deploy"],
             usage: "Get the latest updates from git repo, and restarts the bot.",
             description: "Do a git fetch to get the latest update from the git repo, and kill its process. If pm2 or similiar is running, then the bot should restart."

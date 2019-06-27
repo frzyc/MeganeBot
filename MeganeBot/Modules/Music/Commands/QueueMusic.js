@@ -1,9 +1,9 @@
-const { Command } = require("../../../../MeganeClient").default
+const { Command } = require("../../../../MeganeClient")
 module.exports = class QueuMusic extends Command {
     constructor(client) {
         super(client, {
-            name: "queue-music",
-            aliases: ["qm"],
+            name: "Queue Music",
+            commands: ["queue-music", "qm"],
             usage: "Add music to the playqueue",
             description: "Add a song/video/playlist to the playlist. works with youtube, soundcloud, and a bunch of other formats. Can search with URL, or just a search string(search string will search for a youtube video)",
             examples: [
@@ -19,8 +19,8 @@ module.exports = class QueuMusic extends Command {
                 }
             ],
             restriction: (cmdMsg) => {
-                if(!cmdMsg.message.guild)//if message doesnt have a guild:
-                    return "This command is not supported here."//this is most likely a DM channel, so this is probably not supported. 
+                if (!cmdMsg.message.guild)//if message doesnt have a guild:
+                    return "This command is not supported here."//this is most likely a DM channel, so this is probably not supported.
             }
         })
     }

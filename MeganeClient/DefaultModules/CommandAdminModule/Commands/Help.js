@@ -3,8 +3,8 @@ const { Command } = require("../../../")
 module.exports = class Help extends Command {
     constructor(client) {
         super(client, {
-            name: "help",
-            aliases: ["h"],
+            name: "Help",
+            commands: ["help", "h"],
             examples: ["help list", "help command:example-command"],
             usage: "Print out usage for commands/modules.",
             description: "Use this command to search through all the commands and modules, and get specific usage information on specific commands",
@@ -111,7 +111,7 @@ module.exports = class Help extends Command {
         if (commands) {
             for (let cmd of commands) {
                 usageObj.messageOptions.embed.fields.push({
-                    name: `Command: ${cmd.name}${cmd.aliases && cmd.aliases.length > 0 ? ", " + cmd.aliases.join(", ") : ""}`,
+                    name: `Command: ${cmd.name} (${cmd.commands.join(", ")})`,
                     value: `Usage: ${cmd.usage}`
                 })
             }

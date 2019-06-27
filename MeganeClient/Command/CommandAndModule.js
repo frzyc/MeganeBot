@@ -1,16 +1,31 @@
 const { permissions } = require("../Utility")
+const joi = require('@hapi/joi');
 /**
- * since {@link Command} and {@link CommandModule} share some commands, I am just going to let them extend the same class.
+ * since {@link Command} and {@link CommandModule} share some common functionalities.
  */
 class CommandAndModule {
-    /**
-     * 
-     * @param {MeganeClient} client 
-     * @param {CommandOptions|CommandModuleOptions} options  
-     */
-    constructor(client, options) {
-        this.constructor.CommandAndModulePreCheck(client, options)
 
+    /**
+     * A joi to validate some common properties between Command and CommandModule
+     */
+    static CommandAndModuleOptionsSchema = joi.object().keys({
+        name: joi.string().trim().label("Name").required(),
+        id: joi.string().trim().lowercase(),
+        usage: joi.string(),
+        description: joi.string(),
+        ownerOnly: joi.boolean().default(false),
+        guildOnly: joi.boolean().default(false),
+        dmOnly: joi.boolean().default(false),
+        defaultDisable: joi.boolean().default(false),
+        clientPermissions: joi.array().items(joi.string().valid(Object.keys(permissions))).single(),
+        userPermissions: joi.array().items(joi.string().valid(Object.keys(permissions))).single(),
+    })
+
+    /**
+     *
+     * @param {MeganeClient} client
+     */
+    constructor(client) {
         /**
          * A reference to the MeganeClient.
          * @name CommandAndModule#client
@@ -18,68 +33,6 @@ class CommandAndModule {
          * @readonly
          */
         Object.defineProperty(this, "client", { value: client })
-
-        /**
-         * The name of the {@link Command}/{@link CommandModule}. Human readable.
-         * @type {string}
-         */
-        this.name = options.name
-
-        /**
-         * Unique id of the {@link Command}/{@link CommandModule}. Used internally.
-         * @private
-         * @type {string}
-         */
-        this.id = options.id
-
-        /**
-         * A brief usage description of the {@link Command}/{@link CommandModule}.
-         * @type {?string}
-         */
-        this.usageString = options.usage ? options.usage : null
-
-        /**
-         * A detailed usage description of the {@link Command}/{@link CommandModule}.
-         * @type {?string}
-         */
-        this.descriptionString = options.description ? options.description : null
-
-        /**
-         * Whether this {@link Command}/{@link CommandModule} is restricted to bot owners.
-         * @type {?boolean}
-         */
-        this.ownerOnly = options.ownerOnly
-
-        /**
-         * Whether this {@link Command}/{@link CommandModule} is restricted to only guilds.
-         * @type {?boolean}
-         */
-        this.guildOnly = options.guildOnly
-
-        /**
-         * Whether this {@link Command}/{@link CommandModule} is restricted to only DM channels.
-         * @type {?boolean}
-         */
-        this.dmOnly = options.dmOnly
-
-        /**
-         * Whether this {@link Command}/{@link CommandModule} is disabled by default.
-         * @todo need to implement and test
-         * @type {?boolean}
-         */
-        this.defaultDisable = options.defaultDisable
-
-        /**
-         * list of required permissions for the bot to use this {@link Command}/{@link CommandModule}.
-         * @type {?string[]}
-         */
-        this.clientPermissions = options.clientPermissions || null
-
-        /**
-         * list of required permissions for the user to use this {@link Command}/{@link CommandModule}.
-         * @type {?string[]}
-         */
-        this.userPermissions = options.userPermissions || null
     }
 
     /**
@@ -93,7 +46,7 @@ class CommandAndModule {
 
     /**
      * Get whether the usage string for this {@link Command}/{@link CommandModule} exists.
-     * @returns {boolean} 
+     * @returns {boolean}
      */
     hasUsage() {
         if (this.usageString) return true
@@ -111,7 +64,7 @@ class CommandAndModule {
 
     /**
      * Get whether the description for this {@link Command}/{@link CommandModule} exists.
-     * @returns {boolean} 
+     * @returns {boolean}
      */
     hasDescription() {
         if (this.descriptionString) return true
@@ -121,7 +74,7 @@ class CommandAndModule {
     /**
      * Check whether the author/channel passes the restrictions(dmOnly, guildOnly, ownerOnly).
      * see {@link CommandAndModule#dmOnly}, {@link CommandAndModule#guildOnly} and {@link CommandAndModule#ownerOnly}.
-     * @param {boolean} - True if it passes without been restriction. False otherwise. 
+     * @param {boolean} - True if it passes without been restriction. False otherwise.
      */
     passContextRestriction(message) {
         //check Location restriction
@@ -138,8 +91,8 @@ class CommandAndModule {
 
     /**
      * Checks if the user of the message has the permission to perform an operation in the channel of the message.
-     * @param {external:Message} message 
-     * @param {boolean} [reply=false] 
+     * @param {external:Message} message
+     * @param {boolean} [reply=false]
      */
     passPermissions(message, reply = false) {
         if (this.userPermissions &&
@@ -171,45 +124,6 @@ class CommandAndModule {
             }
         }
         return true
-    }
-
-    /**
-     * A helper function to validate the options before the class is created.
-     * @private
-     * @param {MeganeClient} client 
-     * @param {CommandOptions|CommandModuleOptions} options 
-     */
-    static CommandAndModulePreCheck(client, options) {
-        let optionName = "Command/ModuleOptions"
-        if (!client) throw new Error("A client must be specified.")
-        if (typeof options !== "object") throw new TypeError(`${optionName} must be an object.`)
-        if (typeof options !== "object") throw new TypeError(`${optionName}.options must be an Object.`)
-        if (typeof options.name !== "string") throw new TypeError(`${optionName}.name must be a string.`)
-        if (options.id && typeof options.id !== "string") throw new TypeError(`${optionName}.id must be a string.`)
-        if (!options.id) options.id = options.name.replace(/\s+/g, "").toLowerCase()
-        if (options.usage && typeof options.usage !== "string") throw new TypeError(`${optionName}.usage must be a string.`)
-        if (options.description && typeof options.description !== "string") throw new TypeError(`${optionName}.description must be a string.`)
-        if (options.clientPermissions) {
-            if (!Array.isArray(options.clientPermissions))
-                throw new TypeError(`${optionName}.clientPermissions must be an Array of permission key strings.`)
-            for (const perm of options.clientPermissions)
-                if (!permissions[perm]) throw new RangeError(`${optionName}.clientPermission has an invalid entry: ${perm} `)
-        }
-        if (options.userPermissions) {
-            if (!Array.isArray(options.userPermissions))
-                throw new TypeError(`${optionName}.userPermissions must be an Array of permission key strings.`)
-            for (const perm of options.userPermissions)
-                if (!permissions[perm]) throw new RangeError(`${optionName}.userPermission has an invalid entry: ${perm} `)
-        }
-        if (typeof options.guildOnly !== "undefined" && typeof options.guildOnly !== "boolean")
-            throw new TypeError(`${optionName}.guildOnly must be a boolean.`)
-        if (typeof options.dmOnly !== "undefined" && typeof options.dmOnly !== "boolean")
-            throw new TypeError(`${optionName}.dmOnly must be a boolean.`)
-        if (typeof options.ownerOnly !== "undefined" && typeof options.ownerOnly !== "boolean")
-            throw new TypeError(`${optionName}.ownerOnly must be a boolean.`)
-        if (typeof options.defaultDisable !== "undefined" && typeof options.defaultDisable !== "boolean")
-            throw new TypeError(`${optionName}.defaultDisable must be a boolean.`)
-        if (options.guildOnly && options.dmOnly) throw new Error(`${optionName} guildOnly and dmOnly are mutually exclusive.`)
     }
 }
 module.exports = CommandAndModule

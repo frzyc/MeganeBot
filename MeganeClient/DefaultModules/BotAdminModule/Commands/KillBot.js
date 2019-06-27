@@ -2,8 +2,8 @@ const { Command } = require("../../../")
 module.exports = class KillBot extends Command {
     constructor(client) {
         super(client, {
-            name: "kill-bot",
-            aliases: ["killbot", "you're-already-dead"],
+            name: "Kill the bot",
+            commands: ["kill-bot", "killbot", "you're-already-dead"],
             usage: "Kill the bot.",
             description: "Use this command to kill the bot process. The bot will restart if pm2 or similiar app manager is being used."
         })

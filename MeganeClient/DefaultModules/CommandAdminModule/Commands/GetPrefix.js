@@ -1,10 +1,10 @@
-const {Command} = require("../../../")
+const { Command } = require("../../../")
 
 module.exports = class GetPrefix extends Command {
     constructor(client) {
         super(client, {
-            name: "get-prefix",
-            aliases: ["getprefix"],
+            name: "Get command prefix",
+            commands: ["get-prefix", "getprefix"],
             examples: ["get-prefix"],
             usage: "get command prefix for the guild/chat you are in",
             description: "Use this command to get the command prefix for the guild/chat you are in. "

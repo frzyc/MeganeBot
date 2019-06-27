@@ -1,8 +1,7 @@
 const expect = require("chai").expect
 const discord = require("discord.js")
-const MeganeClient = require("../").MeganeClient
+const { MeganeClient } = require("../")
 const rimraf = require("rimraf")
-const fs = require("fs")
 
 describe("Check the client", () => {
     /**
@@ -68,12 +67,12 @@ describe("Check the client", () => {
             expect(await client.guildTable.getPrefix("0")).to.eq(pre)
         })
     })
-    
-    after(()=>{
+
+    after(() => {
         expect(client).to.exist
         client.destructor()
         // delete the database
-        rimraf("./data",(err) => {
+        rimraf("./data", (err) => {
             if (err) throw err
         })
     })

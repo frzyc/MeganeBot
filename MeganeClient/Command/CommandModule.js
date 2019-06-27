@@ -3,6 +3,7 @@ const path = require("path")
 const discord = require("discord.js")
 const Command = require("./Command")
 const CommandAndModule = require("./CommandAndModule")
+const joi = require('@hapi/joi');
 /**
  * A module to hold commands. All commands belong in a module.
  * @class
@@ -14,7 +15,7 @@ class CommandModule extends CommandAndModule {
      * @property {id} id  - This value is not outwardly exposed, but its an unique key to reference the module. Will be generated from CommandModuleOptions#name if not specified
      * @property {string} [usage] - A short usage description of the module. U
      * @property {string} [description] - A detailed description of the module
-     * @property {Command[]} commands - A array of commands.
+     * @property {(Command|Command[])} commands - A array of commands.
      * @property {boolean} [ownerOnly=false] - This module and all its commands should only be used for bot owners.
      * @property {boolean} [guildOnly=false] - This module and all its commands should only be used on a sever, not DM.
      * @property {boolean} [dmOnly=false] - This module and all its commands should only be used on DM channels.
@@ -24,22 +25,52 @@ class CommandModule extends CommandAndModule {
      */
 
     /**
+     * The JOI schema for validating the options.
+     * convert option must be enabled.
+     */
+    static CommandModuleOptionsSchema =
+        CommandAndModule.CommandAndModuleOptionsSchema.keys({
+            commands: joi.array().items(joi.object().type(Command)).single()
+        })
+
+    /**
      * @param {MeganeClient} client
      * @param {CommandModuleOptions} options
      */
     constructor(client, options) {
-        super(client, options)
-        this.constructor.CommandModulePreCheck(client, options)
+        super(client)
+        let result = this.constructor.CommandModuleOptionsSchema.validate(options)
+        if (result.error) throw result.error
+        if (result.value) {
+            /**
+             * rename the property value because CommandAndModule has getters with the same name.
+             */
+            if (result.value.usage) {
+                result.value.usageString = result.value.usage
+                delete result.value.usage
+
+            }
+            if (result.value.description) {
+                result.value.descriptionString = result.value.description
+                delete result.value.description
+            }
+            if (!result.value.id) result.value.id = result.value.name.replace(/\s+/g, "").toLowerCase()
+            /**
+             * A collection of commands
+             * @type {external:Collection<string, Command>}
+             */
+            this.commands = new discord.Collection()
+            if (result.value.commands) {
+                for (const command of result.value.commands)
+                    this.addCommand(command)
+                delete result.value.commands
+            }
+            Object.assign(this, result.value)
+        }
+
 
         /**
-         * A collection of commands
-         * @type {external:Collection<string, Command>}
-         */
-        this.commands = new discord.Collection()
-        if (options.commands) for (const command of options.commands) this.addCommand(command)
-
-        /**
-         * @todo a map to determine if this module is disabled in a guild. Should be saved to the database as well.
+         * @todo a map to determine if this module is disabled in a guild. TODO Should be saved to the database as well.
          * @type {Map<string, boolean>}
          */
         this.enabledInGuild = new Map()
@@ -55,7 +86,7 @@ class CommandModule extends CommandAndModule {
         if (!(command instanceof Command)) return this.client.emit("warn", `Attempting to add an invalid command object: ${command}; skipping.`)
         if (!command.name || typeof command.name !== "string") throw new TypeError("Command name must be a string.")
         this.commands.set(command.name, command)
-        command.moduleID = this.id
+        command.module = this
 
         //these values are passed down to the command.
         if (command.guildOnly !== undefined && this.guildOnly !== undefined && command.guildOnly !== this.guildOnly)
@@ -140,21 +171,11 @@ class CommandModule extends CommandAndModule {
         }
         for (let [, cmd] of this.commands) {
             msgobj.messageOptions.embed.fields.push({
-                name: `Command: ${cmd.name}${cmd.aliases && cmd.aliases.length > 0 ? ", " + cmd.aliases.join(", ") : ""}`,
+                name: `Command: ${cmd.name} (${ cmd.commands.join(", ")})`,
                 value: `Usage: ${cmd.usage}`
             })
         }
         return msgobj
-    }
-
-    /**
-     * A helper function to validate the options before the class is created.
-     * @private
-     * @param {MeganeClient} client
-     * @param {CommandModuleOptions} options
-     */
-    static CommandModulePreCheck(client, options) {
-        if (options.commands && !Array.isArray(options.commands)) throw new TypeError("CommandModuleOptions.commands must be an Array of Commands.")
     }
 }
 module.exports = CommandModule

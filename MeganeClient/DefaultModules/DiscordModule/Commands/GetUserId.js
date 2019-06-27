@@ -3,8 +3,8 @@ const { Command } = require("../../../")
 module.exports = class GetUserId extends Command {
     constructor(client) {
         super(client, {
-            name: "get-user-id",
-            aliases: ["getusrid"],
+            name: "Get user id",
+            commands: ["get-user-id", "getusrid"],
             examples: ["get-user-id @someone", "getusrid"],
             usage: "Get member id",
             description: "Get the id of the member, will default to the sender of the message.",

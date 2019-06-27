@@ -3,8 +3,8 @@ const { Command } = require("../../../")
 module.exports = class GetUserPermissions extends Command {
     constructor(client) {
         super(client, {
-            name: "get-user-permissions",
-            aliases: ["getusrperms"],
+            name: "Get user permissions",
+            commands: ["get-user-permissions", "getusrperms"],
             examples: ["get-user-permissions @someone", "getusrperms <user id>"],
             usage: "Get member permissions",
             description: "Get the permissions of this guildmember in the context of this channel.",

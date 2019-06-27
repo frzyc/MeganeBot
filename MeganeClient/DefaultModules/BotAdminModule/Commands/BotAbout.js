@@ -3,8 +3,8 @@ const packagejson = require("../../../../package.json")
 module.exports = class BotAbout extends Command {
     constructor(client) {
         super(client, {
-            name: "bot-about",
-            aliases: ["botabout"],
+            name: "About Bot",
+            commands: ["about-bot","aboutbot"],
             usage: "Get some info about the bot.",
             description: "Returns the bot version, and uptime info."
         })

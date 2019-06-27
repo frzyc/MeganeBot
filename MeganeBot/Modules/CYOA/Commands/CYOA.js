@@ -2,7 +2,8 @@ const { Command } = require("../../../../MeganeClient")
 module.exports = class CYOA extends Command {
     constructor(client) {
         super(client, {
-            name: "CYOA",
+            name: "Choose your own adventure",
+            commands: "CYOA",
         })
     }
     async execute(message) {

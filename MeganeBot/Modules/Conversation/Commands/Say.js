@@ -2,7 +2,8 @@ const { Command } = require("../../../../MeganeClient")
 module.exports = class Say extends Command {
     constructor(client) {
         super(client, {
-            name: "say",
+            name: "Say",
+            commands: "say",
             examples: ["say Hello!"],
             usage: "I will say what you tell me to say!",
             args: [{

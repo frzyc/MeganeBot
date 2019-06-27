@@ -1,4 +1,4 @@
-const { Util } = require("../../../MeganeClient").default
+const { Util } = require("../../../MeganeClient")
 module.exports = class Track {
     constructor(playQueue, info, user) {
         this.playQueue = playQueue

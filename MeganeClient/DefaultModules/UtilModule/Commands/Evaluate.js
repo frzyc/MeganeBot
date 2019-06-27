@@ -3,8 +3,9 @@ const { Command } = require("../../../")
 module.exports = class Eval extends Command {
     constructor(client) {
         super(client, {
-            name: "evaluate",
-            examples: ["evaluate 1+1"],
+            name: "Evaluate",
+            commands: ["eval", "evaluate"],
+            examples: ["eval 1+1"],
             usage: "Evaluate a piece of code",
             description: "Evaluate a piece of code, like as if using the eval() function.",
             ownerOnly: true,
@@ -17,7 +18,6 @@ module.exports = class Eval extends Command {
                 }
             ]
         })
-
     }
     execute(message, args) {
         let code = args["evalstring"]

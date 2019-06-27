@@ -1,4 +1,4 @@
-const { permissions } = require("../../../MeganeClient").default
+const { permissions } = require("../../../MeganeClient")
 module.exports = class VoiceController {
     constructor(client, playQueue, guildID) {
         if (!client) throw Error("PlayQueueManager needs a client.")
@@ -100,7 +100,7 @@ module.exports = class VoiceController {
 
         if (voiceConnection != null && voiceConnection.channel.id === usrVoiceChannel.id) {
             this.client.autoMessageFactory({ destination: message, messageContent: "BAKA... I'm already here! " })
-            return true//return true because connection success    
+            return true//return true because connection success
         }
         //check required permissions
         const missing = usrVoiceChannel.permissionsFor(this.client.user).missing([

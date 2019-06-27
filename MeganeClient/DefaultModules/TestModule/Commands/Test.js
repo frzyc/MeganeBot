@@ -3,7 +3,8 @@
 module.exports = class Test extends Command {
     constructor(client) {
         super(client, {
-            name: "test"
+            name: "Test Command",
+            commands: "test"
         })
 
     }

@@ -2,7 +2,8 @@ const { Command, Util } = require("../../../../MeganeClient")
 module.exports = class Emojify extends Command {
     constructor(client) {
         super(client, {
-            name: "emojify",
+            name: "Emojify",
+            commands: "emojify",
             examples: ["emojify Hello!"],
             usage: "I will convert whatever you say to emojis",
             args: [{

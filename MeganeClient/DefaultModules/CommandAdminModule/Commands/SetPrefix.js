@@ -3,8 +3,8 @@ const { Command } = require("../../../")
 module.exports = class SetPrefix extends Command {
     constructor(client) {
         super(client, {
-            name: "set-prefix",
-            aliases: ["setprefix"],
+            name: "Set command prefix",
+            commands: ["set-prefix", "setprefix"],
             examples: ["set-prefix !", "setprefix command?"],
             usage: "Change the command prefix for the guild. Or change it for DM.",
             description: "Use this command to change the command prefix for the guild. It can also be used to change the DM prefix for botowners. \nIt must contain no whitespacecharacter. If nothing is put in, Then the prefix is removed, and only mentions can be used for commands.",

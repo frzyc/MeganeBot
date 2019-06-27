@@ -2,8 +2,8 @@ const { Command } = require("../../../../MeganeClient")
 module.exports = class SayTTS extends Command {
     constructor(client) {
         super(client, {
-            name: "say-tts",
-            aliases:["saytts"],
+            name: "Say TTS",
+            commands:["say-tts","saytts"],
             examples: ["say-tts Speak your mind, human!"],
             usage: "I will TTS what you tell me to say!",
             args: [{
