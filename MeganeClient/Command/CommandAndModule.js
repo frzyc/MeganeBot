@@ -1,4 +1,4 @@
-const permissions = require("./Utility/permissions.json")
+const { permissions } = require("../Utility")
 /**
  * since {@link Command} and {@link CommandModule} share some commands, I am just going to let them extend the same class.
  */
@@ -37,7 +37,7 @@ class CommandAndModule {
          * @type {?string}
          */
         this.usageString = options.usage ? options.usage : null
-        
+
         /**
          * A detailed usage description of the {@link Command}/{@link CommandModule}.
          * @type {?string}
@@ -74,7 +74,7 @@ class CommandAndModule {
          * @type {?string[]}
          */
         this.clientPermissions = options.clientPermissions || null
-        
+
         /**
          * list of required permissions for the user to use this {@link Command}/{@link CommandModule}.
          * @type {?string[]}

@@ -2,7 +2,7 @@
 const Command = require("./Command")
 const CommandMessage = require("./CommandMessage")
 const CommandModule = require("./CommandModule")
-const Type = require("./DefaultTypes/Type")
+const Type = require("../DefaultTypes/Type")
 /**
  * A class to store all the {@link Command}s, {@link CommandModule}s, and {@link Type}s.
  */

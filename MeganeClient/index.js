@@ -1,17 +1,18 @@
 
 const provider = "Provider"
-
+const {Command,CommandArgument,CommandDepot,CommandDispatcher,CommandMessage,CommandModule} = require("./Command")
+const {Util,permissions} = require("./Utility")
 const index = {
     MeganeClient: require("./MeganeClient"),
-    Command: require("./Command"),
-    CommandArgument: require("./CommandArgument"),
-    CommandDepot: require("./CommandDepot"),
-    CommandDispatcher: require("./CommandDispatcher"),
-    CommandMessage: require("./CommandMessage"),
-    CommandModule: require("./CommandModule"),
+    Command: Command,
+    CommandArgument: CommandArgument,
+    CommandDepot: CommandDepot,
+    CommandDispatcher: CommandDispatcher,
+    CommandMessage: CommandMessage,
+    CommandModule: CommandModule,
     MessageFactory: require("./MessageFactory"),
-    Util: require("./Utility/Util"),
-    permissions: require("./Utility/permissions.json"),
+    Util: Util,
+    permissions: permissions,
 
     Type: require("./DefaultTypes/Type"),
     

@@ -1,11 +1,11 @@
-let Util = require("./Utility/Util")
-let CommandArgument = require("./CommandArgument")
-let CommandAndModule = require("./CommandAndModule")
+const { Util } = require("../Utility")
+const CommandArgument = require("./CommandArgument")
+const CommandAndModule = require("./CommandAndModule")
 /**
  * This is the base Command class. All commands should extend this class.
  * @extends CommandAndModule
 */
-class Command extends CommandAndModule{
+class Command extends CommandAndModule {
     /**
      * Options that sets the format and property of the a command.
      * @typedef {Object} CommandOptions
@@ -57,7 +57,7 @@ class Command extends CommandAndModule{
      * @param {CommandOptions} options - The options for the command
      */
     constructor(client, options) {
-        super(client,options)
+        super(client, options)
         this.constructor.CommandPreCheck(client, options)
 
         /**

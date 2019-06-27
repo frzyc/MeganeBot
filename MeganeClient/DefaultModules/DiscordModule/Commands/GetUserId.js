@@ -1,4 +1,4 @@
-const Command = require("../../../Command")
+const { Command } = require("../../../")
 
 module.exports = class GetUserId extends Command {
     constructor(client) {
@@ -21,7 +21,7 @@ module.exports = class GetUserId extends Command {
     }
     execute(message, args) {
         let guildmember = args["member"]
-        if(!guildmember) guildmember = message.author
+        if (!guildmember) guildmember = message.author
         return `<@${guildmember.id}>'s id:\`\`\`JSON\n${guildmember.id}\`\`\``
     }
 }

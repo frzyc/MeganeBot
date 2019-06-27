@@ -1,4 +1,4 @@
-const Command = require("../../../Command")
+const { Command } = require("../../../")
 const packagejson = require("../../../../package.json")
 module.exports = class BotAbout extends Command {
     constructor(client) {

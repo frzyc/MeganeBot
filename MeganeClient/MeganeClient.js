@@ -1,7 +1,6 @@
 ﻿const fs = require("fs")
 const discord = require("discord.js")
-const CommandDepot = require("./CommandDepot")
-const CommandDispatcher = require("./CommandDispatcher")
+const { CommandDepot, CommandDispatcher } = require("./Command")
 const { Database, GuildTable } = require("./Provider")
 const MessageFactory = require("./MessageFactory")
 /**
@@ -38,7 +37,7 @@ class MeganeClient extends discord.Client {
             if (!fs.existsSync(options.profilePictureDirectory)) throw new Error("MeganeClientOptions.profilePictureDirectory must be a valid path.")
         }
         super(options)
-        
+
 
         /**
          * The default path of the database.
@@ -73,8 +72,8 @@ class MeganeClient extends discord.Client {
         this.DEFAULT_PREFIX = "!"
 
         //check if there is a previous prefix from the database
-        this.getPrefixFromDb().then(prevPrefix=>{
-            if(prevPrefix) this.globalPrefix = prevPrefix
+        this.getPrefixFromDb().then(prevPrefix => {
+            if (prevPrefix) this.globalPrefix = prevPrefix
         })
 
         /**
@@ -147,7 +146,7 @@ class MeganeClient extends discord.Client {
     /**
      * A "destructor". Basically closes the database and clean up any stateful stuff
      */
-    destructor(){
+    destructor() {
         this.db.close()
         this.db = null
         this.guildTable = null
@@ -164,7 +163,7 @@ class MeganeClient extends discord.Client {
     /**
      * Get the prefix from DB.
      */
-    getPrefixFromDb(){
+    getPrefixFromDb() {
         return this.guildTable.getPrefix("0")
     }
 

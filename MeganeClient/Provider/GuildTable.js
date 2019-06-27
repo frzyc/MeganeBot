@@ -30,6 +30,7 @@ module.exports = class GuildTable extends Table {
     /**
      * Get the command prefix for a specific guild.
      * @param {Guild|string} guild Either the Guild object or the guildid string
+     * @returns a Promise to resolve to the guild prefix or null
      */
     getPrefix(guild) {
         let guildid = typeof guild === "string" ? guild : guild.id
@@ -40,6 +41,7 @@ module.exports = class GuildTable extends Table {
      * Set the command prefix for a specific guild.
      * @param {Guild|string} guild Either the Guild object or the guildid string
      * @param {string} value The new prefix
+     * @returns a Promise to resolve to the newly set guild prefix or null
      */
     setPrefix(guild, value) {
         let guildid = typeof guild === "string" ? guild : guild.id

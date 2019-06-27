@@ -1,4 +1,4 @@
-const Command = require("../../../Command")
+const { Command } = require("../../../")
 
 module.exports = class PullAndDeploy extends Command {
     constructor(client) {

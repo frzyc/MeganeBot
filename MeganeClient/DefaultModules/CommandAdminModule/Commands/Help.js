@@ -1,4 +1,4 @@
-const Command = require("../../../Command")
+const { Command } = require("../../../")
 
 module.exports = class Help extends Command {
     constructor(client) {
@@ -14,9 +14,9 @@ module.exports = class Help extends Command {
                     default: "list",
                     remaining: true,
                     description:
-                    "**<\"list\"|\"\">** List all commands & modules available to you\n" +
-                    "**<\"command:\"|\"cmd:\"|\"module:\"|\"mod:\"searchquery>** search specifically for modules/commands\n" +
-                    "**<searchquery>** Should resolve to either one or several Commands or Mods...",
+                        "**<\"list\"|\"\">** List all commands & modules available to you\n" +
+                        "**<\"command:\"|\"cmd:\"|\"module:\"|\"mod:\"searchquery>** search specifically for modules/commands\n" +
+                        "**<searchquery>** Should resolve to either one or several Commands or Mods...",
                     validate: (value) => {
                         if (value.toLowerCase() === "list") return true
                         let re = /^command:(.+)|^cmd:(.+)|^module:(.+)|^mod:(.+)/gi
@@ -89,7 +89,7 @@ module.exports = class Help extends Command {
                 embed: {
                     color: 3447003,
                     title: "List of results",
-                    description: `${modules ? modules.length + " Modules" : ""}${commands ? "and "+commands.length + " Commands" : ""} found.`,
+                    description: `${modules ? modules.length + " Modules" : ""}${commands ? "and " + commands.length + " Commands" : ""} found.`,
                 }
             },
             reactions: [{

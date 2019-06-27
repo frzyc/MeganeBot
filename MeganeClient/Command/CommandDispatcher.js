@@ -1,5 +1,5 @@
 ﻿const CommandMessage = require("./CommandMessage")
-const Util = require("./Utility/Util")
+const {Util} = require("../Utility")
 const { Collection } = require("discord.js")
 /**
  * A class to handle received {@link external:Message}, and then finding corresponding {@link Command}s within the message from a {@link CommandDepot}.

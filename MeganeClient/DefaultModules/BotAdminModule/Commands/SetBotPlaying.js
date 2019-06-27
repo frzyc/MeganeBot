@@ -1,4 +1,4 @@
-const Command = require("../../../Command")
+const { Command } = require("../../../")
 
 module.exports = class SetBotPlaying extends Command {
     constructor(client) {
@@ -20,7 +20,7 @@ module.exports = class SetBotPlaying extends Command {
     }
     async execute(message, args) {
         let newplaying = args["newplaying"]
-        if(!newplaying) message.reply("The playing message is empty!")
+        if (!newplaying) message.reply("The playing message is empty!")
         try {
             await this.client.user.setActivity(newplaying)
             await message.reply(`Changed my playing to: "${newplaying}".`)

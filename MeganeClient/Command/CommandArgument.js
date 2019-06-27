@@ -1,4 +1,4 @@
-const CommandArgumentParseError = require("./Errors/CommandArgumentParseError")
+const CommandArgumentParseError = require("../Errors/CommandArgumentParseError")
 class CommandArgument {
     /**
      * @typedef {Object} CommandArgumentOptions

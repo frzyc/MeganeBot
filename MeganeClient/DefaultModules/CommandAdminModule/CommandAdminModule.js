@@ -1,4 +1,4 @@
-const CommandModule = require("../../CommandModule")
+const { CommandModule } = require("../../")
 module.exports = class CommandAdminModule extends CommandModule {
     constructor(client) {
         super(client, {

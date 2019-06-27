@@ -1,4 +1,4 @@
-const { permissions } = require("../../../MeganeClient")
+const { permissions } = require("../../../MeganeClient").default
 module.exports = class VoiceController {
     constructor(client, playQueue, guildID) {
         if (!client) throw Error("PlayQueueManager needs a client.")

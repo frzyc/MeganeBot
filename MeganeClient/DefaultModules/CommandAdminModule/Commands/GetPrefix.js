@@ -1,4 +1,4 @@
-const Command = require("../../../Command")
+const {Command} = require("../../../")
 
 module.exports = class GetPrefix extends Command {
     constructor(client) {

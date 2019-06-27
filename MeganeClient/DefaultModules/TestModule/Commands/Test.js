@@ -1,4 +1,4 @@
-﻿const Command = require("../../../Command")
+﻿const { Command } = require("../../../")
 
 module.exports = class Test extends Command {
     constructor(client) {

@@ -1,4 +1,4 @@
-const CommandArgumentParseError = require("./Errors/CommandArgumentParseError")
+const CommandArgumentParseError = require("../Errors/CommandArgumentParseError")
 /**
  * A class after the corresponding command from the message is parsed.
  * This class primarily deals with setting up the environment to execute the command, parse the arguments for the command, and finally executing the command.

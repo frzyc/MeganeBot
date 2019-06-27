@@ -84,7 +84,7 @@ module.exports = class Table {
                 row, value, value, (err) => {
                     if (err) throw err
                     if (err) return reject(err)
-                    resolve()
+                    resolve(value)
                 }
             )
         })

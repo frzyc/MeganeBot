@@ -1,4 +1,4 @@
-const { Command } = require("../../../../MeganeClient")
+const { Command } = require("../../../../MeganeClient").default
 module.exports = class QueuMusic extends Command {
     constructor(client) {
         super(client, {
