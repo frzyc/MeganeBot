@@ -13,7 +13,7 @@ module.exports = class Table {
      * @param {string} tableName
      */
     constructor(db, tableName) {
-        if(db instanceof Database)
+        if (db instanceof Database)
             db = db.db
         /**
          * The Database
@@ -48,21 +48,29 @@ module.exports = class Table {
 
     /**
      * destory the table
+     * @returns a Promise for the drop table query
      */
     destroy() {
-        this.db.run(`DROP TABLE IF EXISTS ${this.tableName};`)
+        return new Promise((resolve, reject) => {
+            this.db.run(`DROP TABLE IF EXISTS ${this.tableName};`, (err) => {
+                if (err) return reject(err)
+                resolve()
+            })
+        })
+
     }
 
     /**
      * Get a single value.
      * @param {string} rowval The value of the primary.
      * @param {string} column The column to get.
+     * @returns a Promise that resolves to the value, or null if it does not exist.
      */
     get(rowval, column) {
         return new Promise((resolve, reject) => {
             this.db.get(`SELECT ${column} FROM ${this.tableName} WHERE ${this.primaryKey} = ?`, rowval, (err, row) => {
                 if (err) return reject(err)
-                if (row && row[column]) resolve(row[column])
+                if (typeof row !== "undefined" && typeof row[column] !== "undefined") resolve(row[column])
                 else resolve(null)
             })
         })
@@ -74,6 +82,7 @@ module.exports = class Table {
      * @param {*} row Value of the primary.
      * @param {string} column Name of the column.
      * @param {*} value The value to update.
+     * @returns a Promise that resolves to the rowid.
      */
     set(row, column, value) {
         return new Promise((resolve, reject) => {
@@ -81,10 +90,10 @@ module.exports = class Table {
                 `INSERT INTO ${this.tableName}(${this.primaryKey},${column})`
                 + "VALUES(?, ?)"
                 + `ON CONFLICT(${this.primaryKey}) DO UPDATE SET ${column} = ?;`,
-                row, value, value, (err) => {
+                row, value, value, function (err) {
                     if (err) throw err
                     if (err) return reject(err)
-                    resolve(value)
+                    resolve(this.lastID)
                 }
             )
         })
@@ -95,10 +104,11 @@ module.exports = class Table {
      * @returns Promise that resolves to a boolean of whether a table of this.tableName exists in the database.
      */
     tableExists() {
-        return Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => {
             this.db.get("SELECT name FROM sqlite_master WHERE type='table' AND name=?;", this.tableName, (err, row) => {
                 if (err) return reject(err)
-                resolve(row.name === this.tableName)
+                if (row) return resolve(row.name === this.tableName)
+                resolve(false)
             })
         })
     }

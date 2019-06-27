@@ -10,9 +10,6 @@ describe("Check the client", () => {
      */
     let client
     before(() => {
-        fs.mkdir("./data", { recursive: true }, (err) => {
-            if (err) throw err
-        })
         client = new MeganeClient({
             ownerids: "1"
         })
@@ -76,7 +73,7 @@ describe("Check the client", () => {
         expect(client).to.exist
         client.destructor()
         // delete the database
-        rimraf(client.DEFAULT_DB_PATH,(err) => {
+        rimraf("./data",(err) => {
             if (err) throw err
         })
     })

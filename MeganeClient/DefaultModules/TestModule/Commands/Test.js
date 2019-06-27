@@ -7,7 +7,7 @@ module.exports = class Test extends Command {
         })
 
     }
-    execute(message, args) {
+    execute(message) {
         message.reply("test")
     }
 }

@@ -34,7 +34,7 @@ module.exports = class SetPrefix extends Command {
                 msg.messageContent = `A new prefix is set for this guild: ${message.guild.prefix}`
             else
                 msg.messageContent = "The prefix for this guild has been removed. You can still use commands by mentioning me!"
-        } else if (message.channel.type === "dm") {
+        } else if (message.channel.type === "dm") {//TODO setGlobalPrefix
             if (this.client.isOwner(message.author.id)) {
                 this.client.prefix = args["newprefix"]
                 if (this.client.prefix)

@@ -69,7 +69,7 @@ class CommandDepot {
         if (existing) {
             throw new Error(`Module ${module.id} is already added.`)
         } else {
-            if (!module.description) this.client.emit("warn", `addModule:WARN: Module ${module.id} does not have a description.`)
+            if (!module.hasDescription()) this.client.emit("warn", `addModule:WARN: Module ${module.id} does not have a description.`)
             this.modules.set(module.id, module)
             this.client.emit("moduleAdded", module, this)
             this.client.emit("debug", `Added module ${module.id}.`)
@@ -129,7 +129,7 @@ class CommandDepot {
     }
 
     /**
-     * Add a single module to the Depot. must have a unique {@link Command#id}. Will also add it to the corresponding {@link CommandModule}.
+     * Add a single command to the Depot. must have a unique {@link Command#id}. Will also add it to the corresponding {@link CommandModule}.
      * @param {Command} command
      * @returns {CommandDepot} - This {@link CommandDepot} so that functions can be chained.
      */

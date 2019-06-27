@@ -15,9 +15,6 @@ describe("Check GuildExtensions", () => {
      */
     let client
     before(() => {
-        fs.mkdir("./data", { recursive: true }, (err) => {
-            if (err) throw err
-        })
         client = new MeganeClient({
             ownerids: "1"
         })

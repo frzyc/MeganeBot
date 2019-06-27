@@ -46,10 +46,10 @@ class MeganeClient extends discord.Client {
         this.DEFAULT_DB_PATH = "./data/database.db"
 
         let path = require("path")
-        //make any intermediary directory for the database
-        fs.mkdir(path.dirname(this.DEFAULT_DB_PATH), { recursive: true }, (err) => {
-            if (err) throw err
-        })
+        //Make any intermediary directory for the database. 
+        //Use sync cause we are opening the database inside immediately after.
+        fs.mkdirSync(path.dirname(this.DEFAULT_DB_PATH), { recursive: true })
+
         /**
          * The sqlite database to persist data for the Client.
          * @type {Database}
