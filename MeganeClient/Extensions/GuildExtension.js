@@ -19,6 +19,9 @@ class GuildExtension {
         return this.prefixForCommands ? this.prefixForCommands : null
     }
 
+    /**
+     * resolve the prefix by getting it from the database.
+     */
     resolvePrefix() {
         return new Promise((resolve) => {
             this.client.guildTable.getPrefix(this).then(pre => {

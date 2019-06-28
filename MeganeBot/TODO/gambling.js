@@ -166,7 +166,7 @@ Rolling 3 of the same number gets ${slotscmd.cost} x number^2
 slotscmd.process = function (message) {
     return new Promise((resolve) => {
         let player = playerData.getOrCreatePlayer(message.author.id)
-        if (player.wallet.getAmount() < this.cost) return Promise.reject(redel(`You you need ${this.cost} ${currency.nameplural} to bet.`))
+        if (player.wallet.getAmount() < this.cost) return Promise.reject((`You you need ${this.cost} ${currency.nameplural} to bet.`))
         player.wallet.subMoney(this.cost)
         let slotarr = ["💩", "2⃣", "3⃣", "4⃣", "5⃣", "6⃣", "7⃣", "8⃣", "9⃣", "🔟"]
         let results = []

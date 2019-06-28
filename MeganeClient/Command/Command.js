@@ -1,7 +1,6 @@
-const { Util, permissions } = require("../Utility")
 const CommandArgument = require("./CommandArgument")
 const CommandAndModule = require("./CommandAndModule")
-const joi = require('@hapi/joi');
+const joi = require("@hapi/joi")
 /**
  * This is the base Command class. All commands should extend this class.
  * @extends CommandAndModule
@@ -55,18 +54,18 @@ class Command extends CommandAndModule {
     * convert option must be enabled.
     */
     static CommandOptionsSchema =
-    CommandAndModule.CommandAndModuleOptionsSchema.keys({
-        commands: joi.array().items(joi.string().lowercase()).unique().single().required(),
-        examples: joi.array().items(joi.string()).single(),
-        restriction: joi.func().maxArity(1),
-        args: joi.array().items(joi.object()).single(),
-        throttling: joi.object().keys({
-            userCooldown: joi.number().greater(0),
-            serverCooldown: joi.number().greater(0),
-            channelCooldown: joi.number().greater(0)
-        }),
-        numArgs: joi.number().integer().greater(0)
-    }).without("args", "numArgs")
+        CommandAndModule.CommandAndModuleOptionsSchema.keys({
+            commands: joi.array().items(joi.string().lowercase()).unique().single().required(),
+            examples: joi.array().items(joi.string()).single(),
+            restriction: joi.func().maxArity(1),
+            args: joi.array().items(joi.object()).single(),
+            throttling: joi.object().keys({
+                userCooldown: joi.number().positive().unit("seconds"),
+                serverCooldown: joi.number().positive().unit("seconds"),
+                channelCooldown: joi.number().positive().unit("seconds")
+            }),
+            numArgs: joi.number().integer().positive()
+        }).without("args", "numArgs")
 
     /**
      * Constructor. Will precheck the options before creating.
@@ -77,37 +76,23 @@ class Command extends CommandAndModule {
         super(client)
         let result = this.constructor.CommandOptionsSchema.validate(options)
         if (result.error) throw result.error
-        if (result.value) {
-            /**
-             * rename the property value because CommandAndModule has getters with the same name.
-             */
-            if (result.value.usage) {
-                result.value.usageString = result.value.usage
-                delete result.value.usage
-
+        if (result.value.args) {
+            let isEnd = false
+            let hasOptional = false
+            for (let i = 0; i < result.value.args.length; i++) {
+                if (isEnd) throw new Error("No other argument may come after an multiple/remaining argument.")
+                if (result.value.args[i].default !== null) hasOptional = true
+                else if (hasOptional) throw new Error("Required arguments may not come after optional arguments.")
+                if (result.value.args[i].multiple || result.value.args[i].remaining) isEnd = true
             }
-            if (result.value.description) {
-                result.value.descriptionString = result.value.description
-                delete result.value.description
-            }
-            if (result.value.args) {
-                let isEnd = false
-                let hasOptional = false
-                for (let i = 0; i < result.value.args.length; i++) {
-                    if (isEnd) throw new Error("No other argument may come after an multiple/remaining argument.")
-                    if (result.value.args[i].default !== null) hasOptional = true
-                    else if (hasOptional) throw new Error("Required arguments may not come after optional arguments.")
-                    if (result.value.args[i].multiple || result.value.args[i].remaining) isEnd = true
-                }
-            }
-            if (result.value.args) {
-                this.args = new Array(result.value.args.length)
-                for (let i = 0; i < result.value.args.length; i++)
-                    this.args[i] = new CommandArgument(this.client, result.value.args[i])
-                delete result.value.args
-            }
-            Object.assign(this, result.value)
         }
+        if (result.value.args) {
+            this.args = new Array(result.value.args.length)
+            for (let i = 0; i < result.value.args.length; i++)
+                this.args[i] = new CommandArgument(this.client, result.value.args[i])
+            delete result.value.args
+        }
+        Object.assign(this, result.value)
 
         /**
          * A map to each guild, to determine whether if this {@link Command} is enabled.
@@ -178,7 +163,7 @@ class Command extends CommandAndModule {
         let title = `Usage of *${this.name}* (**${this.commands.join(", ")}**)`
         let desc = `**${prefix}${this.commands[0]} ${this.getTemplateArguments()}**\n${this.usage}`
         let msgobj = {
-            deleteTimeCmdMessage: 5 * 60 * 1000,
+            destinationDeleteTime: 5 * 60,
             messageOptions: {
                 embed: {
                     color: 3447003,

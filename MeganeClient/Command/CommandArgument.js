@@ -1,5 +1,5 @@
 const CommandArgumentParseError = require("../Errors/CommandArgumentParseError")
-const joi = require('@hapi/joi');
+const joi = require("@hapi/joi")
 class CommandArgument {
     /**
      * @typedef {Object} CommandArgumentOptions
@@ -22,7 +22,7 @@ class CommandArgument {
         max: joi.any(),
         min: joi.any(),
         default: joi.any(),
-        quantity: joi.number().integer().greater(0),
+        quantity: joi.number().integer().positive(),
         multiple: joi.boolean(),
         remaining: joi.boolean(),
         validate: joi.func().maxArity(3),

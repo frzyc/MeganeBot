@@ -1,16 +1,18 @@
 const Type = require("./Type")
-module.exports = class Float extends Type{
-    constructor(client){
+const joi = require("@hapi/joi")
+module.exports = class Float extends Type {
+    constructor(client) {
         super(client, "float")
     }
+    static schema = joi.number().label("float")
     validate(value, msg, arg) {
-        const float = Number.parseFloat(value)
-        return !Number.isNaN(float) &&
-			(arg.min === null || typeof arg.min === "undefined" || float >= arg.min) &&
-			(arg.max === null || typeof arg.max === "undefined" || float <= arg.max)
+        let schema = this.schema
+        if (arg.min) schema.min(arg.min)
+        if (arg.max) schema.max(arg.max)
+        return schema.validate(value)
     }
 
     parse(value) {
-        return Number.parseFloat(value)
+        return value
     }
 }

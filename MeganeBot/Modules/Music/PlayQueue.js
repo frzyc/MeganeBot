@@ -19,14 +19,16 @@ module.exports = class PlayQueue {
     }
     async addToList(track) {
         if (this.list.length >= this.MAX_NUM_SONGS_PER_PLAYLIST)
-            return this.client.autoMessageFactory({ destination: message, messageContent: `The Playlist size has been maxed: ${this.MAX_NUM_SONGS_PER_PLAYLIST}`, deleteTime: 30 })
+            return this.client.autoMessageFactory({ destination: track.message, messageContent: `The Playlist size has been maxed: ${this.MAX_NUM_SONGS_PER_PLAYLIST}`, deleteTime: 30 })
         track.trackId = this.getTrackId()//generates a unique trackID for each queued song, even if it has been requeued
         this.list.push(track)
         if (this.list.length === 1) this.updatePlayingMessage()//update the next playing part of playing message
         this.updatePlaylistMessage()
         if (!this.tchannel) return
         let msgresolvable = track.getQueuedMessageResolvable()
-        track.message = await this.client.autoMessageFactory(msgresolvable)
+        this.client.autoMessageFactory(msgresolvable).then(msg=>{
+            track.message = msg
+        })
         if (!this.current)
             this.playNextInQueue()
     }

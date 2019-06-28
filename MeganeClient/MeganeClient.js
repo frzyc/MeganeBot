@@ -145,11 +145,17 @@ class MeganeClient extends discord.Client {
 
     /**
      * A "destructor". Basically closes the database and clean up any stateful stuff
+     * @returns a Promise that resolves when the database and other cleanup is done.
      */
     destructor() {
-        this.db.close()
-        this.db = null
-        this.guildTable = null
+        return new Promise((resolve,reject)=>{
+            this.db.close((err)=>{
+                this.db = null
+                this.guildTable = null
+                if(err) return reject(err)
+                resolve()
+            })
+        })
     }
 
     /**

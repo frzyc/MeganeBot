@@ -1,9 +1,8 @@
 const expect = require("chai").expect
-require("../GuildExtension")
-const { Guild } = require("discord.js")
-const { MeganeClient } = require("../../")
 const rimraf = require("rimraf")
-const fs = require("fs")
+const { MeganeClient } = require("../../")
+const { Guild } = require("discord.js")
+
 
 describe("Check GuildExtensions", () => {
     /**
@@ -19,20 +18,29 @@ describe("Check GuildExtensions", () => {
             ownerids: "1"
         })
         expect(client).to.exist
-        guild = new Guild({ prefix: "clientprefix" }, {
+        guild = new Guild(client, {
             id: "testguildid",
             unavailable: true
         })
         expect(guild).to.exist
     })
-    it("Check for Extension Functions",()=>{
-        // expect(Object.prototype.hasOwnProperty.call(guild, "prefix")).to.be.true
-        // expect(Object.prototype.hasOwnProperty.call(guild, "resolvePrefix")).to.be.true
+    it("Check for Extension Functions", () => {
+        expect(Object.prototype.hasOwnProperty.call(Guild.prototype, "prefix")).to.be.true
+        expect(Object.prototype.hasOwnProperty.call(Guild.prototype, "resolvePrefix")).to.be.true
+    })
+    it("Check setting the prefix",async ()=>{
+        let pre = "test"
+        guild.prefix = pre
+        expect(guild.prefix).to.be.equal(pre)
+        // wait for the value to be set before checking...
+        await (new Promise(resolve => setTimeout(resolve, 200)))
+        expect(await guild.resolvePrefix()).to.eq(pre)
+        expect(await client.guildTable.getPrefix(guild)).to.eq(pre)
     })
 
-    after(() => {
+    after(async () => {
         expect(client).to.exist
-        client.destructor()
+        await client.destructor()
         // delete the database
         rimraf(client.DEFAULT_DB_PATH, (err) => {
             if (err) throw err

@@ -7,7 +7,7 @@ class CommandMessage {
     /**
      * @constructor
      * @param {MeganeClient} client
-     * @param {external:Message} message
+     * @param {Message} message
      * @param {Command} command
      * @param {String} argString basically the whole content except the prefix + command part
      */
@@ -114,18 +114,26 @@ class CommandMessage {
                 return processed.result
             }
         )
+        let result = {}
         //validate
         for (let i = 0; i < this.command.args.length; i++) {
             let arg = this.command.args[i]
-            if (!await arg.validate(this.argStrings[i], this.message))
-                throw new CommandArgumentParseError(`Failed to validate argument **${arg.label}**.`)
+            let result = await arg.validate(this.argStrings[i], this.message)
+            if (result.error) {
+                if (result.error instanceof Error && !result.error.message)
+                    throw new CommandArgumentParseError(`Failed to validate argument **${arg.label}**.`)
+                throw result.error
+            }else{
+                if(typeof result.value !=="undefined")
+                    result[arg.label] = result.value
+            }
         }
 
         //parse
-        let result = {}
         for (let i = 0; i < this.command.args.length; i++) {
             let arg = this.command.args[i]
-            result[arg.label] = await arg.parse(this.argStrings[i], this.message)
+            let value = (typeof result[arg.label] !=="undefined")? result[arg.label]:this.argStrings[i]
+            result[arg.label] = await arg.parse(value, this.message)
         }
         return result
     }

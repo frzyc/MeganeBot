@@ -84,7 +84,7 @@ module.exports = class Help extends Command {
         }
         //TODO add commands' modules to modules, and then print out the modules along with commands
         let usageObj = {
-            deleteTimeCmdMessage: 5 * 60 * 1000,
+            destinationDeleteTime: 5 * 60,
             messageOptions: {
                 embed: {
                     color: 3447003,

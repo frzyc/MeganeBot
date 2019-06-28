@@ -68,9 +68,9 @@ describe("Check the client", () => {
         })
     })
 
-    after(() => {
+    after(async () => {
         expect(client).to.exist
-        client.destructor()
+        await client.destructor()
         // delete the database
         rimraf("./data", (err) => {
             if (err) throw err

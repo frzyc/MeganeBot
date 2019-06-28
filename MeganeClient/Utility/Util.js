@@ -172,8 +172,7 @@ messageQueue.prototype.queue = function (msg) {
         }
         if (!this.tchannel) return
         let msgcontent = ""
-        while (true) {
-            if (!this.queueQueue[0]) break
+        while (this.queueQueue[0]) {
             let guesslength = msgcontent.length + "\n".length + this.queueQueue[0].length
             if (guesslength < 2000) {//limit to 2000
                 if (msgcontent.length > 0) msgcontent += "\n"

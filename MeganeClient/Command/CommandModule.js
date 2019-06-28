@@ -3,7 +3,7 @@ const path = require("path")
 const discord = require("discord.js")
 const Command = require("./Command")
 const CommandAndModule = require("./CommandAndModule")
-const joi = require('@hapi/joi');
+const joi = require("@hapi/joi")
 /**
  * A module to hold commands. All commands belong in a module.
  * @class
@@ -42,18 +42,6 @@ class CommandModule extends CommandAndModule {
         let result = this.constructor.CommandModuleOptionsSchema.validate(options)
         if (result.error) throw result.error
         if (result.value) {
-            /**
-             * rename the property value because CommandAndModule has getters with the same name.
-             */
-            if (result.value.usage) {
-                result.value.usageString = result.value.usage
-                delete result.value.usage
-
-            }
-            if (result.value.description) {
-                result.value.descriptionString = result.value.description
-                delete result.value.description
-            }
             if (!result.value.id) result.value.id = result.value.name.replace(/\s+/g, "").toLowerCase()
             /**
              * A collection of commands
@@ -147,7 +135,7 @@ class CommandModule extends CommandAndModule {
         let title = `Module: ${this.name}`
         let desc = `${this.usage}`
         let msgobj = {
-            deleteTimeCmdMessage: 5 * 60 * 1000,
+            destinationDeleteTime: 5 * 60,
             messageOptions: {
                 embed: {
                     color: 3447003,

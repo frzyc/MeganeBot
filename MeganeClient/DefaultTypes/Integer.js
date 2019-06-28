@@ -1,16 +1,18 @@
 const Type = require("./Type")
-module.exports = class Integer extends Type{
-    constructor(client){
+const joi = require("@hapi/joi")
+module.exports = class Integer extends Type {
+    constructor(client) {
         super(client, "integer")
     }
+    static schema = joi.number().integer().label("integer")
     validate(value, msg, arg) {
-        const int = Number.parseInt(value)
-        return !Number.isNaN(int) &&
-			(arg.min === null || typeof arg.min === "undefined" || int >= arg.min) &&
-			(arg.max === null || typeof arg.max === "undefined" || int <= arg.max)
+        let schema = this.schema
+        if (arg.min) schema.min(arg.min)
+        if (arg.max) schema.max(arg.max)
+        return schema.validate(value)
     }
 
     parse(value) {
-        return Number.parseInt(value)
+        return value
     }
 }

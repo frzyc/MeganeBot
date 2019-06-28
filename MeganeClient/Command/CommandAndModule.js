@@ -1,5 +1,5 @@
 const { permissions } = require("../Utility")
-const joi = require('@hapi/joi');
+const joi = require("@hapi/joi")
 /**
  * since {@link Command} and {@link CommandModule} share some common functionalities.
  */
@@ -7,12 +7,13 @@ class CommandAndModule {
 
     /**
      * A joi to validate some common properties between Command and CommandModule
+     * need to rename usage and description because there are getter functions with the same name.
      */
     static CommandAndModuleOptionsSchema = joi.object().keys({
         name: joi.string().trim().label("Name").required(),
         id: joi.string().trim().lowercase(),
-        usage: joi.string(),
-        description: joi.string(),
+        usageString: joi.string(),
+        descriptionString: joi.string(),
         ownerOnly: joi.boolean().default(false),
         guildOnly: joi.boolean().default(false),
         dmOnly: joi.boolean().default(false),
@@ -20,6 +21,8 @@ class CommandAndModule {
         clientPermissions: joi.array().items(joi.string().valid(Object.keys(permissions))).single(),
         userPermissions: joi.array().items(joi.string().valid(Object.keys(permissions))).single(),
     })
+        .rename("description", "descriptionString")
+        .rename("usage", "usageString")
 
     /**
      *

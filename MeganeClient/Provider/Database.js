@@ -8,11 +8,12 @@ module.exports = class Database {
     }
     /**
      * Close the database.
+     * @param {function} callback callback to be called when the databased is closed.
      */
-    close() {
+    close(callback) {
         if (this.db) {
             this.db.serialize()
-            this.db.close()
+            this.db.close(callback)
         }
     }
 

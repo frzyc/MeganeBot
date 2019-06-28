@@ -12,7 +12,7 @@ module.exports = class TestEmbed extends Command {
         return Promise.resolve({
             destination: message,
             messageContent: "testing",
-            deleteTimeCmdMessage: 5 * 1000,
+            destinationDeleteTime: 5 * 60,
             //emojis: ['🇦', '🇧','🇨']
             messageOptions: {
                 embed: {
