@@ -1,4 +1,4 @@
-const sqlite3 = require("sqlite3").verbose()//TODO no verbose in production
+const sqlite3 = process.env.NODE_ENV === "production" ? require("sqlite3") : require("sqlite3").verbose()
 /**
  * A wrapper over the sqlite3.Database.
  */

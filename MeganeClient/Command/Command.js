@@ -157,13 +157,14 @@ class Command extends CommandAndModule {
      * @returns {MessageResolvable} - The generated message that can be fed right into a MessageFactory.
      */
     getUsageEmbededMessageObject(message) {
-        let prefix = message.guild ? message.guild.prefix : this.client.prefix
+        let prefix = message.guild ? message.guild.prefix : null
         if (!prefix)
             prefix = "<@mentionme> "
         let title = `Usage of *${this.name}* (**${this.commands.join(", ")}**)`
         let desc = `**${prefix}${this.commands[0]} ${this.getTemplateArguments()}**\n${this.usage}`
         let msgobj = {
-            destinationDeleteTime: 5 * 60,
+            destination:message,
+            destinationDeleteTime: 5 * 60 * 1000,
             messageOptions: {
                 embed: {
                     color: 3447003,
@@ -294,7 +295,7 @@ class Command extends CommandAndModule {
             if (inCD.serverCooldown) msg += `This command is time- restricted per server.Cooldown: ${inCD.serverCooldown / 1000} seconds.\n`
             if (inCD.channelCooldown) msg += `This command is time- restricted per channel.Cooldown: ${inCD.channelCooldown / 1000} seconds.\n`
             if (reply)
-                this.client.autoMessageFactory({ destination: message, messageContent: msg, deleteTime: 30 })
+                this.client.autoMessageFactory({ destination: message, messageContent: msg, deleteTime: 30 * 1000 })
             return false
         }
         return true

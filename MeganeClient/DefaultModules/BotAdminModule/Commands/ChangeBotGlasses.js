@@ -22,8 +22,8 @@ module.exports = class ChangeBotGlasses extends Command {
                 destination: msg,
                 edit: true,
                 messageContent: "The display picture directory is not set.",
-                deleteTime: 30,
-                destinationDeleteTime: 30
+                deleteTime: 30 * 1000,
+                destinationDeleteTime: 30 * 1000
             })
         }
         fs.readdir(glassesDir, async (err, files) => {
@@ -37,8 +37,8 @@ module.exports = class ChangeBotGlasses extends Command {
                     destination: msg,
                     edit: true,
                     messageContent: "Changed my glasses! :eyeglasses: ",
-                    deleteTime: 60,
-                    destinationDeleteTime: 60
+                    deleteTime: 60 * 1000,
+                    destinationDeleteTime: 60 * 1000
                 })
             } catch (err) {
                 this.client.emit("error:", err)
@@ -46,8 +46,8 @@ module.exports = class ChangeBotGlasses extends Command {
                     destination: msg,
                     edit: true,
                     messageContent: "Cannot change my glasses! " + err.message ? err.message : "",
-                    deleteTime: 3 * 60,
-                    destinationDeleteTime: 3 * 60
+                    deleteTime: 3 * 60 * 1000,
+                    destinationDeleteTime: 3 * 60 * 1000
                 })
             }
         })

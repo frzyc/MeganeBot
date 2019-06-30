@@ -128,14 +128,15 @@ class CommandModule extends CommandAndModule {
 
     /**
      * Generate a usage embed message for this module. Mainly used for the help command.
+     * @param message - The message that triggered this
      * @returns {MessageResolvable} - The generated message that can be fed right into a MessageFactory.
      */
-    getUsageEmbededMessageObject() {
-        //TODO getUsageEmbededMessageObject
+    getUsageEmbededMessageObject(message) {
         let title = `Module: ${this.name}`
         let desc = `${this.usage}`
         let msgobj = {
-            destinationDeleteTime: 5 * 60,
+            destination:message,
+            destinationDeleteTime: 5 * 60 * 1000,
             messageOptions: {
                 embed: {
                     color: 3447003,

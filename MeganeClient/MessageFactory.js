@@ -44,8 +44,8 @@ class MessageFactory {
             ]).required(),
             execute: joi.func().maxArity(2)
         })).single(),
-        deleteTime: joi.number().positive().unit("seconds"),
-        destinationDeleteTime: joi.number().min(0).unit("seconds")
+        deleteTime: joi.number().positive().unit("ms"),
+        destinationDeleteTime: joi.number().min(0).unit("ms")
             .when("edit", {
                 is: true,
                 then: joi.forbidden(),
@@ -104,8 +104,6 @@ class MessageFactory {
         let result = this.constructor.MessageResolvableSchema.validate(msgResolvable)
         if (result.error) throw result.error
         Object.assign(this, result.value)
-        if (this.deleteTime) this.deleteTime = Math.floor(this.deleteTime * 1000) //convert to ms
-        if (this.destinationDeleteTime) this.destinationDeleteTime = Math.floor(this.destinationDeleteTime * 1000) //convert to ms
 
         /**
          * The destination message, a place to get the context of the channel/author. Mutually exclusive to {@link MessageFactory#destChannel}

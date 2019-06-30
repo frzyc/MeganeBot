@@ -3,7 +3,7 @@ const CommandArgumentParseError = require("../Errors/CommandArgumentParseError")
  * A class after the corresponding command from the message is parsed.
  * This class primarily deals with setting up the environment to execute the command, parse the arguments for the command, and finally executing the command.
  */
-class CommandMessage {
+module.exports = class CommandMessage {
     /**
      * @constructor
      * @param {MeganeClient} client
@@ -61,8 +61,8 @@ class CommandMessage {
                 this.client.autoMessageFactory({
                     destination: this.message,
                     messageContent: restiction,
-                    deleteTime: 30,
-                    destinationDeleteTime: 30
+                    deleteTime: 30 * 1000,
+                    destinationDeleteTime: 30 * 1000
                 })
                 return
             }
@@ -76,7 +76,6 @@ class CommandMessage {
                 if (e instanceof CommandArgumentParseError) {
                     let usageObj = this.command.getUsageEmbededMessageObject(this.message)
                     usageObj.messageContent = `Bad Arguments: ${e.message}`
-                    usageObj.destination = this.message
                     this.client.autoMessageFactory(usageObj)
                     return false
                 } else throw e
@@ -92,11 +91,6 @@ class CommandMessage {
         console.log("cmd resolved")
         this.client.emit("commandsuccess", this, response)
         if (response) this.client.dispatcher.handleResponse(response, this.message)
-        // } catch (err) {
-        //     this.client.emit("commandfailed", this, err);
-        //     this.command.clearCooldown(this.message);
-        //     console.log(err);
-        // }
     }
 
     /**
@@ -123,8 +117,8 @@ class CommandMessage {
                 if (result.error instanceof Error && !result.error.message)
                     throw new CommandArgumentParseError(`Failed to validate argument **${arg.label}**.`)
                 throw result.error
-            }else{
-                if(typeof result.value !=="undefined")
+            } else {
+                if (typeof result.value !== "undefined")
                     result[arg.label] = result.value
             }
         }
@@ -132,10 +126,9 @@ class CommandMessage {
         //parse
         for (let i = 0; i < this.command.args.length; i++) {
             let arg = this.command.args[i]
-            let value = (typeof result[arg.label] !=="undefined")? result[arg.label]:this.argStrings[i]
+            let value = (typeof result[arg.label] !== "undefined") ? result[arg.label] : this.argStrings[i]
             result[arg.label] = await arg.parse(value, this.message)
         }
         return result
     }
 }
-module.exports = CommandMessage

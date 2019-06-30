@@ -24,9 +24,13 @@ describe("Check GuildExtensions", () => {
         })
         expect(guild).to.exist
     })
-    it("Check for Extension Functions", () => {
+    it("Check for extension properties", () => {
         expect(Object.prototype.hasOwnProperty.call(Guild.prototype, "prefix")).to.be.true
-        expect(Object.prototype.hasOwnProperty.call(Guild.prototype, "resolvePrefix")).to.be.true
+        expect(Guild).to.respondTo("resolvePrefix")
+    })
+
+    it("Guild.prefix will use the default from client if resolve to undefined.", async ()=>{
+        expect(await guild.resolvePrefix()).to.eq(client.DEFAULT_PREFIX)
     })
     it("Check setting the prefix",async ()=>{
         let pre = "test"

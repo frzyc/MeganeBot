@@ -86,7 +86,7 @@ class CommandAndModule {
         else if (this.guildOnly && (message.channel.type === "dm" || message.channel.type === "group")) returnMsg = "server"
         else if (this.ownerOnly && !this.client.isOwner(message.author.id)) returnMsg = "botowner"
         if (returnMsg) {
-            this.client.autoMessageFactory({ destination: message, messageContent: `This is restricted to ${returnMsg} only.`, deleteTime: 10 })
+            this.client.autoMessageFactory({ destination: message, messageContent: `This is restricted to ${returnMsg} only.`, deleteTime: 5 * 60 * 1000 })
             return false
         }
         return true
@@ -107,7 +107,7 @@ class CommandAndModule {
                     this.client.autoMessageFactory({
                         destination: message,
                         messageContent: `You don't have enough permissions to use ${this.name}. missing:\n${missing.map(p => permissions[p]).join(", and ")}`,
-                        deleteTime: 5 * 60
+                        deleteTime: 5 * 60 * 1000
                     })
                 return false
             }
@@ -121,7 +121,7 @@ class CommandAndModule {
                     this.client.autoMessageFactory({
                         destination: message,
                         messageContent: `I don't have enough permissions to use this command. missing:\n${missing.map(p => permissions[p]).join(", and ")}`,
-                        deleteTime: 5 * 60
+                        deleteTime: 5 * 60 * 1000
                     })
                 return false
             }

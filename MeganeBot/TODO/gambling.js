@@ -59,7 +59,7 @@ eightball.process = function (message, args) {
     return Promise.resolve({
         messageContent: answer,
         reply: true,
-        deleteTime:60*1000
+        deleteTime: 60 * 1000
     })
 }
 cmdModule.addCmd(eightball)
@@ -219,7 +219,7 @@ slotscmd.process = function (message) {
                 return resolve({
                     message: msg,
                     messageContent: msgini2 + slotstring() + result,
-                    deleteTime: 2* 60 *1000
+                    deleteTime: 2 * 60 * 1000
                 })
             }, 750)
         }).catch(console.error)

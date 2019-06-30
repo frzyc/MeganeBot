@@ -15,8 +15,8 @@ module.exports = class GetPrefix extends Command {
         let msg = this.client.messageFactory({
             destination: message,
             reply: true,
-            deleteTime: 2 * 60,
-            destinationDeleteTime: 2 * 60,
+            deleteTime: 2 * 60 * 1000,
+            destinationDeleteTime: 2 * 60 * 1000,
             messageContent: "Cannot get prefix."
         })
         if (message.guild) {

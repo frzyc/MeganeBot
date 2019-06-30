@@ -1,6 +1,6 @@
 ﻿const CommandMessage = require("./CommandMessage")
-const {Util} = require("../Utility")
-const { Collection } = require("discord.js")
+const { Util } = require("../Utility")
+const { Collection, DMChannel, GroupDMChannel } = require("discord.js")
 /**
  * A class to handle received {@link external:Message}, and then finding corresponding {@link Command}s within the message from a {@link CommandDepot}.
  */
@@ -48,7 +48,7 @@ class CommandDispatcher {
         let reasons = this.preprocess(message, oldMessage)
         if (reasons) return
         if (oldMessage) Object.defineProperty(message, "oldMessage", { value: oldMessage })
-        const cmdMsg = this.parseMessage(message)
+        const cmdMsg = await this.parseMessage(message)
         if (cmdMsg) {
             cmdMsg.execute()
         } //else throw new Error('Unable to resolve command.');
@@ -66,8 +66,9 @@ class CommandDispatcher {
         if (this.watchlist.has(messageReaction.message.id)) {
             let emojiCollection = this.watchlist.get(messageReaction.message.id)
             if (emojiCollection.has(messageReaction.emoji.toString())) {
-                await messageReaction.remove(user.id)
-                this.handleResponse(await emojiCollection.get(messageReaction.emoji.toString()).execute(messageReaction, user),messageReaction.message)
+                if (messageReaction.message.channel.type !== "dm")//cannot remove reactions from dm channels
+                    await messageReaction.remove(user.id)
+                this.handleResponse(await emojiCollection.get(messageReaction.emoji.toString()).execute(messageReaction, user), messageReaction.message)
             }
         }
     }
@@ -77,11 +78,11 @@ class CommandDispatcher {
      * @param {null|string|MessageResolvable} response
      * @param {external:Message} message - The Message that triggered the command.
      */
-    async handleResponse(response,message) {
+    async handleResponse(response, message) {
         if (!response) return
         if (typeof response === "string") {
             message.reply(response)
-        } else if (typeof response === "object") {
+        } else if (typeof response === "object" && !(response instanceof Promise)) {
             //try {
             this.client.autoMessageFactory(response)
             //} catch (err) {
@@ -156,9 +157,9 @@ class CommandDispatcher {
      * @param {external:Message} message - Message to parse for commands
      * @returns {?CommandMessage}
      */
-    parseMessage(message) {
+    async parseMessage(message) {
         let cont = message.content
-        const pattern = this.buildPattern(message)
+        const pattern = await this.buildPattern(message)
         const matches = pattern.exec(cont)
         if (!matches) return null
         const cmd = this.client.depot.resolveCommand(matches[2])
@@ -172,10 +173,17 @@ class CommandDispatcher {
      * @private
      * @param {external:Message} message - Provides a context to get the prefix.
      */
-    buildPattern(message) {
+    async buildPattern(message) {
         //when a message is from a guild, must use the prefix from the guild, if the guild has the prefix unset, then only mentions will work.
         //else, for a dm message, both the client's global prefix and mentions will work.
-        let prefix = message.guild ? message.guild.prefix : this.client.prefix
+        let prefix = message.guild ? message.guild.prefix : null
+        if (message.channel instanceof GroupDMChannel || message.channel instanceof DMChannel)
+            prefix = this.client.prefix
+        //if the prefix is either null or undefined, ie not a typeof string, try to resolve it.
+        if (typeof prefix !== "string" && message.guild) {
+            prefix = await message.guild.resolvePrefix()
+        }
+
 
         /* matches {prefix}cmd
          * <{prefix}{cmd}

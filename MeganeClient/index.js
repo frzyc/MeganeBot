@@ -15,13 +15,13 @@ const index = {
     permissions: permissions,
 
     Type: require("./DefaultTypes/Type"),
-    
+
     Table: require(`./${provider}/Table`),
     Database: require(`./${provider}/Database`),
     GuildTable: require(`./${provider}/GuildTable`)
 }
 module.exports = index
-require("./Extensions/GuildExtension")
+require("./Extensions/")
 
 /**
  * The discord.js Client.

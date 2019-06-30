@@ -68,23 +68,14 @@ module.exports = class Help extends Command {
             args["cmdsOrMods"] = { modules: this.client.depot.findModules() }//since return all, don't need to go through and find commands.
         let commands = args["cmdsOrMods"].commands
         let modules = args["cmdsOrMods"].modules
-        if (commands && commands.length === 1) {
-            let command = commands[0]
-            let usageObj = command.getUsageEmbededMessageObject(message)
-            usageObj.destination = message
-            this.client.autoMessageFactory(usageObj)
-            return
-        }
-        if (modules && modules.length === 1) {
-            let mod = modules[0]
-            let usageObj = mod.getUsageEmbededMessageObject(message)
-            usageObj.destination = message
-            this.client.autoMessageFactory(usageObj)
-            return
-        }
+        if (commands && commands.length === 1)
+            return this.client.autoMessageFactory(commands[0].getUsageEmbededMessageObject(message))
+        if (modules && modules.length === 1)
+            return this.client.autoMessageFactory(modules[0].getUsageEmbededMessageObject(message))
+
         //TODO add commands' modules to modules, and then print out the modules along with commands
         let usageObj = {
-            destinationDeleteTime: 5 * 60,
+            destinationDeleteTime: 5 * 60 * 1000,
             messageOptions: {
                 embed: {
                     color: 3447003,

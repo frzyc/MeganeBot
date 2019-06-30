@@ -1,7 +1,7 @@
 /**
  * A helper class that extends the functionality of the {@link external:Guild} class.
  */
-class GuildExtension {
+module.exports = class GuildExtension {
 
     /**
      * The prefix used for commands for this Guild.
@@ -12,11 +12,10 @@ class GuildExtension {
 
     /**
      * Get the command prefix for this guild. If this is null, call {@link GuildExtension#resolvePrefix}
-     * //TODO test whether this is actually cached or a new Guild is created for every access?
      * @returns {string}
      */
     get prefix() {
-        return this.prefixForCommands ? this.prefixForCommands : null
+        return this.prefixForCommands
     }
 
     /**
@@ -25,7 +24,7 @@ class GuildExtension {
     resolvePrefix() {
         return new Promise((resolve) => {
             this.client.guildTable.getPrefix(this).then(pre => {
-                if (pre)
+                if (typeof pre === "string")
                     this.prefixForCommands = pre
                 else //use the default value from the client.
                     this.prefixForCommands = this.client.prefix
@@ -44,10 +43,3 @@ class GuildExtension {
         this.prefixForCommands = newPrefix
     }
 }
-const { Guild } = require("discord.js")
-for (const prop of Object.getOwnPropertyNames(GuildExtension.prototype)) {
-    if (prop === "constructor") continue
-    console.log("Adding Extension to Guild: " + prop)
-    Object.defineProperty(Guild.prototype, prop, Object.getOwnPropertyDescriptor(GuildExtension.prototype, prop))
-}
-module.exports = GuildExtension

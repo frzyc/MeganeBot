@@ -1,5 +1,6 @@
 ﻿const fs = require("fs")
 const discord = require("discord.js")
+const joi = require("@hapi/joi")
 const { CommandDepot, CommandDispatcher } = require("./Command")
 const { Database, GuildTable } = require("./Provider")
 const MessageFactory = require("./MessageFactory")
@@ -12,32 +13,27 @@ class MeganeClient extends discord.Client {
      * In addition to the options of the default discord.js client, some extra ones.
      * @typedef {object} MeganeClientOptions - Options that are added for MeganeClient
      * @property {string|string[]} ownerids - List of owners by user ids.
-     * @property {string} [prefix] - The default global prefix used by the Client. 
-     * Will be overwritten by a prefix that was saved in the db. 
-     * Will default to {@link MeganeClient#DEFAULT_PREFIX}.
-     * @property {string} profilePictureDirectory - The directory with some display pictures to change for the bot.
+     * @property {string} profilePictureDirectory - The directory with some display pictures to change for the bot. //TODO should be attached to the command to change picture somehow?
      */
+    static clientOptionsSchema = joi.object({
+        ownerids: joi.array().items(joi.string()).unique().single().required()
+    }).unknown(true)
 
     /**
      * MeganeClient constructor
      * @param {MeganeClientOptions} options - Should be the same options passed to Discord.Client, with additions for MeganeClient
      */
     constructor(options) {
+        super(options)
+        let result = this.constructor.clientOptionsSchema.validate(options)
+        if (result.error) throw result.error
+        else options = result.value
+
         //preCheck options
-        if (typeof options !== "object") throw new TypeError("MeganeClientOptions must be an object.")
-        if (!options.ownerids) throw new TypeError("MeganeClientOptions must be have ownerids.")
-        if (typeof options.ownerids !== "string" && !Array.isArray(options.ownerids)) throw new TypeError("MeganeClientOptions.ownerids must be a string or an array of strings.")
-        if (Array.isArray(options.ownerids))
-            for (let ownerid of options.ownerids)
-                if (typeof ownerid !== "string") throw new TypeError("MeganeClientOptions.ownerids must be a string or an array of strings.")
-        if (typeof options.ownerids === "string")
-            options.ownerids = [options.ownerids]
         if (options.profilePictureDirectory) {
             if (typeof options.profilePictureDirectory !== "string") throw new TypeError("MeganeClientOptions.profilePictureDirectory must be a string or an array of strings.")
             if (!fs.existsSync(options.profilePictureDirectory)) throw new Error("MeganeClientOptions.profilePictureDirectory must be a valid path.")
         }
-        super(options)
-
 
         /**
          * The default path of the database.
@@ -46,7 +42,7 @@ class MeganeClient extends discord.Client {
         this.DEFAULT_DB_PATH = "./data/database.db"
 
         let path = require("path")
-        //Make any intermediary directory for the database. 
+        //Make any intermediary directory for the database.
         //Use sync cause we are opening the database inside immediately after.
         fs.mkdirSync(path.dirname(this.DEFAULT_DB_PATH), { recursive: true })
 
@@ -70,24 +66,22 @@ class MeganeClient extends discord.Client {
          * This is the default prefix, if a prefix is not set.
          */
         this.DEFAULT_PREFIX = "!"
-
-        //check if there is a previous prefix from the database
-        this.getPrefixFromDb().then(prevPrefix => {
-            if (prevPrefix) this.globalPrefix = prevPrefix
-        })
-
         /**
          * The global command prefix. It is used as the default for private message channels or new servers.
          * @private
          * @type {String}
          */
-        this.globalPrefix = options.prefix ? options.prefix : this.DEFAULT_PREFIX
+
+        //check if there is a previous prefix from the database, if not, default to the default.
+        this.getPrefixFromDb().then(prevPrefix => {
+            if (typeof prevPrefix === "string") this.globalPrefix = prevPrefix
+            else this.globalPrefix = this.DEFAULT_PREFIX
+        })
 
         //validate owners
-        options.owner = new Set(options.ownerids)
-        delete options.ownerids
+        this.options.owner = new Set(options.ownerids)
         this.once("ready", () => {
-            for (const owner of options.owner) {
+            for (const owner of this.options.owner) {
                 this.fetchUser(owner).catch(err => {
                     console.log(err)
                     throw Error(`Unable to fetch owner ${owner}.`)
@@ -148,11 +142,11 @@ class MeganeClient extends discord.Client {
      * @returns a Promise that resolves when the database and other cleanup is done.
      */
     destructor() {
-        return new Promise((resolve,reject)=>{
-            this.db.close((err)=>{
+        return new Promise((resolve, reject) => {
+            this.db.close((err) => {
                 this.db = null
                 this.guildTable = null
-                if(err) return reject(err)
+                if (err) return reject(err)
                 resolve()
             })
         })

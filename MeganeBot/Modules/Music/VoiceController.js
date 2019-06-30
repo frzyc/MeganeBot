@@ -93,7 +93,7 @@ module.exports = class VoiceController {
     async joinvoice(message) {
         let usrVoiceChannel = this.getAuthorVoiceChannel(message)
         if (usrVoiceChannel == null) {
-            this.client.autoMessageFactory({ destination: message, messageContent: "BAKA... You are not in a voice channel.", deleteTime: 30 })
+            this.client.autoMessageFactory({ destination: message, messageContent: "BAKA... You are not in a voice channel.", deleteTime: 30 * 1000 })
             return false
         }
         const voiceConnection = this.client.voiceConnections.get(message.guild.id)
@@ -111,7 +111,7 @@ module.exports = class VoiceController {
             this.client.autoMessageFactory({
                 destination: message,
                 messageContent: `I don't have enough permissions to use this command. missing:\n${missing.map(p => permissions[p]).join(", and ")}`,
-                deleteTime: 5 * 60
+                deleteTime: 5 * 60 * 1000
             })
             return false
         }

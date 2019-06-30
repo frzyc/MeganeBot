@@ -82,17 +82,3 @@ describe("Test stuff with schema", () => {
         expect(r.error).to.be.null
     })
 })
-describe("MessageFactory tests", () => {
-    it("make sure .deleteTime and .destinationDeleteTime are converted to ms", () => {
-        let timeS1 = 10
-        let timeS2 = 20
-        let r = new MessageFactory({},{
-            destination: new Message(),
-            deleteTime: timeS1,
-            destinationDeleteTime: timeS2
-        })
-        expect(r.deleteTime).to.eq(timeS1*1000)
-        expect(r.destinationDeleteTime).to.eq(timeS2*1000)
-    })
-
-})

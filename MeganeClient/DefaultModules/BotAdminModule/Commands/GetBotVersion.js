@@ -13,8 +13,8 @@ module.exports = class GetBotVersion extends Command {
         let returnMsg = this.client.messageFactory({
             destination: message,
             messageContent: "Failed checking git version!",
-            deleteTime: 5 * 60,
-            destinationDeleteTime: 5 * 60,
+            deleteTime: 5 * 60 * 1000,
+            destinationDeleteTime: 5 * 60 * 1000,
         })
         var commit = require("child_process").spawn("git", ["log", "-n", "1"])
         commit.stdout.on("data", data => {

@@ -5,9 +5,9 @@ module.exports = class String extends Type {
         super(client, "string")
     }
 
-    static schema = joi.string()
+    static schema = joi.string().allow("")
     validate(value, msg, arg) {
-        let schema = this.schema
+        let schema = this.constructor.schema
         if (arg.min) schema.min(arg.min)
         if (arg.max) schema.max(arg.max)
         return schema.validate(value)

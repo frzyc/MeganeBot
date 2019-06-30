@@ -41,8 +41,8 @@ module.exports = class SetPrefix extends Command {
         let msg = this.client.messageFactory({
             destination: message,
             messageContent: `I am currently ${status}!`,
-            deleteTime: 30,
-            destinationDeleteTime: 30
+            deleteTime: 30 * 1000,
+            destinationDeleteTime: 30 * 1000
         })
         if (status === this.client.user.presence.status)
             return msg.execute()

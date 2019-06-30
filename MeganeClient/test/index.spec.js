@@ -8,10 +8,14 @@ describe("Check the client", () => {
      * @type {MeganeClient}
      */
     let client
-    before(() => {
+    before(async () => {
         client = new MeganeClient({
             ownerids: "1"
         })
+        client.users = new Map([["1", { id: "1" }]])
+        expect(client.isOwner("1")).to.be.true
+        // wait for the database to be resolved...
+        await (new Promise(resolve => setTimeout(resolve, 100)))
         expect(client).to.exist
     })
     it("Check MeganeClient extends discord.Client", () => {
@@ -21,12 +25,13 @@ describe("Check the client", () => {
         before(() => {
             //set owner to be "1"
             client.options.owner = new Set(["1", "2", "3", "3"])
-            client.users = new Map()
-            client.users.set("1", { id: "1" })
-            client.users.set("2", { id: "2" })
-            client.users.set("3", { id: "3" })
-            client.users.set("4", { id: "4" })
-            client.users.set("5", { id: "5" })
+            client.users = new Map([
+                ["1", { id: "1" }],
+                ["2", { id: "2" }],
+                ["3", { id: "3" }],
+                ["4", { id: "4" }],
+                ["5", { id: "5" }]
+            ])
             expect(client.users.size).to.equal(5)
         })
         it("check user size", () => {
@@ -54,7 +59,7 @@ describe("Check the client", () => {
     })
 
     describe("Client Global prefix", () => {
-        it("Check default global prefix", () => {
+        it("Check default global prefix", async () => {
             //only works if the previous database was wiped out.
             expect(client.prefix).to.eq(client.DEFAULT_PREFIX)
         })
@@ -63,7 +68,15 @@ describe("Check the client", () => {
             client.prefix = pre
             expect(client.prefix).to.be.equal(pre)
             // wait for the value to be set before checking...
-            await (new Promise(resolve => setTimeout(resolve, 200)))
+            await (new Promise(resolve => setTimeout(resolve, 100)))
+            expect(await client.guildTable.getPrefix("0")).to.eq(pre)
+        })
+        it("set prefix to an empty string", async () => {
+            let pre = ""
+            client.prefix = pre
+            expect(client.prefix).to.be.equal(pre)
+            // wait for the value to be set before checking...
+            await (new Promise(resolve => setTimeout(resolve, 100)))
             expect(await client.guildTable.getPrefix("0")).to.eq(pre)
         })
     })

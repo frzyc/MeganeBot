@@ -19,14 +19,14 @@ module.exports = class PlayQueue {
     }
     async addToList(track) {
         if (this.list.length >= this.MAX_NUM_SONGS_PER_PLAYLIST)
-            return this.client.autoMessageFactory({ destination: track.message, messageContent: `The Playlist size has been maxed: ${this.MAX_NUM_SONGS_PER_PLAYLIST}`, deleteTime: 30 })
+            return this.client.autoMessageFactory({ destination: track.message, messageContent: `The Playlist size has been maxed: ${this.MAX_NUM_SONGS_PER_PLAYLIST}`, deleteTime: 30 * 1000 })
         track.trackId = this.getTrackId()//generates a unique trackID for each queued song, even if it has been requeued
         this.list.push(track)
         if (this.list.length === 1) this.updatePlayingMessage()//update the next playing part of playing message
         this.updatePlaylistMessage()
         if (!this.tchannel) return
         let msgresolvable = track.getQueuedMessageResolvable()
-        this.client.autoMessageFactory(msgresolvable).then(msg=>{
+        this.client.autoMessageFactory(msgresolvable).then(msg => {
             track.message = msg
         })
         if (!this.current)
@@ -59,7 +59,7 @@ module.exports = class PlayQueue {
             shuffleArray(this.list)
             this.updatePlayingMessage()
             this.updatePlaylistMessage()
-            this.client.autoMessageFactory({ destination: this.tchannel, messageContent: "Playlist Shuffled.", deleteTime: 30 })
+            this.client.autoMessageFactory({ destination: this.tchannel, messageContent: "Playlist Shuffled.", deleteTime: 30 * 1000 })
         }
         function shuffleArray(array) {
             for (var i = array.length - 1; i > 0; i--) {
@@ -227,7 +227,7 @@ module.exports = class PlayQueue {
                 destination: message,
                 reply: true,
                 messageContent: `Query **"${searchString}"** returned no valid results.`,
-                deleteTime: 30,
+                deleteTime: 30 * 1000,
                 destinationDeleteTime: 30
             })
 

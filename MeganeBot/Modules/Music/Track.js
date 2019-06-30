@@ -185,7 +185,7 @@ module.exports = class Track {
                     footer: this.footer
                 }
             },
-            deleteTime: 3 * 60,
+            deleteTime: 3 * 60 * 1000,
             reactions: [{
                 emoji: "↪",
                 execute: async (messageReaction, user) => {
