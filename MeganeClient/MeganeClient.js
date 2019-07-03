@@ -20,6 +20,12 @@ class MeganeClient extends discord.Client {
     }).unknown(true)
 
     /**
+     * The default path of the database.
+     * @type {string}
+     */
+    static DEFAULT_DB_PATH = "./data/database.db"
+
+    /**
      * MeganeClient constructor
      * @param {MeganeClientOptions} options - Should be the same options passed to Discord.Client, with additions for MeganeClient
      */
@@ -35,22 +41,18 @@ class MeganeClient extends discord.Client {
             if (!fs.existsSync(options.profilePictureDirectory)) throw new Error("MeganeClientOptions.profilePictureDirectory must be a valid path.")
         }
 
-        /**
-         * The default path of the database.
-         * @type {string}
-         */
-        this.DEFAULT_DB_PATH = "./data/database.db"
+
 
         let path = require("path")
         //Make any intermediary directory for the database.
         //Use sync cause we are opening the database inside immediately after.
-        fs.mkdirSync(path.dirname(this.DEFAULT_DB_PATH), { recursive: true })
+        fs.mkdirSync(path.dirname(MeganeClient.DEFAULT_DB_PATH), { recursive: true })
 
         /**
          * The sqlite database to persist data for the Client.
          * @type {Database}
          */
-        this.db = new Database(this.DEFAULT_DB_PATH, (err) => {
+        this.db = new Database(MeganeClient.DEFAULT_DB_PATH, (err) => {
             if (err) throw err
         })
 
@@ -72,11 +74,8 @@ class MeganeClient extends discord.Client {
          * @type {String}
          */
 
-        //check if there is a previous prefix from the database, if not, default to the default.
-        this.getPrefixFromDb().then(prevPrefix => {
-            if (typeof prevPrefix === "string") this.globalPrefix = prevPrefix
-            else this.globalPrefix = this.DEFAULT_PREFIX
-        })
+        //check if there is a previous prefix from the database
+        this.getPrefixFromDb()
 
         //validate owners
         this.options.owner = new Set(options.ownerids)
@@ -162,9 +161,14 @@ class MeganeClient extends discord.Client {
 
     /**
      * Get the prefix from DB.
+     * Check if there is a previous prefix from the database, if not, default to the default.
      */
-    getPrefixFromDb() {
-        return this.guildTable.getPrefix("0")
+    async getPrefixFromDb() {
+        await this.guildTable.getPrefix("0").then(
+            prevPrefix => {
+                if (typeof prevPrefix === "string") this.globalPrefix = prevPrefix
+                else this.globalPrefix = this.DEFAULT_PREFIX
+            })
     }
 
     /**

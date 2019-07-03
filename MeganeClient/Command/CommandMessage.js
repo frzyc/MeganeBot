@@ -70,15 +70,13 @@ module.exports = class CommandMessage {
         var parsedArgs = null
         if (this.command.args && this.command.args.length > 0) {
             try {
-                parsedArgs = await this.separateArgs()
+                parsedArgs = await this.separateValidateParseAllArgs()
             } catch (e) {
                 console.log(e)
-                if (e instanceof CommandArgumentParseError) {
-                    let usageObj = this.command.getUsageEmbededMessageObject(this.message)
-                    usageObj.messageContent = `Bad Arguments: ${e.message}`
-                    this.client.autoMessageFactory(usageObj)
-                    return false
-                } else throw e
+                let usageObj = this.command.getUsageEmbededMessageObject(this.message)
+                usageObj.messageContent = `Bad Arguments: ${e.message}`
+                this.client.autoMessageFactory(usageObj)
+                return false
             }
         }
 
@@ -98,7 +96,7 @@ module.exports = class CommandMessage {
      * @private
      * @returns {?Object} - The parsed results.
      */
-    async separateArgs() {
+    async separateValidateParseAllArgs() {
         //break up the string into arguments
         let argString = this.argString.trim()
         this.argStrings = this.command.args.map(
@@ -114,8 +112,8 @@ module.exports = class CommandMessage {
             let arg = this.command.args[i]
             let result = await arg.validate(this.argStrings[i], this.message)
             if (result.error) {
-                if (result.error instanceof Error && !result.error.message)
-                    throw new CommandArgumentParseError(`Failed to validate argument **${arg.label}**.`)
+                if (!result.error.message)
+                    throw new CommandArgumentParseError(`Failed to validate argument **${arg.label}**.`)//TODO different error for validation error?
                 throw result.error
             } else {
                 if (typeof result.value !== "undefined")

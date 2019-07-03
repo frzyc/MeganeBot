@@ -9,13 +9,14 @@ describe("Check the client", () => {
      */
     let client
     before(async () => {
+        rimraf(MeganeClient.DEFAULT_DB_PATH, (err) => {
+            if (err) throw err
+        })
         client = new MeganeClient({
             ownerids: "1"
         })
         client.users = new Map([["1", { id: "1" }]])
         expect(client.isOwner("1")).to.be.true
-        // wait for the database to be resolved...
-        await (new Promise(resolve => setTimeout(resolve, 100)))
         expect(client).to.exist
     })
     it("Check MeganeClient extends discord.Client", () => {
@@ -61,6 +62,7 @@ describe("Check the client", () => {
     describe("Client Global prefix", () => {
         it("Check default global prefix", async () => {
             //only works if the previous database was wiped out.
+            await client.getPrefixFromDb()
             expect(client.prefix).to.eq(client.DEFAULT_PREFIX)
         })
         it("set global prefix", async () => {
@@ -85,7 +87,7 @@ describe("Check the client", () => {
         expect(client).to.exist
         await client.destructor()
         // delete the database
-        rimraf("./data", (err) => {
+        rimraf(MeganeClient.DEFAULT_DB_PATH, (err) => {
             if (err) throw err
         })
     })

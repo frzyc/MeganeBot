@@ -1,36 +1,40 @@
 const CommandArgumentParseError = require("../Errors/CommandArgumentParseError")
 const joi = require("@hapi/joi")
+/**
+ * A command argument is a "word" after the command. The argument will be retracted from the string and parsed based on its type. The basic unit of an argument is a word without any whitespace.
+ * You can also define how many "words" by using the .multiple option.
+ */
 class CommandArgument {
     /**
      * @typedef {Object} CommandArgumentOptions
-     * @property {string} label - Property value of the parsed results in the results object. See {@link CommandArgument#label}.
+     * @property {string} label - Property name of the parsed results in the results object. See {@link CommandArgument#label}.
      * @property {string} [type] - Should corresponding to an existing type, or leave it null for a custom type. See {@link CommandArgument#type}.
      * @property {string} [description] - A description for this argument. See {@link CommandArgument#descriptionString}.
      * @property {number} [max] - The max value. See {@link CommandArgument#max}.
      * @property {number} [min] - The min value. See {@link CommandArgument#min}.
      * @property {*} [default] - The default value. See {@link CommandArgument#default}.
-     * @property {number} [quantity] - Retrieve a set quantitiy of values. Needs to be a whole number. Mutually exclusive from {@link CommandArgument#multiple}|{@link CommandArgument#remaining}. See {@link CommandArgument#quantity}.
-     * @property {boolean} [multiple] - Retrieve several values. Mutually exclusive from {@link CommandArgument#quantity}|{@link CommandArgument#remaining}. See {@link CommandArgument#multiple}.
-     * @property {boolean} [remaining] - Retrieve the last remaining string of input. Mutually exclusive from {@link CommandArgument#quantity}|{@link CommandArgument#multiple}. See {@link CommandArgument#remaining}.
+     * @property {integer} [array] - Define how many words this argument uses. See {@link CommandArgument#multiple}
      * @property {function} [validate] - Custom validator. Only when {@link CommandArgumentOptions#type} is null. See {@link CommandArgument#customValidator}.
      * @property {function} [parse] - Custom parser. Only when {@link CommandArgumentOptions#type} is null. See {@link CommandArgument#customParser}.
      */
-    static CommandArgumentOptionsSchema = joi.object().keys({
+    static CommandArgumentOptionsSchema = joi.object({
         label: joi.string().required(),
         type: joi.string().lowercase(),
-        description: joi.string(),
-        max: joi.any(),
-        min: joi.any(),
+        descriptionString: joi.string(),
+        min: joi.number().max(joi.ref("max")),
+        max: joi.number().min(joi.ref("min")),
         default: joi.any(),
-        quantity: joi.number().integer().positive(),
-        multiple: joi.boolean(),
-        remaining: joi.boolean(),
-        validate: joi.func().maxArity(3),
-        parse: joi.func().maxArity(3)
+        array: joi.number().integer().min(0),
+        customValidator: joi.func().maxArity(3),
+        customParser: joi.func().maxArity(3),
+        last: joi.boolean()
     })
-        .oxor("quantity", "multiple", "remaining")//only one is allowed
-        .without("type", ["validate", "parse"])
-        .with("validate", "parse")
+        .rename("description", "descriptionString")
+        .rename("validate", "customValidator")
+        .rename("parse", "customParser")
+        .without("type", ["customValidator", "customParser"])
+        .xor("type", "customValidator")
+        .with("customValidator", "customParser")
 
     /**
      * Constructor
@@ -38,6 +42,7 @@ class CommandArgument {
      * @param {CommandArgumentOptions} options
      */
     constructor(client, options) {
+        if (!client) throw new Error("The client must be specified for the CommandArgumentOptions.")
         /**
          * A reference to the MeganeClient.
          * @name CommandArgument#client
@@ -46,29 +51,13 @@ class CommandArgument {
          */
         Object.defineProperty(this, "client", { value: client })
 
-        let result = this.constructor.CommandArgumentOptionsSchema.validate(options)
+        let result = CommandArgument.CommandArgumentOptionsSchema.validate(options)
         if (result.error) throw result.error
-        if (result.value) {
-            /**
-             * Rename the property value because CommandArgument has getters with the same name.
-             */
-            if (result.value.description) {
-                result.value.descriptionString = result.value.description
-                delete result.value.description
-            }
-            if (result.value.description) {
-                result.value.customValidator = result.value.validate
-                delete result.value.validate
-            }
-            if (result.value.description) {
-                result.value.customParser = result.value.parse
-                delete result.value.parse
-            }
-            Object.assign(this, result.value)
-        }
+        if (options.type && !client.depot.types.has(result.value.type)) throw new RangeError(`CommandArgumentOptions.type:"${result.value.type}" isn't registered.`)
+        Object.assign(this, result.value)
 
         /**
-         * A label to reference this {@link CommandArgument} in the parsed object.
+         * A label to reference the result of this {@link CommandArgument} in the parsed object.
          * @name label
          * @type {string}
          */
@@ -107,27 +96,13 @@ class CommandArgument {
          */
 
         /**
-         * The number of values this {@link CommandArgument} parses.
-         * This will return the values as an array.
-         * @name quantity
-         * @type {?number}
-         */
-
-        /**
-         * This will keep parsing arguments until the end of the arugment string.
-         * This will return the values as an array.
-         * Must be the last argument for the {@link Command#args}.
-         * only applicable if true.
-         * @name multiple
-         * @type {?boolean}
-         */
-
-        /**
-         * This will dump the remaining argument string into one argument.
-         * Must be the last argument for the {@link Command#args}.
-         * only applicable if true.
-         * @name remaining
-         * @type {?boolean}
+         * The number of values this {@link CommandArgument} parses. This will return the values as an array.
+         * The last value of the array will have the remaining string, even if it has multiple words.
+         * A value of 0 will convert all the words to an array.
+         * If this has a value of 0, it should be the last argument for the {@link Command#args}.
+         * Each element of this array will be applied the type validation and parsing individually.
+         * @name array
+         * @type {?integer}
          */
 
         /**
@@ -141,6 +116,13 @@ class CommandArgument {
          * @name customParser
          * @type {?function}
          */
+
+        /**
+        * A Whether this is the last argument in the {@link Command#args}.
+        * @name last
+        * @private
+        * @type {?function}
+        */
     }
 
     /**
@@ -150,30 +132,38 @@ class CommandArgument {
      * @returns {boolean} - Whether the value is legit.
      */
     async validateType(value, msg) {
-        if (typeof value !== "string") return TypeError("type validation is only valid for strings")
+        if (typeof value !== "string") return { error: TypeError("type validation is only valid for strings") }
         if (this.customValidator) return await this.customValidator(value, msg, this)
         else return await this.type.validate(value, msg, this)
     }
+
+    /**
+     * @typedef validateReturn
+     * @param {*} value - The validated values, the validation might have changed them to an intermediate state.
+     * @param {*} error - Any failure to validate will be here.
+     */
 
     /**
      * validate values individually against the the {@link Type} of this {@link Argument}.
      * @private
      * @param {string[]} values - The values to validate.
      * @param {msg} msg - The message the values were extracted from.
-     * @returns {boolean} - Returns true if all valuse are legit.
+     * @returns {validateReturn} 
      */
     async validate(values, msg) {
-        if (this.multiple || this.quantity) {
-            if (!Array.isArray(values) || (this.quantity && values.length !== this.quantity))
-                throw Error(`Failed to validate argument ${this.label}.`)
+        if (typeof this.array === "number") {
+            if (!Array.isArray(values) || (this.array && values.length !== this.array))
+                return { error: TypeError("Validate expects an array as values") }
+            let result = { value: [] }
             for (let value of values) {
-                if (!await this.validateType(value, msg))
-                    return false
+                let r = await this.validateType(value, msg)
+                if (r.error) return r
+                result.value.push(r.value)
             }
+            return result
         } else {//remaining or single, both single argument
             return await this.validateType(values, msg)
         }
-        return true
     }
 
     /**
@@ -196,15 +186,11 @@ class CommandArgument {
      * @returns {object} - The parsed output.
      */
     async parse(values, msg) {
-        if (this.multiple || this.quantity) {
-            if (!Array.isArray(values) || (this.quantity && values.length !== this.quantity))
-                throw Error(`Failed to validate argument ${this.label}.`)
+        if (typeof this.array === "number")
             return await Promise.all(values.map(
                 async (value) => await this.parseType(value, msg))
             )
-        } else {//remaining or single, both single argument
-            return await this.parseType(values, msg)
-        }
+        return await this.parseType(values, msg)
     }
 
     /**
@@ -222,39 +208,32 @@ class CommandArgument {
      */
     separateArg(argString) {
         let result
-        if (!argString) {//means we ran out of the argument string to parse, but an argument still havent been parsed.
-            if (typeof this.default !== "undefined") {//allow for "" and null and 0 and such falsy values
-                result = this.default
-            } else throw new CommandArgumentParseError(`Ran out of arguments to separate at **${this.label}**.`)
-        } else if (this.multiple) {//multiple -> keep parsing until the string is over
-            let arr = []
-            while (argString) {
-                //keep splitting until argString is nothing.
-                let sep = this.constructor.separateString(argString, 1)
-                if (!sep) break
-                if (sep.length > 0)
-                    arr.push(sep[0])
-                if (sep.length > 1) argString = sep[1]
+        if (this.array === 0) { //keep parsing until the string is over
+            let arr = this.constructor.separateString(argString, 0)
+            if (arr !== null && arr.length > 0) {
+                result = arr
+                argString = null
+            }
+        } else if (this.array) {//get a fixed number of arguments
+            let sep = this.constructor.separateString(argString, this.array, this.last)
+            if (sep !== null) {
+                if (sep.length === this.array + 1)
+                    argString = sep.pop()
+                result = sep
+            }
+        } else {//single -> get a single argument
+            let sep = this.constructor.separateString(argString, 1, this.last)
+            if (sep !== null && sep.length > 0) {
+                result = sep[0]
+                if (sep.length > 1)
+                    argString = sep[1]
                 else argString = null
             }
-            if (arr.length === 0) throw new CommandArgumentParseError(`Failed to separate arguments at **${this.label}**.`)
-            result = arr
-        } else if (this.remaining) {//remaining -> just give the whole remaining string to the arg
-            result = argString
-        } else if (this.quantity) {//quantitiy -> get a fixed number of arguments
-            result[this.label] = []
-            let sep = this.constructor.separateString(argString, this.quantity)
-            if (!sep) throw new CommandArgumentParseError(`Cannot separate ${this.quantity} arguments at **${this.label}**.`)
-            if (sep.length > this.quantity)
-                argString = sep.pop()
-            result = sep
-        } else {//single -> get a single argument
-            let sep = this.constructor.separateString(argString, 1)
-            if (!sep || sep.length === 0) throw new CommandArgumentParseError(`Failed to separate arguments at **${this.label}**.`)
-            result = sep[0]
-            if (sep.length > 1)
-                argString = sep[1]
         }
+        if (typeof result === "undefined" && typeof this.default !== "undefined") {
+            result = this.default
+        } else if (typeof result === "undefined")
+            throw new CommandArgumentParseError(`Failed to separate the tokens at **${this.label}**.`)
         return {
             result: result,
             remaining: argString
@@ -265,19 +244,30 @@ class CommandArgument {
      * Separate argCount of arguments from the argstring. Arguments are separated by spaces.
      * @private
      * @param {String} argString - String to parse arguments from.
-     * @param {number} [argCount=1] - The number of argumetns to parse.
-     * @returns {String[]} - The array of parsed strings. Will have length argCount+1 if there are still argString remaining.
+     * @param {number} [argCount=1] - The number of argumetns to parse. 0 to parse all the tokens into an array.
+     * @param {boolean} [last=false] - Whether the last element in the array will have all remaining argstring
+     * @returns {?String[]} - The array of parsed strings. 
+     * Will have length argCount+1 if there are still argString remaining. 
+     * Returns null if there is a failure.
      */
-    static separateString(argString, argCount = 1) {
+    static separateString(argString, argCount = 1, last = false) {
         if (!argString) return null
         const re = /\s*(?:("|')([^]*?)\1|(\S+))\s*/g
         const result = []
         let match = []
-        while (argCount-- && (match = re.exec(argString))) {
-            if (!match) return null
-            result.push(match[2] || match[3])
+        if (argCount === 0) {
+            while ((match = re.exec(argString))) {
+                if (!match) break
+                result.push(match[2] || match[3])
+            }
+        } else {
+            for (let i = argCount; i > (last ? 1 : 0); i--) {
+                match = re.exec(argString)
+                if (!match) return null
+                result.push(match[2] || match[3])
+            }
         }
-        if (match && re.lastIndex < argString.length) {
+        if ((match && re.lastIndex < argString.length) || last) {
             result.push(argString.substr(re.lastIndex))//push the remaining string in case separating argCount doesn't consume its entirety.
         }
         return result
@@ -299,48 +289,6 @@ class CommandArgument {
     hasDescription() {
         if (this.descriptionString) return true
         return false
-    }
-
-    /**
-     * A helper function to validate the options before the class is created.
-     * @private
-     * @param {MeganeClient} client
-     * @param {CommandArgumentOptions} options
-     */
-    static preCheck(client, options) {
-        if (!client) throw new Error("The client must be specified for the CommandArgumentOptions.")
-        if (typeof options !== "object") throw new TypeError("CommandArgumentOptions must be an object.")
-        if (!options.label) throw new TypeError("CommandArgumentOptions must have a valid \"label\" string property.")
-        if (typeof options.label !== "string") throw new TypeError("CommandArgumentOptions.label must be a string.")
-        if (options.description && typeof options.description !== "string") throw new TypeError("CommandArgumentOptions.description must be a string.")
-        if (!options.type && !options.validate)
-            throw new Error("CommandArgumentOptions must have either \"type\" or \"validate\" specified.")
-        if (options.type) {
-            if (typeof options.type !== "string") throw new TypeError("CommandArgumentOptions.type must be a string.")
-            else options.type = options.type.toLowerCase()
-            if (!client.depot.types.has(options.type)) throw new RangeError(`CommandArgumentOptions.type:"${options.type}" isn't registered.`)
-        }
-        if (options.type) {
-            if (options.validate || options.parse)
-                throw new Error("CommandArgumentOptions cannot have type and validate|parse.")
-        } else {
-            if (!options.validate || !options.parse)
-                throw new Error("Custom CommandArgumentOptions must have validate and parse functions.")
-        }
-        if (options.validate && typeof options.validate !== "function")
-            throw new TypeError("CommandArgumentOptions.validate must be a function.")
-        if (options.parse && typeof options.parse !== "function")
-            throw new TypeError("CommandArgumentOptions.parse must be a function.")
-        if (!options.type && (!options.validate || !options.parse))
-            throw new Error("CommandArgumentOptions must have both validate and parse since it doesn't have a type.")
-        if (options.quantity && (!Number.isInteger(options.quantity) || options.quantity <= 0))
-            throw new TypeError("quantity must be a positive integer.")
-        if (options.multiple && typeof options.multiple !== "boolean")
-            throw new TypeError("multiple must be a boolean.")
-        if (options.remaining && typeof options.remaining !== "boolean")
-            throw new TypeError("remaining must be a boolean.")
-        if ([options.multiple, options.quantitiy, options.remaining].reduce((sum, i) => sum + (i ? 1 : 0)) > 1)
-            throw new TypeError("multiple and quantity and remaining are mutually exclusive.")
     }
 }
 module.exports = CommandArgument

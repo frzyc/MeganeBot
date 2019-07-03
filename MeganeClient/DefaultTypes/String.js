@@ -7,9 +7,9 @@ module.exports = class String extends Type {
 
     static schema = joi.string().allow("")
     validate(value, msg, arg) {
-        let schema = this.constructor.schema
-        if (arg.min) schema.min(arg.min)
-        if (arg.max) schema.max(arg.max)
+        let schema = String.schema
+        if (typeof arg ==="object" && typeof arg.min ==="number") schema = schema.min(arg.min)
+        if (typeof arg ==="object" && typeof arg.max ==="number") schema = schema.max(arg.max)
         return schema.validate(value)
     }
 

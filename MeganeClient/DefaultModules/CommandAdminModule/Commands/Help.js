@@ -12,7 +12,6 @@ module.exports = class Help extends Command {
                 {
                     label: "cmdsOrMods",
                     default: "list",
-                    remaining: true,
                     description:
                         "**<\"list\"|\"\">** List all commands & modules available to you\n" +
                         "**<\"command:\"|\"cmd:\"|\"module:\"|\"mod:\"searchquery>** search specifically for modules/commands\n" +

@@ -3,7 +3,7 @@ const { MessageFactory } = require("../")
 const { Message, Channel } = require("discord.js")
 describe("Test stuff with schema", () => {
     let schema
-    it("schema exists", () => {
+    before(() => {
         schema = MessageFactory.MessageResolvableSchema
         expect(schema).to.exist
     })

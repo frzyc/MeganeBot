@@ -255,3 +255,6 @@ ModelManifest.xml
 
 # nyc
 .nyc_output/
+
+#coverage
+coverage/

@@ -11,13 +11,13 @@ module.exports = class addCommand extends Command {
                 {
                     label: "numbers",
                     type: "float",
-                    multiple: true
+                    array: 0
                 }
             ]
         })
 
     }
     execute(message, args) {
-        message.reply(`${args.numbers.join(" + ")} = **${args.numbers.reduce((prev, arg) => prev + parseFloat(arg), 0)}**`)
+        message.reply(`${args.numbers.join(" + ")} = **${args.numbers.reduce((prev, arg) => prev + parseFloat(arg), 0)}**`)//TODO is parseFloat needed here?
     }
 }

@@ -14,6 +14,9 @@ describe("Check GuildExtensions", () => {
      */
     let client
     before(() => {
+        rimraf(MeganeClient.DEFAULT_DB_PATH, (err) => {
+            if (err) throw err
+        })
         client = new MeganeClient({
             ownerids: "1"
         })
@@ -30,6 +33,7 @@ describe("Check GuildExtensions", () => {
     })
 
     it("Guild.prefix will use the default from client if resolve to undefined.", async ()=>{
+        await client.getPrefixFromDb()
         expect(await guild.resolvePrefix()).to.eq(client.DEFAULT_PREFIX)
     })
     it("Check setting the prefix",async ()=>{
@@ -46,7 +50,7 @@ describe("Check GuildExtensions", () => {
         expect(client).to.exist
         await client.destructor()
         // delete the database
-        rimraf(client.DEFAULT_DB_PATH, (err) => {
+        rimraf(MeganeClient.DEFAULT_DB_PATH, (err) => {
             if (err) throw err
         })
     })

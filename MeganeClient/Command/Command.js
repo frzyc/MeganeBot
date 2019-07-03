@@ -74,16 +74,19 @@ class Command extends CommandAndModule {
      */
     constructor(client, options) {
         super(client)
-        let result = this.constructor.CommandOptionsSchema.validate(options)
+        let result = Command.CommandOptionsSchema.validate(options)
         if (result.error) throw result.error
-        if (result.value.args) {
+        if (result.value.args) {//TODO this parsing can be done similarly https://github.com/hapijs/joi/issues/1489
             let isEnd = false
             let hasOptional = false
-            for (let i = 0; i < result.value.args.length; i++) {
-                if (isEnd) throw new Error("No other argument may come after an multiple/remaining argument.")
-                if (result.value.args[i].default !== null) hasOptional = true
+            for (let arg of result.value.args) {
+                if (isEnd) throw new Error("No other argument may come after an .array = 0 argument.")
+                if (typeof arg.default !== "undefined") hasOptional = true
                 else if (hasOptional) throw new Error("Required arguments may not come after optional arguments.")
-                if (result.value.args[i].multiple || result.value.args[i].remaining) isEnd = true
+                if (arg.array === 0) {
+                    isEnd = true
+                    arg.last = true
+                }
             }
         }
         if (result.value.args) {
@@ -163,7 +166,7 @@ class Command extends CommandAndModule {
         let title = `Usage of *${this.name}* (**${this.commands.join(", ")}**)`
         let desc = `**${prefix}${this.commands[0]} ${this.getTemplateArguments()}**\n${this.usage}`
         let msgobj = {
-            destination:message,
+            destination: message,
             destinationDeleteTime: 5 * 60 * 1000,
             messageOptions: {
                 embed: {
@@ -197,7 +200,7 @@ class Command extends CommandAndModule {
         if (this.args) {
             for (let arg of this.args) {
                 msgobj.messageOptions.embed.fields.push({
-                    name: `Argument: ${arg.label}`,//TODO put a description for default, multiple, remaining -> `Optional Argument:` ...
+                    name: `Argument: ${arg.label}${typeof this.default !== "undefined" ? (" Optional(Defaults to " + this.default + ")") : ""}`,
                     value: `Type: **${arg.type.id}**\nDescription:\n${arg.description}`
                 })
             }

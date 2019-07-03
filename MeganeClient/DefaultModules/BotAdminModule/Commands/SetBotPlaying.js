@@ -12,7 +12,6 @@ module.exports = class SetBotPlaying extends Command {
                 {
                     label: "newplaying",
                     type: "string",
-                    remaining: true,
                     description: "The new value to set playing status."
                 }
             ]

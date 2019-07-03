@@ -9,7 +9,6 @@ module.exports = class Emojify extends Command {
             args: [{
                 label: "string",
                 type: "string",
-                remaining: true,
                 description: "The thing for me to convert."
             }]
         })

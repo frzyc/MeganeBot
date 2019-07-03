@@ -18,7 +18,9 @@ const index = {
 
     Table: require(`./${provider}/Table`),
     Database: require(`./${provider}/Database`),
-    GuildTable: require(`./${provider}/GuildTable`)
+    GuildTable: require(`./${provider}/GuildTable`),
+
+    CommandArgumentParseError: require("./Errors/CommandArgumentParseError")
 }
 module.exports = index
 require("./Extensions/")

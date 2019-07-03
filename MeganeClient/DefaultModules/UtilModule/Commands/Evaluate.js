@@ -13,7 +13,6 @@ module.exports = class Eval extends Command {
                 {
                     label: "evalstring",
                     type: "string",
-                    remaining: true,
                     description: "The string to evaluate"
                 }
             ]

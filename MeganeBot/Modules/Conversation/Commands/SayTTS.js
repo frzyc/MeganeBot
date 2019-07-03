@@ -9,7 +9,6 @@ module.exports = class SayTTS extends Command {
             args: [{
                 label: "saying",
                 type: "string",
-                remaining: true,
                 description: "The thing for me to tts."
             }]
         })

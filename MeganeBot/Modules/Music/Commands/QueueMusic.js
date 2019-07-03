@@ -14,7 +14,6 @@ module.exports = class QueuMusic extends Command {
                 {
                     type: "string",
                     label: "query",
-                    remaining: true,
                     description: "This can be either a phrase to search, or an URL for a video/song, or even a playlist!"
                 }
             ],
