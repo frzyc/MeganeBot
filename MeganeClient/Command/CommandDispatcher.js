@@ -1,6 +1,6 @@
 ﻿const CommandMessage = require("./CommandMessage")
 const { Util } = require("../Utility")
-const { Collection, DMChannel, GroupDMChannel } = require("discord.js")
+const { Collection, DMChannel, GroupDMChannel, Message } = require("discord.js")
 /**
  * A class to handle received {@link external:Message}, and then finding corresponding {@link Command}s within the message from a {@link CommandDepot}.
  */
@@ -61,8 +61,6 @@ class CommandDispatcher {
      */
     async handleReaction(messageReaction, user) {
         if (user.bot) return //wont respond to bots
-        //console.log(messageReaction);
-        //console.log(`NEW REACTION BOOO YEAH emoji.name:${messageReaction.emoji.name}, emoji.id:${messageReaction.emoji.id}, emoji.identifier:${messageReaction.emoji.identifier}, emoji.toString():${messageReaction.emoji.toString()}`);
         if (this.watchlist.has(messageReaction.message.id)) {
             let emojiCollection = this.watchlist.get(messageReaction.message.id)
             if (emojiCollection.has(messageReaction.emoji.toString())) {
@@ -79,15 +77,12 @@ class CommandDispatcher {
      * @param {external:Message} message - The Message that triggered the command.
      */
     async handleResponse(response, message) {
-        if (!response) return
+        if (response instanceof Promise) response = await response
+        if (!response || (response instanceof Message)) return
         if (typeof response === "string") {
             message.reply(response)
-        } else if (typeof response === "object" && !(response instanceof Promise)) {
-            //try {
+        } else if (typeof response === "object" && response.destination) {
             this.client.autoMessageFactory(response)
-            //} catch (err) {
-            //    console.log(err);
-            //}
         } else {
             throw new TypeError("Response must be typeof [null|string|MessageResolvable].")
         }
@@ -158,13 +153,13 @@ class CommandDispatcher {
      * @returns {?CommandMessage}
      */
     async parseMessage(message) {
-        let cont = message.content
+        const cont = message.content
         const pattern = await this.buildPattern(message)
         const matches = pattern.exec(cont)
         if (!matches) return null
-        const cmd = this.client.depot.resolveCommand(matches[2])
-        const argString = cont.substring(matches[0].length)
+        const cmd = this.commandDepot.resolveCommand(matches[2])
         if (!cmd) return null
+        const argString = cont.substring(matches[0].length)
         return new CommandMessage(this.client, message, cmd, argString)
     }
 
@@ -184,17 +179,31 @@ class CommandDispatcher {
             prefix = await message.guild.resolvePrefix()
         }
 
-
         /* matches {prefix}cmd
-         * <{prefix}{cmd}
-         * <@{id}> {cmd}
-         * <@!{id}> {cmd}
+         * <CMD_PREFIX{cmd} ...
+         * 
+         * mention by User
+         * <@USER_ID> {cmd} ...
+         * 
+         * mention by User(Nickname)
+         * <@!USER_ID> {cmd} ...
          */
         if (!prefix) {
-            return new RegExp(`(^<@!?${this.client.user.id}>\\s+)([^\\s]+)`, "i")
+            return new RegExp(`(^<@!?${this.client.user.id}>\\s*)([^\\s]+)`, "i")
         }
         let escapedPrefix = Util.escapeRegexString(prefix)
-        return new RegExp(`^(${escapedPrefix}\\s*|<@!?${this.client.user.id}>\\s+(?:${escapedPrefix})?)([^\\s]+)`, "i")
+        return new RegExp(`^(${escapedPrefix}\\s*|<@!?${this.client.user.id}>\\s*(?:${escapedPrefix})?)([^\\s]+)`, "i")
+    }
+
+    /**
+     * 
+     * @param {string} msgid 
+     * @param {ReactionUtil} reaction 
+     */
+    addReactionToWatchlist(msgid, reaction){
+        if (!this.watchlist.has(msgid))
+            this.watchlist.set(msgid, new Collection())
+        this.watchlist.get(msgid).set(reaction.emoji, reaction)
     }
 }
 module.exports = CommandDispatcher

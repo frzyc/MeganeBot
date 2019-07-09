@@ -146,8 +146,8 @@ class Command extends CommandAndModule {
 
     /**
      * A template for the execute method of {@link Command}.
-     * @param {external:Message} message
-     * @param {Object|string|string[]} args Depending on the arguments defined, or numArguments. numArguements === 1 will be a string
+     * @param {external:Message} message - The message that triggered this command
+     * @param {Object} args - Object for the parsed args, with property name being the {@link CommandArgument#label}s
      * @abstract
      */
     async execute(message, args) { // eslint-disable-line no-unused-vars, require-await

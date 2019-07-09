@@ -2,7 +2,7 @@ const expect = require("chai").expect
 const String = require("../String")
 
 
-describe("Check String type", () => {
+describe("String Type tests", () => {
     let string
     before(() => {
         string = new String({})

@@ -39,7 +39,7 @@ module.exports = class PullAndDeploy extends Command {
                 npmspawn.on("close", async () => {
                     console.log("goodbye")
                     await updateMsg.edit("brb!")
-                    await this.client.destroy()
+                    await this.client.destructor()
                     process.exit()
                 })
             })

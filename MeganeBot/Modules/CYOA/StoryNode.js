@@ -62,8 +62,8 @@ module.exports = class StoryNode {
                 }
             }, {
                 emoji: "📚",
-                execute: (reactionMessage, user) => {
-                    let libMsgRes = user.client.CYOALibrary.getMessageResolvable()
+                execute: (reactionMessage) => {
+                    let libMsgRes = this.story.library.getMessageResolvable()
                     libMsgRes.destination = reactionMessage.message
                     libMsgRes.edit = true
                     return libMsgRes

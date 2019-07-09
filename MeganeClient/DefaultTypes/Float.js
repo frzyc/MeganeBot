@@ -6,9 +6,9 @@ module.exports = class Float extends Type {
     }
     static schema = joi.number().label("float")
     validate(value, msg, arg) {
-        let schema = this.schema
-        if (arg.min) schema.min(arg.min)
-        if (arg.max) schema.max(arg.max)
+        let schema = Float.schema
+        if (typeof arg ==="object" && typeof arg.min ==="number") schema = schema.min(arg.min)
+        if (typeof arg ==="object" && typeof arg.max ==="number") schema = schema.max(arg.max)
         return schema.validate(value)
     }
 

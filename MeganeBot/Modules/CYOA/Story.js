@@ -21,7 +21,16 @@ module.exports = class Story {
      * @property {String} [url] - A url for the author.
      * @property {string} [icon_url] - A url for a icon to display for the author.
      */
-    constructor(storyobj) {
+    constructor(library,storyobj) {
+        if(!library) throw "invalid library"
+        /**
+         * A reference to the Library this node belongs to.
+         * @name library
+         * @type {Library}
+         * @readonly
+         */
+        Object.defineProperty(this, "library", { value: library })
+
         let storyErrorMsg = "Story parsing Error: "
         if (!storyobj || typeof storyobj !== "object") throw new TypeError(storyErrorMsg + "Story must be an object.")
         if (!storyobj.title || typeof storyobj.title !== "string") throw new TypeError(storyErrorMsg + "String must have a valid string as title.")

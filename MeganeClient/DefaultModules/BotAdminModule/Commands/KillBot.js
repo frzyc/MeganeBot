@@ -18,7 +18,7 @@ module.exports = class KillBot extends Command {
             msg.messageContent = "NANI?"
 
         await msg.execute()
-        await this.client.destroy()
+        await this.client.destructor()
         process.exit()
     }
 }

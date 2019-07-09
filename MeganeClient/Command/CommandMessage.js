@@ -80,15 +80,18 @@ module.exports = class CommandMessage {
             }
         }
 
-        //set the cooldown for now, if rejected, we can clear the cooldown/
+        //set the cooldown for now, if failure, we can clear the cooldown/
         this.command.setCooldown(this.message)
 
-        //use Promise.resolve just incase a process doesnt return a promise...
-        //try {
-        let response = await this.command.execute(this.message, parsedArgs)
-        console.log("cmd resolved")
-        this.client.emit("commandsuccess", this, response)
-        if (response) this.client.dispatcher.handleResponse(response, this.message)
+        try {
+            let response = await this.command.execute(this.message, parsedArgs)
+            this.client.emit("commandsuccess", this, response)
+            if (response) this.client.dispatcher.handleResponse(response, this.message)
+        } catch (error) {
+            console.error(error)
+            this.command.clearCooldown(this.message)
+        }
+
     }
 
     /**

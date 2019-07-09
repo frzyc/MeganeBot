@@ -3,7 +3,7 @@ const discord = require("discord.js")
 const { MeganeClient } = require("../")
 const rimraf = require("rimraf")
 
-describe("Check the client", () => {
+describe("MeganeClient tests", () => {
     /**
      * @type {MeganeClient}
      */
@@ -19,6 +19,16 @@ describe("Check the client", () => {
         expect(client.isOwner("1")).to.be.true
         expect(client).to.exist
     })
+
+    after(async () => {
+        expect(client).to.exist
+        await client.destructor()
+        // delete the database
+        rimraf(MeganeClient.DEFAULT_DB_PATH, (err) => {
+            if (err) throw err
+        })
+    })
+    
     it("Check MeganeClient extends discord.Client", () => {
         expect(client).to.be.instanceOf(discord.Client)
     })
@@ -82,15 +92,4 @@ describe("Check the client", () => {
             expect(await client.guildTable.getPrefix("0")).to.eq(pre)
         })
     })
-
-    after(async () => {
-        expect(client).to.exist
-        await client.destructor()
-        // delete the database
-        rimraf(MeganeClient.DEFAULT_DB_PATH, (err) => {
-            if (err) throw err
-        })
-    })
-
-
 })

@@ -17,46 +17,31 @@ module.exports = class Help extends Command {
                         "**<\"command:\"|\"cmd:\"|\"module:\"|\"mod:\"searchquery>** search specifically for modules/commands\n" +
                         "**<searchquery>** Should resolve to either one or several Commands or Mods...",
                     validate: (value) => {
-                        if (value.toLowerCase() === "list") return true
+                        if (value.toLowerCase() === "list") return { value: "list" }
                         let re = /^command:(.+)|^cmd:(.+)|^module:(.+)|^mod:(.+)/gi
                         let match = re.exec(value)
                         if (match) {
                             if (match[1])
-                                if (this.client.depot.findCommands(match[1].trim()).length > 0) return true
+                                return { value: { commands: this.client.depot.findCommands(match[1].trim()) } }
                             if (match[2])
-                                if (this.client.depot.findCommands(match[2].trim()).length > 0) return true
+                                return { value: { commands: this.client.depot.findCommands(match[2].trim()) } }
                             if (match[3])
-                                if (this.client.depot.findModules(match[3].trim()).length > 0) return true
+                                return { value: { modules: this.client.depot.findModules(match[3].trim()) } }
                             if (match[4])
-                                if (this.client.depot.findModules(match[4].trim()).length > 0) return true
+                                return { value: { modules: this.client.depot.findModules(match[4].trim()) } }
                         }
-                        if (!value) return false
-                        if (this.client.depot.findCommands(value).length > 0) return true
-                        if (this.client.depot.findModules(value).length > 0) return true
-                        return false
+                        const retobj = {}
+                        const cmds = this.client.depot.findCommands(value)
+                        const mods = this.client.depot.findModules(value)
+                        if (cmds.length || mods.length) {
+                            retobj.commands = cmds.length ? cmds : undefined
+                            retobj.modules = mods.length ? mods : undefined
+                            return { value: retobj }
+                        } else
+                            return { error: "no command/module resolved." }
                     },
                     parse: (value) => {
-                        if (value.toLowerCase() === "list") return "list"
-                        let re = /^command:(.+)|^cmd:(.+)|^module:(.+)|^mod:(.+)/gi
-                        let match = re.exec(value)
-                        if (match) {
-                            if (match[1])
-                                return { commands: this.client.depot.findCommands(match[1].trim()) }
-                            if (match[2])
-                                return { commands: this.client.depot.findCommands(match[2].trim()) }
-                            if (match[3])
-                                return { modules: this.client.depot.findModules(match[3].trim()) }
-                            if (match[4])
-                                return { modules: this.client.depot.findModules(match[4].trim()) }
-                        }
-                        let retobj = {}
-                        let cmds = this.client.depot.findCommands(value)
-                        if (cmds.length)
-                            retobj.commands = cmds
-                        let mods = this.client.depot.findModules(value)
-                        if (mods.length)
-                            retobj.modules = mods
-                        return retobj
+                        return value
                     }
                 }
             ]
@@ -68,12 +53,12 @@ module.exports = class Help extends Command {
         let commands = args["cmdsOrMods"].commands
         let modules = args["cmdsOrMods"].modules
         if (commands && commands.length === 1)
-            return this.client.autoMessageFactory(commands[0].getUsageEmbededMessageObject(message))
+            return commands[0].getUsageEmbededMessageObject(message)
         if (modules && modules.length === 1)
-            return this.client.autoMessageFactory(modules[0].getUsageEmbededMessageObject(message))
+            return modules[0].getUsageEmbededMessageObject(message)
 
-        //TODO add commands' modules to modules, and then print out the modules along with commands
         let usageObj = {
+            destination: message,
             destinationDeleteTime: 5 * 60 * 1000,
             messageOptions: {
                 embed: {
@@ -106,7 +91,6 @@ module.exports = class Help extends Command {
                 })
             }
         }
-        usageObj.destination = message
-        this.client.autoMessageFactory(usageObj)
+        usageObj
     }
 }

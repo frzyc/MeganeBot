@@ -2,7 +2,11 @@ const YoutubeDL = require("youtube-dl")
 const ytdlc = require("ytdl-core")
 const VoiceController = require("./VoiceController")
 const Track = require("./Track")
+/**
+ * The Playqueue holds and organizes tracks, keep track of the playlist and prints messages on the text channel.
+ */
 module.exports = class PlayQueue {
+    static MAX_NUM_SONGS_PER_PLAYLIST = 100
     constructor(client, guildID) {
         if (!client) throw Error("PlayQueueManager needs a client.")
         Object.defineProperty(this, "client", { value: client })
@@ -12,14 +16,13 @@ module.exports = class PlayQueue {
         this.tchannel = null
         this.voiceController = new VoiceController(client, this, guildID)
         this.trackId = 0
-        this.MAX_NUM_SONGS_PER_PLAYLIST = 100
         this.playlistMessage = null
         this.queue = []
         this.queuing = false
     }
     async addToList(track) {
-        if (this.list.length >= this.MAX_NUM_SONGS_PER_PLAYLIST)
-            return this.client.autoMessageFactory({ destination: track.message, messageContent: `The Playlist size has been maxed: ${this.MAX_NUM_SONGS_PER_PLAYLIST}`, deleteTime: 30 * 1000 })
+        if (this.list.length >= PlayQueue.MAX_NUM_SONGS_PER_PLAYLIST)
+            return this.client.autoMessageFactory({ destination: track.message, messageContent: `The Playlist size has been maxed: ${PlayQueue.MAX_NUM_SONGS_PER_PLAYLIST}`, deleteTime: 30 * 1000 })
         track.trackId = this.getTrackId()//generates a unique trackID for each queued song, even if it has been requeued
         this.list.push(track)
         if (this.list.length === 1) this.updatePlayingMessage()//update the next playing part of playing message
@@ -44,7 +47,7 @@ module.exports = class PlayQueue {
         } else
             this.queue.push(track)
     }
-    removefromQueue(trackId) {
+    removefromQueue(trackId) {//TODO rename this ot removeFromList to reduce confusion
         //console.log(`removefromQueue:${trackId}`)
         let ind = this.list.findIndex((track) => track.trackId === trackId)
         if (ind < 0) return console.log(`removefromQueue:${trackId} FAILED TO FIND VIDEO IN QUEUE`)
@@ -54,7 +57,7 @@ module.exports = class PlayQueue {
         //edit the queue messgae of the track to indicate it has been dequeued
         this.client.autoMessageFactory(track.getDequeuedMessageResolvable())
     }
-    shuffleQueue() {
+    shuffleQueue() {//TODO rename to shuffleList()
         if (this.list.length > 1) {
             shuffleArray(this.list)
             this.updatePlayingMessage()
@@ -66,7 +69,6 @@ module.exports = class PlayQueue {
                 var j = Math.floor(Math.random() * (i + 1));
                 [array[i], array[j]] = [array[j], array[i]]
             }
-            return array
         }
     }
     async playNextInQueue() {
@@ -126,12 +128,12 @@ module.exports = class PlayQueue {
         })
         disp.once("end", reason => {
             console.log("DISPATCHER END:" + reason)
-            setTimeout(() => this.playStopped(), 1000)
+            setTimeout(() => this.stopCurrentPlaying(), 1000)
         })
         disp.once("error", (err) => {
             console.log("DISPATCHER ERROR:")
             console.error(err)
-            setTimeout(() => this.playStopped(), 1000)
+            setTimeout(() => this.stopCurrentPlaying(), 1000)
         })
         disp.once("debug", (debug) => {
             console.log("DISPATCHER DEBUG:")
@@ -201,8 +203,8 @@ module.exports = class PlayQueue {
         if (!this.playlistMessage) return
         this.client.autoMessageFactory(this.getPlaylistmessageResolvable(this.playlistMessage))
     }
-    async playStopped() {
-        //console.log(`playQueue.playStopped in vchannel:${this.voiceController.vchannel}`);
+    async stopCurrentPlaying() {
+        //console.log(`playQueue.stopCurrentPlaying in vchannel:${this.voiceController.vchannel}`);
         if (this.current.message)// modify the orginal playing message to show that its finished.
             await await this.client.autoMessageFactory(this.current.getFinishedMessageResolvable())
         this.current = null
@@ -248,15 +250,15 @@ module.exports = class PlayQueue {
                 } else if (queryInfo._type === "playlist") {
                     if (queryInfo.entries.length === 0) //no valid search results
                         return errMsg.execute()
-                    if (this.list.length + queryInfo.entries.length >= this.MAX_NUM_SONGS_PER_PLAYLIST) {
-                        errMsg.messageContent = `Adding this playlist will breach Max Playlist size(${this.MAX_NUM_SONGS_PER_PLAYLIST}).
+                    if (this.list.length + queryInfo.entries.length >= PlayQueue.MAX_NUM_SONGS_PER_PLAYLIST) {
+                        errMsg.messageContent = `Adding this playlist will breach Max Playlist size(${PlayQueue.MAX_NUM_SONGS_PER_PLAYLIST}).
                         As many songs as possible from this playlist will be added.`
                         errMsg.execute()
                     }
                     if (message && message.deletable) message.delete(30 * 1000)
                     queryInfo.entries.forEach((entry, index) => {
                         setTimeout(() => {
-                            if ((this.list.length + this.queue.length) >= this.MAX_NUM_SONGS_PER_PLAYLIST) return
+                            if ((this.list.length + this.queue.length) >= PlayQueue.MAX_NUM_SONGS_PER_PLAYLIST) return
                             //if entry.ie_key === 'Youtube', the url only have the id...
                             this.queryYTDL(entry.ie_key === "Youtube" ? "https://www.youtube.com/watch?v=" + entry.id : entry.url, message)
                         }, index * 2000)

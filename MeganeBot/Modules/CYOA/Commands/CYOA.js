@@ -7,8 +7,6 @@ module.exports = class CYOA extends Command {
         })
     }
     async execute(message) {
-        let msgRes = this.client.CYOALibrary.getMessageResolvable()
-        msgRes.destination = message
-        return msgRes
+        return this.module.library.getMessageResolvable(message)
     }
 }

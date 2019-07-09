@@ -22,9 +22,9 @@ module.exports = class SetBotPlaying extends Command {
         if (!newplaying) message.reply("The playing message is empty!")
         try {
             await this.client.user.setActivity(newplaying)
-            await message.reply(`Changed my playing to: "${newplaying}".`)
+            message.reply(`Changed my playing to: "${newplaying}".`)
         } catch (e) {
-            await message.reply("Cannot set bot's playing status.")
+            message.reply("Cannot set bot's playing status.")
         }
     }
 }

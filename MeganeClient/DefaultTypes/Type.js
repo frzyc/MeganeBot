@@ -23,7 +23,7 @@ class Type {
 
     /**
      * @typedef {Object} ValidationReturn
-     * @property {?Object} result The result of the validation. Will be passed as
+     * @property {?Object} value The result of the validation. Will be passed as
      * the value to {@link Type#parse}
      * @property {?Object} error The error if the validation failed. Return an Error with no message to use the default error message
      */

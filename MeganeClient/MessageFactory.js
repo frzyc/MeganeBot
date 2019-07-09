@@ -1,5 +1,4 @@
-const { Channel, Message, Emoji, ReactionEmoji } = require("discord.js")
-const { Collection } = require("discord.js")
+const { TextChannel, DMChannel, GroupDMChannel, Message, Emoji, ReactionEmoji } = require("discord.js")
 const joi = require("@hapi/joi")
 /**
  * A Utilize class to handle Message creation/editing or adding reactions.
@@ -7,7 +6,7 @@ const joi = require("@hapi/joi")
 class MessageFactory {
     /**
      * @typedef {Object} MessageResolvable
-     * @property {Message|Channel} destination - A message or a channel as a destination to send the message.
+     * @property {[Message|TextChannel|DMChannel|GroupDMChannel]} destination - A message or a channel as a destination to send the message.
      * @property {string} [messageContent] - A string for the content of the new message, or to edit an existing message.
      * @property {MessageOptions} [messageOptions] - Options to format embeds for the message.
      * @property {boolean} [edit=false] - If destination is a Message, apply all the content/emojis to this message as an edit.
@@ -17,18 +16,21 @@ class MessageFactory {
      * @property {number} [deleteTime] - Time in seconds to delete the message
      * @property {number} [destinationDeleteTime] - time in seconds to delete the destination message. (This is mutually exclusive to edit)
      */
-    static MessageResolvableSchema = joi.object({
-        destination: joi.alternatives().try([joi.object().type(Message), joi.object().type(Channel)]).required(),
+    static textBasedChannel = joi.alternatives().try([joi.object().type(TextChannel), joi.object().type(DMChannel), joi.object().type(GroupDMChannel)])
+    static messageResolvableSchema = joi.object({
+        destination: joi.alternatives().try([joi.object().type(Message), MessageFactory.textBasedChannel]),
+        destMessage: joi.object().type(Message),
+        destChannel: MessageFactory.textBasedChannel,
         messageContent: joi.string(),
         messageOptions: joi.object(),//TODO validation
-        edit: joi.when("destination", {//can't .edit the destChannel
-            is: joi.object().type(Channel),
+        edit: joi.when("destChannel", {//can't .edit the destChannel
+            is: joi.exist(),
             then: joi.boolean().only(false),
             otherwise: joi.boolean()
         }),
         typing: joi.boolean(),
-        reply: joi.when("destination", {//can't reply to a channel
-            is: joi.object().type(Channel),
+        reply: joi.when("destChannel", {//can't reply to a channel
+            is: joi.exist(),
             then: joi.boolean().only(false),
             otherwise: joi.boolean()
         }).when("edit", {//can't edit and reply
@@ -49,37 +51,39 @@ class MessageFactory {
             .when("edit", {
                 is: true,
                 then: joi.forbidden(),
-            }).when("destination", {//can't delete the destChannel
-                is: joi.object().type(Channel),
+            }).when("destChannel", {//can't delete the destChannel
+                is: joi.exist(),
                 then: joi.forbidden()
             }),
-        destMessage: joi.object().type(Message),
-        destChannel: joi.object().type(Channel)
-    }).when(//when .typing, specify either .messageContent or .messageOptions
-        joi.object({
-            typing: joi.equal(true).required()
-        }).unknown(),
-        {
-            then: joi.object({
-                messageContent: joi.any(),
-                messageOpsadtions: joi.any()
-            }).or("messageContent", "messageOptions")
-        }
-    ).when(
-        joi.object({
-            destination: joi.object().type(Message).required()
-        }).unknown(),
-        {
-            then: joi.object().rename("destination", "destMessage", { alias: true })
-        }
-    ).when(
-        joi.object({
-            destination: joi.object().type(Channel).required()
-        }).unknown(),
-        {
-            then: joi.object().rename("destination", "destChannel", { alias: true })
-        }
-    )
+    })
+        .xor("destMessage", "destChannel").error(() => "Must define one of: .destination, .destMessage or .destChannel")
+        .when(//when .typing, specify either .messageContent or .messageOptions
+            joi.object({
+                typing: joi.equal(true).required()
+            }).unknown(),
+            {
+                then: joi.object({
+                    messageContent: joi.any(),
+                    messageOptions: joi.any()
+                }).or("messageContent", "messageOptions")
+            }
+        ).when(
+            joi.object({
+                destination: joi.object().type(Message).required()
+            }).unknown(),
+            {
+                then: joi.object().rename("destination", "destMessage")
+            }
+        ).when(
+            joi.object({
+                destination: MessageFactory.textBasedChannel.required()
+            }).unknown(),
+            {
+                then: joi.object().rename("destination", "destChannel")
+            }
+        )
+
+    static MAX_TYPING_DURATION_MS = 5000
 
     /**
      * The reaction to add to a message. Can have a callback function to triggered by someone reacting to it.
@@ -101,7 +105,7 @@ class MessageFactory {
          */
         Object.defineProperty(this, "client", { value: client })
 
-        let result = this.constructor.MessageResolvableSchema.validate(msgResolvable)
+        let result = MessageFactory.messageResolvableSchema.validate(msgResolvable)
         if (result.error) throw result.error
         Object.assign(this, result.value)
 
@@ -181,46 +185,28 @@ class MessageFactory {
      * - Will simulate typing,
      * - Queue up deletion of message/original message
      * - Add reactions, and attach callbacks
-     * @returns {Promise}
+     * @returns {Promise} 
      */
     async execute() {
-        let msgPromise = null
-        if (this.typing) {//a simulated typing msg
-            let channel = this.destMessage ? this.destMessage.channel : this.destChannel
-            channel.startTyping()
-            msgPromise = new Promise((replyResolve) => {
-                let typelength = this.messageContent ? this.messageContent.length : 0 + this.messageOptions ? JSON.stringify(this.messageOptions).length : 0
-                let typeduration = typelength * 30 + 100
-                setTimeout(() => {
-                    channel.stopTyping(true)
-                    return replyResolve(this.sendMessage())
-                }, (typeduration))
-            })
-        } else
-            msgPromise = this.sendMessage()
-        let msgToPostProcess = await msgPromise
-        if (!msgToPostProcess && this.destMessage) msgToPostProcess = this.destMessage//there is a chance that no presending is needed, and its only updating the emoji/delete
-        if (!msgToPostProcess) return// in theory this shouldn't happen...
-        //do the post process on the message
-        //TODO if a message is deleted, remove it from the waitlist
-        if (Number.isInteger(this.deleteTime) && msgToPostProcess.deletable) msgToPostProcess.delete(this.deleteTime).catch(console.error)
-        if (Number.isInteger(this.destinationDeleteTime) && this.destMessage && this.destMessage.deletable) this.destMessage.delete(this.destinationDeleteTime).catch(console.error)
-        let dmChannel = msgToPostProcess.channel.type === "dm"//reactions and such interactions does not work for a DM channel.
-        if (this.reactions) {
-            if (!dmChannel)
-                await msgToPostProcess.clearReactions()
-            for (let reaction of this.reactions)
-                await msgToPostProcess.react(reaction.emoji)
-            //add the functions to the waitlist after the reactions are all added.
-            for (let reaction of this.reactions) {
-                if (reaction.execute && !dmChannel) {
-                    if (!this.client.dispatcher.watchlist.has(msgToPostProcess.id))
-                        this.client.dispatcher.watchlist.set(msgToPostProcess.id, new Collection())
-                    this.client.dispatcher.watchlist.get(msgToPostProcess.id).set(reaction.emoji, reaction)
-                }
+        if (this.typing)
+            await this.simulateTyping()
+        return this.sendMessage().then(async msg => {
+            if (typeof this.deleteTime === "number" && msg.deletable)
+                msg.delete(this.deleteTime).catch(console.error)
+            if (typeof this.destinationDeleteTime === "number" && this.deletable)
+                this.delete(this.destinationDeleteTime).catch(console.error)
+            if (this.reactions) {
+                if (msg.channel.type !== "dm")//bot can't remove user reactions in a DM channel
+                    await msg.clearReactions()
+                for (let reaction of this.reactions)
+                    await msg.react(reaction.emoji)
+                //add the functions to the waitlist after the reactions are all added.
+                for (let reaction of this.reactions)
+                    if (reaction.execute)
+                        this.client.dispatcher.addReactionToWatchlist(msg.id, reaction)
             }
-        }
-        return msgToPostProcess
+            return msg
+        })
     }
 
     /**
@@ -238,6 +224,32 @@ class MessageFactory {
                 return this.destMessage.channel.send(this.messageContent, this.messageOptions)
         }
         return this.destChannel.send(this.messageContent, this.messageOptions)
+    }
+
+    /**
+     * Simulating the bot typing the response message using the length of {@link MessageFactory#messageContent} and {@link MessageFactory#messageOptions}.
+     * @private
+     */
+    simulateTyping() {
+        let channel = this.destMessage ? this.destMessage.channel : this.destChannel
+        let typeduration =
+            ((this.messageContent ? this.messageContent.length : 0) + (this.messageOptions ? JSON.stringify(this.messageOptions).length : 0)) * 30 + 100
+        return MessageFactory.typeInChannel(channel, typeduration > MessageFactory.MAX_TYPING_DURATION_MS ? MessageFactory.MAX_TYPING_DURATION_MS : typeduration)
+    }
+    /**
+     *
+     * @param {Channel} channel
+     * @param {number} time in ms
+     * @returns {Promise}
+     */
+    static typeInChannel(channel, time) {
+        channel.startTyping()
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                channel.stopTyping()
+                return resolve()
+            }, time)
+        })
     }
 }
 module.exports = MessageFactory

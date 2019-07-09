@@ -18,13 +18,13 @@ module.exports = class ChangeBotGlasses extends Command {
         })
         let glassesDir = this.client.profilePictureDirectory
         if (!glassesDir) {
-            return await this.client.autoMessageFactory({
+            return {
                 destination: msg,
                 edit: true,
                 messageContent: "The display picture directory is not set.",
                 deleteTime: 30 * 1000,
                 destinationDeleteTime: 30 * 1000
-            })
+            }
         }
         fs.readdir(glassesDir, async (err, files) => {
             try {
@@ -42,13 +42,13 @@ module.exports = class ChangeBotGlasses extends Command {
                 })
             } catch (err) {
                 this.client.emit("error:", err)
-                return await this.client.autoMessageFactory({
+                return {
                     destination: msg,
                     edit: true,
                     messageContent: "Cannot change my glasses! " + err.message ? err.message : "",
                     deleteTime: 3 * 60 * 1000,
                     destinationDeleteTime: 3 * 60 * 1000
-                })
+                }
             }
         })
 

@@ -9,10 +9,10 @@ module.exports = class CYOAModule extends CommandModule{
         })
         this.addCommandsIn(require("path").join(__dirname, "Commands"))
 
-        this.client.CYOALibrary = new Library()
+        this.library = new Library()
 
         let story = require("./story.json")
-        this.client.CYOALibrary.addStory(story)
+        this.library.addStory(story)
         
     }
 }

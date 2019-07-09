@@ -21,13 +21,13 @@ module.exports = class SetPrefix extends Command {
 
     }
     execute(message, args) {
-        let msg = this.client.messageFactory({
+        let msg = {
             destination: message,
             reply: true,
             deleteTime: 2 * 60 * 1000,
             destinationDeleteTime: 2 * 60 * 1000,
             messageContent: "Cannot set prefix."
-        })
+        }
         if (message.guild) {
             message.guild.prefix = args["newprefix"]
             if (message.guild.prefix)
@@ -45,7 +45,7 @@ module.exports = class SetPrefix extends Command {
                 msg.messageContent = "You must be a bot owner to change the global prefix!"
             }
         }
-        msg.execute()
+        return msg
 
     }
 }

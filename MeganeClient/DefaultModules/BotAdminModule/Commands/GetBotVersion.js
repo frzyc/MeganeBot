@@ -10,27 +10,28 @@ module.exports = class GetBotVersion extends Command {
         })
     }
     async execute(message) {
-        let returnMsg = this.client.messageFactory({
-            destination: message,
-            messageContent: "Failed checking git version!",
-            deleteTime: 5 * 60 * 1000,
-            destinationDeleteTime: 5 * 60 * 1000,
-        })
-        var commit = require("child_process").spawn("git", ["log", "-n", "1"])
-        commit.stdout.on("data", data => {
-            console.log(`stdout: ${data}`)
-            returnMsg.messageContent = `\`\`\`${data}\`\`\``
-            returnMsg.execute()
-        })
-        commit.stderr.on("data", data => {
-            console.log(`stderr: ${data}`)
-            returnMsg.messageContent = `\`\`\`${data}\`\`\``
-            returnMsg.execute()
-        })
-        commit.on("close", code => {
-            console.log(`code:${code}`)
-            if (code != 0)
-                returnMsg.execute()//since the return message has the error message by default.
+        return new Promise(resolve=>{
+            let returnMsg = {
+                destination: message,
+                deleteTime: 5 * 60 * 1000,
+                destinationDeleteTime: 5 * 60 * 1000,
+            }
+            var commit = require("child_process").spawn("git", ["log", "-n", "1"])
+            commit.stdout.on("data", data => {
+                console.log(`stdout: ${data}`)
+                returnMsg.messageContent = `\`\`\`${data}\`\`\``
+                resolve(returnMsg)
+            })
+            commit.stderr.on("data", data => {
+                console.log(`stderr: ${data}`)
+                returnMsg.messageContent = `\`\`\`${data}\`\`\``
+                resolve(returnMsg)
+            })
+            commit.on("close", code => {
+                console.log(`code:${code}`)
+                returnMsg.messageContent = `Failed checking git version! code:${code}`
+                resolve(returnMsg)
+            })
         })
     }
 }

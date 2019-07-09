@@ -12,13 +12,13 @@ module.exports = class GetPrefix extends Command {
 
     }
     execute(message) {
-        let msg = this.client.messageFactory({
+        let msg = {
             destination: message,
             reply: true,
             deleteTime: 2 * 60 * 1000,
             destinationDeleteTime: 2 * 60 * 1000,
             messageContent: "Cannot get prefix."
-        })
+        }
         if (message.guild) {
             if (message.guild.prefix)
                 msg.messageContent = `The command prefix for this guild: ${message.guild.prefix}`
@@ -30,7 +30,7 @@ module.exports = class GetPrefix extends Command {
             else
                 msg.messageContent = "The global command prefix has been removed. You can still use commands by mentioning me!"
         }
-        msg.execute()
+        return msg
 
     }
 }

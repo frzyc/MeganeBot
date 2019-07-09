@@ -5,13 +5,14 @@ module.exports = class Library {
         this.lib = new Map()
     }
     addStory(obj) {
-        let st = new Story(obj)
+        let st = new Story(this, obj)
         this.lib.set(st.title, st)
         //TODO check version of story to see whether to load. currently all story will be reloaded.
     }
-    getMessageResolvable() {
+    getMessageResolvable(dest) {
         //generate the message object resolvable for listing the stories
         let msgobj = {
+            destination:dest,
             messageOptions: {
                 embed: {
                     title: "CYOA Library",

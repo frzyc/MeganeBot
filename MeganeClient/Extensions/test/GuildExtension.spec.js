@@ -4,7 +4,7 @@ const { MeganeClient } = require("../../")
 const { Guild } = require("discord.js")
 
 
-describe("Check GuildExtensions", () => {
+describe("GuildExtensions tests", () => {
     /**
      * @type {Guild}
      */
