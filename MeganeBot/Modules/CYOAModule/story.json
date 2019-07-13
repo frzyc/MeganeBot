@@ -1,0 +1,53 @@
+{
+    "title": "Some Test story",
+    "author": {
+        "name": "AuthorAuthorson",
+        "url": "https://www.google.com/",
+        "icon_url": "https://cdn.discordapp.com/avatars/267870216082423809/16d4f1723320c1de633c99051b22bb50.png?size=2048"
+    },
+    "version": "1.0",
+    "currencyname": "points",
+    "excerpt": "Story about something",
+    "description": "Some brief description about the story",
+    "nodes": [
+        {
+            "id": "a",
+            "title": "Title A",
+            "description": "something to describe A",
+            "content": "A is for Apple",
+            "choices": [
+                {
+                    "id": "b",
+                    "name": "B",
+                    "description": "go to option B"
+                },
+                {
+                    "id": "c",
+                    "name": "C",
+                    "description": "go to option C"
+                }
+            ],
+            "points": 1
+        },
+        {
+            "id": "b",
+            "title": "Title B",
+            "description": "something to describe B",
+            "content": "B is for Banana",
+            "choices": [
+                {
+                    "id": "c",
+                    "name": "C",
+                    "description": "go to option C"
+                }
+            ],
+            "points": 10
+        },
+        {
+            "id": "c",
+            "title": "Title C",
+            "description": "something to describe C",
+            "content": "C is for Cherry"
+        }
+    ]
+}

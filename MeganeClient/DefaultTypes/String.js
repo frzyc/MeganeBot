@@ -1,16 +1,19 @@
-const Type = require('./Type');
+const { Type } = require("../")
+const joi = require("@hapi/joi")
 module.exports = class String extends Type {
-	constructor(client) {
-		super(client, 'string');
-	}
+  constructor(client) {
+    super(client, "string")
+  }
 
-	validate(value, msg, arg) {
-		return Boolean(value) &&
-			(arg.min === null || typeof arg.min === 'undefined' || value.length >= arg.min) &&
-			(arg.max === null || typeof arg.max === 'undefined' || value.length <= arg.max);
-	}
+    static schema = joi.string().allow("")
+    validate(value, msg, arg) {
+      let schema = String.schema
+      if (typeof arg ==="object" && typeof arg.min ==="number") schema = schema.min(arg.min)
+      if (typeof arg ==="object" && typeof arg.max ==="number") schema = schema.max(arg.max)
+      return schema.validate(value)
+    }
 
-	parse(value) {
-		return value;
-	}
+    parse(value) {
+      return value
+    }
 }

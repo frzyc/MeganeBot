@@ -1,16 +1,17 @@
-const Type = require('./Type');
+const { Type } = require("../")
 module.exports = class GuildMember extends Type {
-	constructor(client) {
-		super(client, 'guildmember');
-	}
-	validate(value, msg, arg) {
-		if (value === 'message-author') return true;
-		if (!msg.guild) return false;
-		let matches = value.match(/^(?:<@!?)?([0-9]+)>?$/);
-		if (matches && msg.guild.members.has(matches[1])) {
-			return true;
-		} else return false;
-		/* TODO a search function for words as well.
+  constructor(client) {
+    super(client, "guildmember")
+  }
+    static regex = /^(?:<@!?)?([0-9]+)>?$/
+    validate(value, msg) {
+      if (value === "message-author") return { value: msg.author }
+      if (!msg.guild) return { error: "not in a guild" }
+      let matches = value.match(this.regex)
+      if (matches && msg.guild.members.has(matches[1])) {
+        return { value: msg.guild.members.get(matches[1]) }
+      } else return { error: Error() }
+      /* TODO a search function for words as well.
 		let members = null;
 		
 		if (msg.channel.type === "text") {//guild channel
@@ -20,14 +21,9 @@ module.exports = class GuildMember extends Type {
 		}
 
 		*/
-	}
+    }
 
-	parse(value, msg, arg) {
-		if (value === 'message-author')
-			return msg.author;
-		let matches = value.match(/^(?:<@!?)?([0-9]+)>?$/);
-		if (matches) {
-			return msg.guild.members.get(matches[1]);
-		}
-	}
+    parse(value) {
+      return value
+    }
 }

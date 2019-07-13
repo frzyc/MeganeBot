@@ -1,22 +1,22 @@
-const Type = require('./Type');
+const { Type } = require("../")
 module.exports = class User extends Type {
-	constructor(client) {
-		super(client, 'user');
-	}
-	async validate(value, msg, arg) {
-		let matches = value.match(/^(?:<@!?)?([0-9]+)>?$/);
-		if (matches) {
-			try {
-				return await this.client.fetchUser(matches[1]);
-			} catch (err) {
-				return false;
-			}
-		}
-	}
+  constructor(client) {
+    super(client, "user")
+  }
+    static regex = /^(?:<@!?)?([0-9]+)>?$/ 
+    async validate(value) {
+      let matches = value.match(this.regex)
+      if (matches) {
+        try {
+          return { value: await this.client.fetchUser(matches[1]) }
+        } catch (err) {
+          return { error: err }
+        }
+      } else
+        return { error: "Not a valid user." }
+    }
 
-	async parse(value, msg, arg) {
-		let matches = value.match(/^(?:<@!?)?([0-9]+)>?$/);
-		if (matches)
-			return await this.client.fetchUser(matches[1]);
-	}
+    async parse(value) {
+      return value
+    }
 }

@@ -1,19 +1,20 @@
-const Type = require('./Type');
-module.exports = class Boolean extends Type{
-    constructor(client){
-        super(client, 'boolean');
-        this.truthy = new Set(['true', 't', 'yes', 'y', 'on', 'enable', 'enabled', '1', '+']);
-		this.falsy = new Set(['false', 'f', 'no', 'n', 'off', 'disable', 'disabled', '0', '-']);
-    }
+const { Type } = require("../")
+const joi = require("@hapi/joi")
+module.exports = class Boolean extends Type {
+  constructor(client) {
+    super(client, "boolean")
+  }
+    static truthyArr = ["true", "t", "yes", "y", "on", "enable", "enabled", "1", "+"]
+    static falsyArr = ["false", "f", "no", "n", "off", "disable", "disabled", "0", "-"]
+    static schema = joi.boolean()
+      .truthy(Boolean.truthyArr)
+      .falsy(Boolean.falsyArr)
+      .insensitive()
     validate(value) {
-		const lc = value.toLowerCase();
-		return this.truthy.has(lc) || this.falsy.has(lc);
-	}
+      return Boolean.schema.validate(value)
+    }
 
-	parse(value) {
-		const lc = value.toLowerCase();
-		if(this.truthy.has(lc)) return true;
-		if(this.falsy.has(lc)) return false;
-		throw new RangeError('Unknown boolean value.');
-	}
+    parse(value) {
+      return value
+    }
 }

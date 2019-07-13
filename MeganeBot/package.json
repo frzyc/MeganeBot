@@ -1,0 +1,16 @@
+{
+  "name": "@frzyc/meganebot",
+  "version": "1.0.0",
+  "description": "A discord Bot using MeganeClient",
+  "main": "bot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@frzyc/meganeclient": "file:../MeganeClient",
+    "youtube-dl": "^2.0.1",
+    "ytdl-core": "^0.29.7"
+  }
+}

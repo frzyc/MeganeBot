@@ -1,12 +1,18 @@
 {
-  "name": "MeganeBot",
-  "version": "1.6.0",
-  "description": "a bot made by a glasses fetishtist",
-  "main": "MeganeBot/bot.js",
+  "name": "@frzyc/meganesuite",
+  "version": "2.0.0",
+  "description": "a discord.js bot made by a glasses fetishtist",
+  "main": "index.js",
   "scripts": {
     "docgen": "./node_modules/.bin/jsdoc MeganeClient -r -d docs --configure jsdoc-conf.json --private",
     "docgen-test": "./node_modules/.bin/jsdoc MeganeClient -r -d docs --configure jsdoc-conf.json --private --debug --verbose",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "./node_modules/.bin/eslint --ext .js MeganeClient/ MeganeBot/",
+    "lint-layout": "./node_modules/.bin/eslint --ext .js --fix --fix-type layout MeganeClient/ MeganeBot/",
+    "test": "mocha \"**/**.spec.js\"",
+    "coverage": "nyc npm run test",
+    "no-test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js",
+    "start-prod": "NODE_ENV=production pm2 start npm -- start"
   },
   "author": "frzyc",
   "repository": {
@@ -14,17 +20,25 @@
     "url": "git+https://github.com/frzyc/MeganeBot.git"
   },
   "license": "ISC",
+  "engines": {
+    "node": ">=12.0.0"
+  },
   "dependencies": {
-    "discord.js": "^11.2.1",
-    "ffmpeg-binaries": "^3.2.2",
-    "node-opus": "^0.2.7",
-    "request": "^2.83.0",
-    "sqlite": "^2.8.0",
-    "uws": "^8.14.1",
-    "youtube-dl": "^1.12.2",
-    "ytdl-core": "^0.18.1"
+    "@discordjs/uws": "^10.149.0",
+    "@frzyc/meganebot": "file:MeganeBot",
+    "@frzyc/meganeclient": "file:MeganeClient",
+    "@hapi/joi": "^15.1.1",
+    "discord.js": "^11.5.1",
+    "node-opus": "^0.3.2",
+    "opusscript": "0.0.6"
   },
   "devDependencies": {
-    "jsdoc": "^3.5.5"
+    "babel-eslint": "^10.0.3",
+    "chai": "^4.2.0",
+    "eslint": "^6.5.1",
+    "jsdoc": "^3.6.3",
+    "mocha": "^6.2.1",
+    "nyc": "^14.1.1",
+    "sinon": "^7.5.0"
   }
 }
