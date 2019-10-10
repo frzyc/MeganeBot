@@ -228,7 +228,7 @@ class CommandDepot {
 
   /**
      * Add an array of {@link Type}s.
-     * @param {...(function[]|Type[]} args
+     * @param {...(function[]|Type[])} args
      * @returns {CommandDepot} - This {@link CommandDepot} so that functions can be chained.
      */
   addTypes(...args) {

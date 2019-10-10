@@ -44,11 +44,11 @@ class CommandArgument {
     constructor(client, options) {
       if (!client) throw new Error("The client must be specified for the CommandArgumentOptions.")
       /**
-         * A reference to the MeganeClient.
-         * @name CommandArgument#client
-         * @type {MeganeClient}
-         * @readonly
-         */
+       * A reference to the MeganeClient.
+       * @name CommandArgument#client
+       * @type {MeganeClient}
+       * @readonly
+       */
       Object.defineProperty(this, "client", { value: client })
 
       let result = CommandArgument.CommandArgumentOptionsSchema.validate(options)
@@ -57,72 +57,54 @@ class CommandArgument {
       Object.assign(this, result.value)
 
       /**
-         * A label to reference the result of this {@link CommandArgument} in the parsed object.
-         * @name label
-         * @type {string}
-         */
+       * A label to reference the result of this {@link CommandArgument} in the parsed object.
+       * @member {string} CommandArgument.label
+       */
+      /**
+       * The description for this {@link CommandArgument}.
+       * @member {?string} CommandArgument.descriptionString
+       * @private
+       */
+      /**
+       * The min value if {@link CommandArgument#type} is a scaler value, or can be measured by a length.
+       * @member {?number} CommandArgument.min
+       */
+      /**
+       * The max value if {@link CommandArgument#type} is a scaler value, or can be measured by a length.
+       * @member {?number} CommandArgument.max
+       */
+      /**
+       * The default value for this {@link CommandArgument}.
+       * This makes this argument optional.
+       * All arguments in {@link Command#args} after this one will need to be optional as well.
+       * @member {?Object} CommandArgument.default
+       */
+      /**
+       * The number of values this {@link CommandArgument} parses. This will return the values as an array.
+       * The last value of the array will have the remaining string, even if it has multiple words.
+       * A value of 0 will convert all the words to an array.
+       * If this has a value of 0, it should be the last argument for the {@link Command#args}.
+       * Each element of this array will be applied the type validation and parsing individually.
+       * @member {?integer} CommandArgument.array 
+       */
+      /**
+       * A customized Validator for a custom type. See {@link Type#validate}.
+       * @member {?function} CommandArgument.customValidator
+       */
+      /**
+       * A customized parser for a custom type. See {@link Type#parse}.
+       * @member {?function} CommandArgument.customParser
+       */
+      /**
+       * A Whether this is the last argument in the {@link Command#args}.
+       * @member {boolean} CommandArgument.last
+       */
 
       /**
-         * The {@link Type} for this {@link CommandArgument}.
-         * @name type
-         * @type {Type|"custom"}
-         */
-      this.type = this.type ? client.depot.types.get(this.type) : { id: "custom" }//if type is not defined, is is a custom type.
-
-      /**
-         * The description for this {@link CommandArgument}.
-         * @name descriptionString
-         * @type {?string}
-         */
-
-      /**
-         * The min value if {@link CommandArgument#type} is a scaler value, or can be measured by a length.
-         * @name min
-         * @type {?number}
-         */
-
-      /**
-         * The max value if {@link CommandArgument#type} is a scaler value, or can be measured by a length.
-         * @name max
-         * @type {?number}
-         */
-
-      /**
-         * The default value for this {@link CommandArgument}.
-         * This makes this argument optional.
-         * All arguments in {@link Command#args} after this one will need to be optional as well.
-         * @name default
-         * @type {?Object}
-         */
-
-      /**
-         * The number of values this {@link CommandArgument} parses. This will return the values as an array.
-         * The last value of the array will have the remaining string, even if it has multiple words.
-         * A value of 0 will convert all the words to an array.
-         * If this has a value of 0, it should be the last argument for the {@link Command#args}.
-         * Each element of this array will be applied the type validation and parsing individually.
-         * @name array
-         * @type {?integer}
-         */
-
-      /**
-         * A customized Validator for a custom type. See {@link Type#validate}.
-         * @name customValidator
-         * @type {?function}
-         */
-
-      /**
-         * A customized parser for a custom type. See {@link Type#parse}.
-         * @name customParser
-         * @type {?function}
-         */
-
-      /**
-        * A Whether this is the last argument in the {@link Command#args}.
-        * @name last
-        * @private
-        * @type {?function}
-        */
+       * The {@link Type} for this {@link CommandArgument}. if type is not defined, is is a custom type.
+       * @member {Type|"custom"} CommandArgument.type
+       */
+      this.type = this.type ? client.depot.types.get(this.type) : { id: "custom" }
     }
 
     /**

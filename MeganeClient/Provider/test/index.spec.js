@@ -6,7 +6,7 @@ describe("Database Provider Tests", () => {
     database = new Database()
     db = await database.init()
     expect(db).to.exist
-    database.dropDatabase()
+    await database.dropDatabase()
   })
   after(() => {
     database.close()

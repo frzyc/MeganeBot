@@ -1,6 +1,10 @@
 ﻿const fs = require("fs")
 const path = require("path")
 
+/**
+ * @namespace Util
+ */
+
 //a helper function to format strings
 if (!String.prototype.format) {
   String.prototype.format = function () {
@@ -32,21 +36,12 @@ exports.hasChain = function (obj, key) {
   })
 }
 
-exports.requireFile = function (filepath) {
-  try {
-    require(filepath)
-  }
-  catch (e) {
-    console.log(`requireF(): The file "${filepath}" couldn't be loaded.`)
-  }
-}
 exports.getMentionStrings = function (message) {
   let str = message.content
   return str.match(/(<@\d+>)|(<@!\d+>)|(<@&\d+>)|(@everyone)/g)
 }
 
 exports.getMentionedUsers = function (message) {
-  //console.log('getMentionedUsers');
   let userarr = {}
   if (message.mentions.everyone) {
     message.guild.members.map(member => {
@@ -54,7 +49,6 @@ exports.getMentionedUsers = function (message) {
       if (!userarr[user.id])
         userarr[user.id] = user
     })
-    //console.log(`everyone mention added. size: ${Object.keys(userarr).length}`);
     return userarr
   }
 
@@ -103,11 +97,20 @@ exports.getRandomIntInclusive = function (min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
-
+/**
+ * Given a percentage chance, generate a boolean.
+ * @function Util.percentChance
+ * @param {digit} percent 
+ */
 exports.percentChance = function (percent) {
   return (Math.random() < (percent / 100))
 }
 
+/**
+ * get the emoji representation of a letter.
+ * @function Util.getDigitSymbol
+ * @param {digit} letter Between 0-10 inclusive
+ */
 exports.getDigitSymbol = function (digit) {
   //let digitarr = [`:zero:`, `:one:`, `:two:`, `:three:`, `:four:`, `:five:`, `:six:`, `:seven:`, `:eight:`, `:nine:`, `:keycap_ten:`];
   let digitarr = ["0⃣", "1⃣", "2⃣", "3⃣", "4⃣", "5⃣", "6⃣", "7⃣", "8⃣", "9⃣", "🔟"]
@@ -116,8 +119,14 @@ exports.getDigitSymbol = function (digit) {
   return ""
 }
 
+/**
+ * get the emoji representation of a letter.
+ * @function Util.getLetterSymbol
+ * @param {String} letter Will take the 1st char if its a long string
+ */
 exports.getLetterSymbol = function (letter) {
-  let letterarr = {
+  letter = letter.charAt(0)
+  const letterarr = {
     A: "🇦",
     B: "🇧",
     C: "🇨",
@@ -206,91 +215,7 @@ exports.justOnePromise = function (promise, resolveResponse, rejectResponse) {
     })
   })
 }
-/**
- * @deprecated Deprecated by the type parsing of the new system.
- */
-exports.staticArgTypes = {
-  "none": {
-    type: "none",//special process for none
-    process: (arg) => {
-      if (arg == null || arg.length === 0) return ""
-      else return null
-    }
-  },
-  "string": {
-    type: "string",//special process for string
-  },
-  "oristring": {
-    type: "oristring",//special process for string
-    process: (arg, message) => {
-      if (arg == null || arg.length === 0) return null
-      let cont = message.content
-      let index = cont.indexOf(arg)
-      if (index >= 0)
-        return cont.slice(index)
-      return null
-    }
-  },
-  "word": {//a word, can be literally anything in it
-    type: "word",
-    process: (arg) => {
-      if (arg == null) return null
-      //console.log(`process:word(${arg})`);
-      if (arg.length === 0)
-        return null
-      return arg
-    }
-  },
-  "int": {
-    type: "int",
-    process: (arg) => {
-      if (arg == null) return null
-      //console.log(`process:int(${arg})`);
-      if (!/^[-+]?[0-9]+$/.test(arg)) return null
-      let ret = parseInt(arg)
-      if (isFinite(ret))
-        return ret
-      else
-        return null
-    }
-  },
-  "posint": {
-    type: "posint",
-    process: (arg) => {
-      if (arg == null) return null
-      //console.log(`process:int(${arg})`);
-      if (!/^[0-9]+$/.test(arg)) return null
-      let ret = parseInt(arg)
-      if (isFinite(ret))
-        return ret
-      else
-        return null
-    }
-  },
-  "float": {
-    type: "float",
-    process: (arg) => {
-      if (arg == null) return null
-      //console.log(`process:float(${arg})`);
-      //strict parsing
-      //  /^([-+]?(\d+\.?\d*|\d*\.?\d+))$/
-      if (!/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/.test(arg)) return null
-      let ret = parseFloat(arg)
-      if (isFinite(ret)) return ret
-      else
-        return null
-    }
-  },
-  "mentions": {
-    type: "mentions",
-    process: (arg, message) => {
-      let mentionedusers = exports.getMentionedUsers(message)
-      let mentioneduserscount = Object.keys(mentionedusers).length
-      if (mentioneduserscount === 0) return null
-      return mentionedusers
-    }
-  }
-}
+
 let customType = function (evalfunc, statictype) {
   this.type = "custom"
   this.evalfunc = evalfunc
@@ -332,9 +257,11 @@ exports.escapeRegexString = function (str) {
 
 /**
  * Get all files in a directory, and returns an array of all of them after require() them.
+ * @function Util.requireAllInDirectory
+ * @param directory The directory to acquire at.
  * @return {object[]} array of all the exported module content from all files in directory
  */
-exports.requireAllInDirectory = function(directory){
+exports.requireAllInDirectory = function (directory) {
   if (!fs.existsSync(directory)) throw new Error(`"${directory}" is not an valid directory.`)
   let files = fs.readdirSync(directory)
   let cmdfile = []
@@ -344,30 +271,11 @@ exports.requireAllInDirectory = function(directory){
   }
   return cmdfile.map(file => require(path.join(directory, file)))
 }
-/*
-console.log('100% 200%'.match(/(\d{0,3})%/g));
-console.log(/(\d{0,3})%/g.exec('100% 200%'));
 
-var myString = '100% 200%';
-var myRegexp = /\d{0,3}%/g;
-match = myRegexp.exec(myString);
-while (match != null) {
-    // matched text: match[0]
-    // match start: match.index
-    // capturing group n: match[n]
-    console.log(match[1])
-    match = myRegexp.exec(myString);
+/**
+ * Returns a Promise that resolves in some time
+ * @param ms the ms to timeout
+ */
+exports.sleep = function (ms) {
+  return new Promise(res => setTimeout(res, ms))
 }
-
-const at = exports.staticArgTypes;
-const ct = exports.customType;
-const ctr = exports.customTypeRegex;
-let testtem = [at['word'], at['int'], at['float'], new ct((v) => {
-    if (v >= 0 && v < 10) return v;
-    else return null;
-}, at['int']), new ctr(/^([0 - 9]{0,3})%$/g, at['posint']), at['none']
-];
-let teststring = `test 12345 -.12e-19 9 100%`;
-console.log("TEST PARSE");
-console.log(exports.parseArgs(testtem, teststring.split(' ')));
-*/

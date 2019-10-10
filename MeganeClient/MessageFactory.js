@@ -6,7 +6,7 @@ const joi = require("@hapi/joi")
 class MessageFactory {
     /**
      * @typedef {Object} MessageResolvable
-     * @property {[Message|TextChannel|DMChannel|GroupDMChannel]} destination - A message or a channel as a destination to send the message.
+     * @property {(Message|TextChannel|DMChannel|GroupDMChannel)} destination - A message or a channel as a destination to send the message.
      * @property {string} [messageContent] - A string for the content of the new message, or to edit an existing message.
      * @property {MessageOptions} [messageOptions] - Options to format embeds for the message.
      * @property {boolean} [edit=false] - If destination is a Message, apply all the content/emojis to this message as an edit.

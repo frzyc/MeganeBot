@@ -43,14 +43,14 @@ describe("CommandDispatcher tests", () => {
         id: client_user_id
       }
       await client.init
-      client.db.dropDatabase()
+      await client.db.dropDatabase()
     })
 
     after(async () => {
       expect(client).to.exist
-      await client.destructor()
       // delete the database
-      client.db.dropDatabase()
+      await client.db.dropDatabase()
+      await client.destructor()
     })
     it("Tests client has dispatcher", () => {
       expect(client.dispatcher).to.exist

@@ -13,14 +13,14 @@ describe("MeganeClient tests", () => {
     })
     client.users = new Map([["1", { id: "1" }]])
     await client.init
-    client.db.dropDatabase()
+    await client.db.dropDatabase()
     expect(client.isOwner("1")).to.be.true
     expect(client).to.exist
   })
 
   after(async () => {
     expect(client).to.exist
-    client.db.dropDatabase()
+    await client.db.dropDatabase()
     await client.destructor()
   })
     

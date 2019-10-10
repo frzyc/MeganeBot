@@ -4,8 +4,8 @@
   "description": "a discord.js bot made by a glasses fetishtist",
   "main": "index.js",
   "scripts": {
-    "docgen": "./node_modules/.bin/jsdoc MeganeClient -r -d docs --configure jsdoc-conf.json --private",
-    "docgen-test": "./node_modules/.bin/jsdoc MeganeClient -r -d docs --configure jsdoc-conf.json --private --debug --verbose",
+    "docgen": "./node_modules/.bin/jsdoc --configure jsdoc-conf.json",
+    "docgen-test": "./node_modules/.bin/jsdoc --configure jsdoc-conf.json --debug --verbose",
     "lint": "./node_modules/.bin/eslint --ext .js MeganeClient/ MeganeBot/",
     "lint-layout": "./node_modules/.bin/eslint --ext .js --fix --fix-type layout MeganeClient/ MeganeBot/",
     "test": "mocha \"**/**.spec.js\"",

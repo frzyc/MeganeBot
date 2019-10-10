@@ -76,7 +76,7 @@ module.exports = class Track {
         {
           emoji: "🔀",
           execute: () => {
-            this.playQueue.shuffleQueue()
+            this.playQueue.shuffleList()
           }
         },
         {
@@ -161,7 +161,7 @@ module.exports = class Track {
         execute: async (reactionMessage, user) => {
           if (user.id !== this.userID) return
           await reactionMessage.remove()
-          this.playQueue.removefromQueue(this.trackId)
+          this.playQueue.removeFromList(this.trackId)
         }
       }],
     }

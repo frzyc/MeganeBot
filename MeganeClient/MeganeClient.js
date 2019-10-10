@@ -42,7 +42,7 @@ class MeganeClient extends discord.Client {
     this.once("ready", () => {
       for (const owner of this.options.owner) {
         this.fetchUser(owner).catch(err => {
-          console.log(err)
+          console.error(err)
           throw Error(`Unable to fetch owner ${owner}.`)
         })
       }
@@ -83,8 +83,8 @@ class MeganeClient extends discord.Client {
       .addModulesIn(path.join(__dirname, "DefaultModules"))
 
     /**
-     * @type {Promise}
      * Resolves to whether the client inits properly
+     * @type {Promise}
      */
     this.init = this.init()
   }

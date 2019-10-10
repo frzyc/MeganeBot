@@ -1,7 +1,13 @@
 {
+    "opts": {
+        "destination": "./docs/",   
+        "recurse": true
+    },
     "plugins": ["plugins/markdown"],
     "recurseDepth": 10,
     "source": {
+        "include": [ "./MeganeClient" ],
+        "exclude": [ "./MeganeClient/node_modules" ],
         "includePattern": ".+\\.js(doc|x)?$",
         "excludePattern": "(^|\\/|\\\\)_"
     },
